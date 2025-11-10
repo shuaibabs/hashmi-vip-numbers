@@ -55,7 +55,7 @@ export type Activity = {
 
 const now = new Date();
 
-export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 20 }, (_, i) => {
+export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) => {
   const isRTS = i % 3 !== 0;
   return {
     id: i + 1,
