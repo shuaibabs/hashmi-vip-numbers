@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -11,21 +12,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AssignNumbersModal } from '@/components/assign-numbers-modal';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AllNumbersPage() {
-  const { numbers } = useApp();
+  const { numbers, role } = useApp();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRtsModalOpen, setIsRtsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
   const filteredNumbers = useMemo(() => {
     return numbers
@@ -48,7 +53,7 @@ export default function AllNumbersPage() {
 
   const handleMarkRTS = (number: NumberRecord) => {
     setSelectedNumber(number);
-    setIsModalOpen(true);
+    setIsRtsModalOpen(true);
   };
 
   const handlePageChange = (page: number) => {
@@ -59,6 +64,33 @@ export default function AllNumbersPage() {
     router.push(`/numbers/${id}`);
   };
 
+  const handleSelectRow = (id: number) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedRows(paginatedNumbers.map(n => n.id));
+    } else {
+      setSelectedRows([]);
+    }
+  };
+
+  const isAllOnPageSelected = paginatedNumbers.length > 0 && selectedRows.length === paginatedNumbers.length;
+
+  const handleOpenAssignModal = () => {
+    setIsAssignModalOpen(true);
+  }
+  
+  const closeAssignModal = () => {
+    setIsAssignModalOpen(false);
+    setSelectedRows([]);
+  }
+
+  const selectedNumberRecords = numbers.filter(n => selectedRows.includes(n.id));
+
   return (
     <>
       <PageHeader
@@ -66,36 +98,54 @@ export default function AllNumbersPage() {
         description="Search, filter, and manage all numbers in the system."
       />
       <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Input 
-            placeholder="Search by mobile, name, location..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Input 
+              placeholder="Search by mobile, name, location..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-sm"
+            />
+            <Select value={statusFilter} onValueChange={(value) => {
+              setStatusFilter(value);
               setCurrentPage(1);
-            }}
-            className="max-w-sm"
-          />
-          <Select value={statusFilter} onValueChange={(value) => {
-            setStatusFilter(value);
-            setCurrentPage(1);
-          }}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="RTS">RTS</SelectItem>
-              <SelectItem value="Non-RTS">Non-RTS</SelectItem>
-            </SelectContent>
-          </Select>
+            }}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="RTS">RTS</SelectItem>
+                <SelectItem value="Non-RTS">Non-RTS</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+           {role === 'admin' && selectedRows.length > 0 && (
+             <Button onClick={handleOpenAssignModal}>
+               <UserPlus className="mr-2 h-4 w-4" />
+               Assign Selected ({selectedRows.length})
+             </Button>
+           )}
         </div>
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
+                 <TableHead padding="checkbox" className="w-12">
+                  {role === 'admin' && (
+                    <Checkbox
+                      checked={isAllOnPageSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all"
+                    />
+                  )}
+                </TableHead>
                 <TableHead>Sr.No</TableHead>
                 <TableHead>Mobile</TableHead>
+                <TableHead>Assigned To</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Purchase From</TableHead>
                 <TableHead>Location</TableHead>
@@ -106,31 +156,48 @@ export default function AllNumbersPage() {
             </TableHeader>
             <TableBody>
               {paginatedNumbers.map((num, index) => (
-                <TableRow key={num.id} onClick={() => handleRowClick(num.id)} className="cursor-pointer">
-                  <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
-                  <TableCell className="font-medium">{num.mobile}</TableCell>
-                  <TableCell>
+                <TableRow 
+                    key={num.id} 
+                    data-state={selectedRows.includes(num.id) && "selected"}
+                >
+                  <TableCell padding="checkbox">
+                    {role === 'admin' && (
+                      <Checkbox
+                        checked={selectedRows.includes(num.id)}
+                        onCheckedChange={() => handleSelectRow(num.id)}
+                        aria-label="Select row"
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                  </TableCell>
+                  <TableCell className="font-medium cursor-pointer" onClick={() => handleRowClick(num.id)}>{num.mobile}</TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.assignedTo}</TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
                     <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
                   </TableCell>
-                  <TableCell>{num.purchaseFrom}</TableCell>
-                  <TableCell>{num.location}</TableCell>
-                  <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.purchaseFrom}</TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.location}</TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
                     <Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Mark RTS</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {role === 'admin' && (
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Mark RTS</DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -142,9 +209,16 @@ export default function AllNumbersPage() {
       </div>
       {selectedNumber && (
         <RtsStatusModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen={isRtsModalOpen}
+          onClose={() => setIsRtsModalOpen(false)}
           number={selectedNumber}
+        />
+      )}
+      {role === 'admin' && (
+        <AssignNumbersModal
+            isOpen={isAssignModalOpen}
+            onClose={closeAssignModal}
+            selectedNumbers={selectedNumberRecords}
         />
       )}
     </>

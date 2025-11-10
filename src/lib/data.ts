@@ -15,7 +15,7 @@ export type NumberRecord = {
   upcStatus: 'Generated' | 'Pending';
   currentLocation: string;
   locationType: 'Store' | 'Employee' | 'Customer';
-  assignedTo: string;
+  assignedTo: string; // Can be 'Unassigned', or employee name like 'Naeem'
   purchaseDate: string | Date;
   notes?: string;
 };
@@ -55,8 +55,12 @@ export type Activity = {
 
 const now = new Date();
 
+export const DUMMY_EMPLOYEES = ['Naeem', 'Ramesh', 'Suresh'];
+
 export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) => {
   const isRTS = i % 3 !== 0;
+  const assignedEmployee = DUMMY_EMPLOYEES[i % DUMMY_EMPLOYEES.length];
+  
   return {
     id: i + 1,
     mobile: `98765432${String(10 + i).padStart(2, '0')}`,
@@ -64,14 +68,14 @@ export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) =
     purchaseFrom: `Vendor ${String.fromCharCode(65 + (i % 4))}`,
     purchasePrice: 120 + i * 5,
     salePrice: isRTS ? 200 + i * 5 : '',
-    rtsDate: isRTS ? null : addDays(now, i - 10), // Some dates in past, some in future
-    location: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${['Naeem', 'Ramesh', 'Suresh'][i % 3]}`,
-    name: ['Naeem', 'Ramesh', 'Suresh'][i % 3],
+    rtsDate: isRTS ? null : addDays(now, i - 10),
+    location: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${assignedEmployee}`,
+    name: assignedEmployee,
     mobileAlt: `91234567${String(89 + i).padStart(2, '0')}`,
     upcStatus: i % 4 === 0 ? 'Pending' : 'Generated',
-    currentLocation: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${['Naeem', 'Ramesh', 'Suresh'][i % 3]}`,
+    currentLocation: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${assignedEmployee}`,
     locationType: i % 2 === 0 ? 'Store' : 'Employee',
-    assignedTo: `${['Naeem', 'Ramesh', 'Suresh'][i % 3]} - 99887766${String(55+i).padStart(2, '0')}`,
+    assignedTo: i > 20 ? 'Unassigned' : assignedEmployee,
     purchaseDate: subDays(now, i * 3 + 5),
   };
 });
