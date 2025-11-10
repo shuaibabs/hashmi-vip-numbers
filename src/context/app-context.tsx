@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -34,6 +35,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reminders, setReminders] = useState<Reminder[]>(DUMMY_REMINDERS);
   const [activities, setActivities] = useState<Activity[]>(DUMMY_ACTIVITIES);
 
+  const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
+    setActivities(prev => [
+      { id: prev.length + 1, ...activity, timestamp: new Date() },
+      ...prev
+    ]);
+  };
+  
   useEffect(() => {
     const checkRtsDates = () => {
       let updated = false;
@@ -47,7 +55,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 action: 'Auto-updated to RTS',
                 description: `Number ${num.mobile} automatically became RTS.`
             })
-            return { ...num, status: 'RTS', rtsDate: '' };
+            return { ...num, status: 'RTS' as 'RTS', rtsDate: null };
           }
         }
         return num;
@@ -61,18 +69,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [numbers]);
 
 
-  const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
-    setActivities(prev => [
-      { id: prev.length + 1, ...activity, timestamp: new Date() },
-      ...prev
-    ]);
-  };
-
   const updateNumberStatus = (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
     setNumbers(prevNumbers =>
       prevNumbers.map(num =>
         num.id === id
-          ? { ...num, status, rtsDate: status === 'RTS' ? '' : rtsDate, notes: note ? `${num.notes || ''}\n${note}`.trim() : num.notes }
+          ? { ...num, status, rtsDate: status === 'RTS' ? null : rtsDate, notes: note ? `${num.notes || ''}\n${note}`.trim() : num.notes }
           : num
       )
     );

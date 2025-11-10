@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from 'react-hook-form';
@@ -20,8 +21,13 @@ const formSchema = z.object({
   status: z.enum(['RTS', 'Non-RTS']),
   rtsDate: z.date().optional(),
   note: z.string().optional(),
-}).refine(data => data.status === 'RTS' || (data.status === 'Non-RTS' && data.rtsDate), {
-  message: 'RTS Date is required when status is Non-RTS',
+}).refine(data => {
+  if (data.status === 'Non-RTS') {
+    return !!data.rtsDate;
+  }
+  return true;
+}, {
+  message: 'RTS Date is required for Non-RTS status.',
   path: ['rtsDate'],
 });
 
@@ -38,7 +44,7 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
     resolver: zodResolver(formSchema),
     defaultValues: {
       status: number.status,
-      rtsDate: number.rtsDate && number.status === 'Non-RTS' ? new Date(number.rtsDate) : undefined,
+      rtsDate: number.rtsDate ? new Date(number.rtsDate) : undefined,
       note: '',
     },
   });
@@ -70,6 +76,7 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
                       field.onChange(value);
                       if (value === 'RTS') {
                           form.setValue('rtsDate', undefined);
+                          form.clearErrors('rtsDate');
                       }
                   }} defaultValue={field.value}>
                     <FormControl>

@@ -1,3 +1,4 @@
+
 import { addDays, subDays } from "date-fns";
 
 export type NumberRecord = {
@@ -55,15 +56,15 @@ export type Activity = {
 const now = new Date();
 
 export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 20 }, (_, i) => {
-  const status = i % 3 === 0 ? 'Non-RTS' : 'RTS';
+  const isRTS = i % 3 !== 0;
   return {
     id: i + 1,
     mobile: `98765432${String(10 + i).padStart(2, '0')}`,
-    status: status,
+    status: isRTS ? 'RTS' : 'Non-RTS',
     purchaseFrom: `Vendor ${String.fromCharCode(65 + (i % 4))}`,
     purchasePrice: 120 + i * 5,
-    salePrice: status === 'RTS' ? 200 + i * 5 : '',
-    rtsDate: status === 'Non-RTS' ? addDays(now, i + 1) : '',
+    salePrice: isRTS ? 200 + i * 5 : '',
+    rtsDate: isRTS ? null : addDays(now, i - 10), // Some dates in past, some in future
     location: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${['Naeem', 'Ramesh', 'Suresh'][i % 3]}`,
     name: ['Naeem', 'Ramesh', 'Suresh'][i % 3],
     mobileAlt: `91234567${String(89 + i).padStart(2, '0')}`,
