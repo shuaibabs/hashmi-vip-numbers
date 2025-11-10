@@ -7,7 +7,7 @@ export type NumberRecord = {
   purchaseFrom: string;
   purchasePrice: number;
   salePrice: number | string;
-  rtsDate: string | Date;
+  rtsDate: string | Date | null;
   location: string;
   name: string;
   mobileAlt: string;
@@ -63,7 +63,7 @@ export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 20 }, (_, i) =
     purchaseFrom: `Vendor ${String.fromCharCode(65 + (i % 4))}`,
     purchasePrice: 120 + i * 5,
     salePrice: status === 'RTS' ? 200 + i * 5 : '',
-    rtsDate: status === 'RTS' ? subDays(now, i * 2) : '',
+    rtsDate: status === 'Non-RTS' ? addDays(now, i + 1) : '',
     location: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${['Naeem', 'Ramesh', 'Suresh'][i % 3]}`,
     name: ['Naeem', 'Ramesh', 'Suresh'][i % 3],
     mobileAlt: `91234567${String(89 + i).padStart(2, '0')}`,

@@ -20,8 +20,8 @@ const formSchema = z.object({
   status: z.enum(['RTS', 'Non-RTS']),
   rtsDate: z.date().optional(),
   note: z.string().optional(),
-}).refine(data => data.status === 'Non-RTS' || (data.status === 'RTS' && data.rtsDate), {
-  message: 'RTS Date is required when status is RTS',
+}).refine(data => data.status === 'RTS' || (data.status === 'Non-RTS' && data.rtsDate), {
+  message: 'RTS Date is required when status is Non-RTS',
   path: ['rtsDate'],
 });
 
@@ -38,13 +38,13 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
     resolver: zodResolver(formSchema),
     defaultValues: {
       status: number.status,
-      rtsDate: number.rtsDate ? new Date(number.rtsDate) : undefined,
+      rtsDate: number.rtsDate && number.status === 'Non-RTS' ? new Date(number.rtsDate) : undefined,
       note: '',
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    updateNumberStatus(number.id, values.status, values.rtsDate!, values.note);
+    updateNumberStatus(number.id, values.status, values.rtsDate || null, values.note);
     onClose();
     form.reset();
   }
@@ -66,7 +66,12 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value === 'RTS') {
+                          form.setValue('rtsDate', undefined);
+                      }
+                  }} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a status" />
@@ -81,13 +86,13 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
                 </FormItem>
               )}
             />
-            {form.watch('status') === 'RTS' && (
+            {form.watch('status') === 'Non-RTS' && (
               <FormField
                 control={form.control}
                 name="rtsDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>RTS Date</FormLabel>
+                    <FormLabel>Schedule RTS Date</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -112,7 +117,7 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                          disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
                           initialFocus
                         />
                       </PopoverContent>
@@ -127,7 +132,7 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
               name="note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Add Note</FormLabel>
+                  <FormLabel>Add Note (Optional)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Add a note for this status change..." {...field} />
                   </FormControl>

@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_PURCHASES, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type PurchaseRecord, type Reminder, type SaleRecord } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { isToday, isPast } from 'date-fns';
 
 type UserRole = 'admin' | 'employee';
 
@@ -15,7 +16,7 @@ type AppContextType = {
   purchases: PurchaseRecord[];
   reminders: Reminder[];
   activities: Activity[];
-  updateNumberStatus: (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date, note?: string) => void;
+  updateNumberStatus: (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   toggleSalePaymentStatus: (id: number) => void;
   markReminderDone: (id: number) => void;
   addPurchase: (purchase: Omit<PurchaseRecord, 'id'>) => void;
@@ -33,6 +34,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reminders, setReminders] = useState<Reminder[]>(DUMMY_REMINDERS);
   const [activities, setActivities] = useState<Activity[]>(DUMMY_ACTIVITIES);
 
+  useEffect(() => {
+    const checkRtsDates = () => {
+      let updated = false;
+      const updatedNumbers = numbers.map(num => {
+        if (num.status === 'Non-RTS' && num.rtsDate) {
+          const rtsDateObj = new Date(num.rtsDate);
+          if (isToday(rtsDateObj) || isPast(rtsDateObj)) {
+            updated = true;
+            addActivity({
+                employeeName: 'System',
+                action: 'Auto-updated to RTS',
+                description: `Number ${num.mobile} automatically became RTS.`
+            })
+            return { ...num, status: 'RTS', rtsDate: '' };
+          }
+        }
+        return num;
+      });
+      if (updated) {
+        setNumbers(updatedNumbers);
+      }
+    };
+    const interval = setInterval(checkRtsDates, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, [numbers]);
+
+
   const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
     setActivities(prev => [
       { id: prev.length + 1, ...activity, timestamp: new Date() },
@@ -40,11 +68,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
   };
 
-  const updateNumberStatus = (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date, note?: string) => {
+  const updateNumberStatus = (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
     setNumbers(prevNumbers =>
       prevNumbers.map(num =>
         num.id === id
-          ? { ...num, status, rtsDate: status === 'RTS' ? rtsDate : '', notes: note ? `${num.notes || ''}\n${note}`.trim() : num.notes }
+          ? { ...num, status, rtsDate: status === 'RTS' ? '' : rtsDate, notes: note ? `${num.notes || ''}\n${note}`.trim() : num.notes }
           : num
       )
     );
