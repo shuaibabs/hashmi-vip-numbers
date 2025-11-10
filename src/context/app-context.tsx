@@ -75,6 +75,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
     const newActivity = { id: allActivities.length + 1, ...activity, timestamp: new Date() };
     setAllActivities(prev => [newActivity, ...prev]);
+    
+    // Show toast notification for admin
+    if (role === 'admin') {
+      toast({
+        title: `Activity: ${activity.employeeName} ${activity.action}`,
+        description: activity.description,
+      });
+    }
   };
   
   useEffect(() => {
@@ -105,25 +113,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   const updateNumberStatus = (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
+    let updatedNumberRef: NumberRecord | undefined;
     setAllNumbers(prevNumbers =>
-      prevNumbers.map(num =>
-        num.id === id
-          ? { ...num, status, rtsDate: status === 'RTS' ? null : rtsDate, notes: note ? `${num.notes || ''}\n${note}`.trim() : num.notes }
-          : num
-      )
+      prevNumbers.map(num => {
+        if (num.id === id) {
+          const updatedNum = { ...num, status, rtsDate: status === 'RTS' ? null : rtsDate, notes: note ? `${num.notes || ''}\n${note}`.trim() : num.notes };
+          updatedNumberRef = updatedNum;
+          return updatedNum;
+        }
+        return num;
+      })
     );
-    const updatedNumber = allNumbers.find(n => n.id === id);
-    if(updatedNumber) {
+    
+    if(updatedNumberRef) {
         addActivity({
             employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
             action: 'Updated RTS Status',
-            description: `Marked ${updatedNumber.mobile} as ${status}`
-        })
+            description: `Marked ${updatedNumberRef.mobile} as ${status}`
+        });
+        toast({
+          title: 'Success!',
+          description: 'Status updated successfully!',
+        });
     }
-    toast({
-      title: 'Success!',
-      description: 'Status updated successfully!',
-    });
   };
 
   const toggleSalePaymentStatus = (id: number) => {
