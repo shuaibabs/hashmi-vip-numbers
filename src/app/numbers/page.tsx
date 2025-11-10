@@ -127,8 +127,8 @@ export default function AllNumbersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Mark RTS</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Mark RTS</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
