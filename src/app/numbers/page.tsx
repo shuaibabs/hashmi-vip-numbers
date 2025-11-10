@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
 import { PageHeader } from '@/components/page-header';
@@ -19,6 +20,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function AllNumbersPage() {
   const { numbers } = useApp();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
@@ -51,6 +53,10 @@ export default function AllNumbersPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleRowClick = (id: number) => {
+    router.push(`/numbers/${id}`);
   };
 
   return (
@@ -100,7 +106,7 @@ export default function AllNumbersPage() {
             </TableHeader>
             <TableBody>
               {paginatedNumbers.map((num, index) => (
-                <TableRow key={num.id}>
+                <TableRow key={num.id} onClick={() => handleRowClick(num.id)} className="cursor-pointer">
                   <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
                   <TableCell className="font-medium">{num.mobile}</TableCell>
                   <TableCell>
@@ -114,14 +120,13 @@ export default function AllNumbersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View</DropdownMenuItem>
                         <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Mark RTS</DropdownMenuItem>
                       </DropdownMenuContent>
