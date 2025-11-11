@@ -33,6 +33,7 @@ const navItems = [
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/sales', label: 'Sales', icon: DollarSign, adminOnly: false },
   { href: '/reminders', label: 'Work Reminders', icon: ClipboardList, adminOnly: false },
+  { href: '/cocp', label: 'COCP', icon: RadioTower, adminOnly: false },
   { href: '/activities', label: 'Employee Activities', icon: History, adminOnly: true },
   { href: '/import-export', label: 'Import / Export', icon: FileOutput, adminOnly: false },
 ];

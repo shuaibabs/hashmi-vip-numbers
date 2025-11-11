@@ -22,6 +22,7 @@ export type NumberRecord = {
   activationStatus: 'Done' | 'Pending' | 'Fail';
   uploadStatus: 'Done' | 'Pending' | 'Fail';
   checkInDate: Date | null;
+  safeCustodyDate: Date | null;
 };
 
 export type SaleRecord = {
@@ -86,6 +87,7 @@ export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) =
     activationStatus: isRTS ? 'Done' : 'Pending',
     uploadStatus: i % 5 === 0 ? 'Pending' : 'Done',
     checkInDate: i % 7 === 0 ? null : subDays(now, i % 7),
+    safeCustodyDate: numberTypes[i % numberTypes.length] === 'COCP' ? subDays(now, i * 2) : null,
   };
 });
 
