@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -535,7 +536,7 @@ const sidebarMenuButtonVariants = cva(
 
 const SidebarMenuButton = React.forwardRef<
   HTMLAnchorElement,
-  Omit<React.ComponentProps<"a">, "href"> & {
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
   } & VariantProps<typeof sidebarMenuButtonVariants>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname } from 'next/navigation';
@@ -57,7 +58,7 @@ export function AppSidebar() {
           {navItems.map((item) =>
             (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref>
+                <Link href={item.href} asChild>
                   <SidebarMenuButton
                       isActive={pathname === item.href}
                       tooltip={item.label}
