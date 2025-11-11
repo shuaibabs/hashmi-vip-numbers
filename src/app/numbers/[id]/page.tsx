@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -58,9 +59,12 @@ export default function NumberDetailsPage() {
               <CardTitle className="text-2xl">{number.mobile}</CardTitle>
               <CardDescription>Assigned to {number.assignedTo}</CardDescription>
             </div>
-            <Badge variant={number.status === 'RTS' ? 'default' : 'destructive'} className={number.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>
-              {number.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+                <Badge variant="outline">{number.numberType}</Badge>
+                <Badge variant={number.status === 'RTS' ? 'default' : 'destructive'} className={number.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>
+                {number.status}
+                </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">

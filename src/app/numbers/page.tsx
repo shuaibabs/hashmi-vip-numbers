@@ -29,6 +29,7 @@ export default function AllNumbersPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isRtsModalOpen, setIsRtsModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
@@ -40,7 +41,8 @@ export default function AllNumbersPage() {
   const sortedAndFilteredNumbers = useMemo(() => {
     let sortableItems = [...numbers]
       .filter(num => 
-        (statusFilter === 'all' || num.status === statusFilter)
+        (statusFilter === 'all' || num.status === statusFilter) &&
+        (typeFilter === 'all' || num.numberType === typeFilter)
       )
       .filter(num => 
         num.mobile.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,7 +77,7 @@ export default function AllNumbersPage() {
     }
 
     return sortableItems;
-  }, [numbers, searchTerm, statusFilter, sortConfig]);
+  }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig]);
 
   const totalPages = Math.ceil(sortedAndFilteredNumbers.length / ITEMS_PER_PAGE);
   const paginatedNumbers = sortedAndFilteredNumbers.slice(
@@ -166,7 +168,7 @@ export default function AllNumbersPage() {
       />
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Input 
               placeholder="Search by mobile, name, location..."
               value={searchTerm}
@@ -187,6 +189,20 @@ export default function AllNumbersPage() {
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="RTS">RTS</SelectItem>
                 <SelectItem value="Non-RTS">Non-RTS</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={(value) => {
+              setTypeFilter(value);
+              setCurrentPage(1);
+            }}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Prepaid">Prepaid</SelectItem>
+                <SelectItem value="Postpaid">Postpaid</SelectItem>
+                <SelectItem value="COCP">COCP</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -212,12 +228,12 @@ export default function AllNumbersPage() {
                 </TableHead>
                 <TableHead>Sr.No</TableHead>
                 <SortableHeader column="mobile" label="Mobile" />
+                <SortableHeader column="numberType" label="Number Type" />
                 <SortableHeader column="assignedTo" label="Assigned To" />
                 <SortableHeader column="status" label="Status" />
                 <SortableHeader column="purchaseFrom" label="Purchase From" />
                 <SortableHeader column="location" label="Location" />
                 <SortableHeader column="rtsDate" label="RTS Date" />
-                <SortableHeader column="upcStatus" label="UPC Status" />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -240,6 +256,7 @@ export default function AllNumbersPage() {
                     {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                   </TableCell>
                   <TableCell className="font-medium cursor-pointer" onClick={() => handleRowClick(num.id)}>{num.mobile}</TableCell>
+                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.numberType}</TableCell>
                   <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.assignedTo}</TableCell>
                   <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
                     <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
@@ -247,9 +264,6 @@ export default function AllNumbersPage() {
                   <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.purchaseFrom}</TableCell>
                   <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.location}</TableCell>
                   <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
-                    <Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge>
-                  </TableCell>
                   <TableCell className="text-right">
                    {(role === 'admin' || role === 'employee') && (
                     <DropdownMenu>

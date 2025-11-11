@@ -5,6 +5,7 @@ export type NumberRecord = {
   id: number;
   mobile: string;
   status: 'RTS' | 'Non-RTS';
+  numberType: 'Prepaid' | 'Postpaid' | 'COCP';
   purchaseFrom: string;
   purchasePrice: number;
   salePrice: number | string;
@@ -60,6 +61,8 @@ const now = new Date();
 
 export const DUMMY_EMPLOYEES = ['Naeem', 'Ramesh', 'Suresh'];
 
+const numberTypes: ('Prepaid' | 'Postpaid' | 'COCP')[] = ['Prepaid', 'Postpaid', 'COCP'];
+
 export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) => {
   const isRTS = i % 3 !== 0;
   const assignedEmployee = DUMMY_EMPLOYEES[i % DUMMY_EMPLOYEES.length];
@@ -68,6 +71,7 @@ export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) =
     id: i + 1,
     mobile: `98765432${String(10 + i).padStart(2, '0')}`,
     status: isRTS ? 'RTS' : 'Non-RTS',
+    numberType: numberTypes[i % numberTypes.length],
     purchaseFrom: `Vendor ${String.fromCharCode(65 + (i % 4))}`,
     purchasePrice: 120 + i * 5,
     salePrice: isRTS ? 200 + i * 5 : '',
