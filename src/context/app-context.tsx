@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES, NewNumberData } from '@/lib/data';
+import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES, NewNumberData, DUMMY_DEALER_PURCHASES, DealerPurchaseRecord, NewDealerPurchaseData } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
 
@@ -20,6 +20,7 @@ type AppContextType = {
   reminders: Reminder[];
   activities: Activity[];
   employees: string[];
+  dealerPurchases: DealerPurchaseRecord[];
   updateNumberStatus: (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   toggleSalePaymentStatus: (id: number) => void;
   markReminderDone: (id: number) => void;
@@ -29,6 +30,9 @@ type AppContextType = {
   checkInNumber: (id: number) => void;
   sellNumber: (id: number, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => void;
   addNumber: (data: NewNumberData) => void;
+  addDealerPurchase: (data: NewDealerPurchaseData) => void;
+  toggleDealerPaymentStatus: (id: number) => void;
+  toggleDealerPortOutStatus: (id: number) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -42,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [allSales, setAllSales] = useState<SaleRecord[]>(DUMMY_SALES);
   const [allReminders, setAllReminders] = useState<Reminder[]>(DUMMY_REMINDERS);
   const [allActivities, setAllActivities] = useState<Activity[]>(DUMMY_ACTIVITIES);
+  const [allDealerPurchases, setAllDealerPurchases] = useState<DealerPurchaseRecord[]>(DUMMY_DEALER_PURCHASES);
   const [employees] = useState<string[]>(DUMMY_EMPLOYEES);
 
   // These will hold the filtered data based on role
@@ -49,6 +54,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sales, setSales] = useState<SaleRecord[]>(allSales);
   const [reminders, setReminders] = useState<Reminder[]>(allReminders);
   const [activities, setActivities] = useState<Activity[]>(allActivities);
+  const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>(allDealerPurchases);
 
   useEffect(() => {
     if (role === 'admin') {
@@ -56,6 +62,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSales(allSales);
       setReminders(allReminders);
       setActivities(allActivities);
+      setDealerPurchases(allDealerPurchases);
     } else {
       // It's an employee, filter all data for the simulated employee
       setNumbers(allNumbers.filter(n => n.assignedTo === SIMULATED_EMPLOYEE_NAME));
@@ -64,10 +71,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSales(allSales.filter(s => employeeMobiles.has(s.mobile)));
       
       setReminders(allReminders.filter(r => r.assignedTo === SIMULATED_EMPLOYEE_NAME));
+      setDealerPurchases(allDealerPurchases); // Employees can see all dealer purchases for now
       // For simplicity, we show all activities to employees for now
       setActivities(allActivities);
     }
-  }, [role, allNumbers, allSales, allReminders, allActivities]);
+  }, [role, allNumbers, allSales, allReminders, allActivities, allDealerPurchases]);
 
 
   const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
@@ -293,6 +301,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
       description: `Successfully added ${data.mobile} to the inventory.`
     });
   };
+  
+  const addDealerPurchase = (data: NewDealerPurchaseData) => {
+    const newId = Math.max(0, ...allDealerPurchases.map(p => p.id)) + 1;
+    const newPurchase: DealerPurchaseRecord = {
+      id: newId,
+      ...data,
+      paymentStatus: 'Pending',
+      portOutStatus: 'Pending',
+    };
+    setAllDealerPurchases(prev => [newPurchase, ...prev]);
+    addActivity({
+      employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+      action: 'Added Dealer Purchase',
+      description: `Added new dealer purchase for ${data.mobile}`,
+    });
+    toast({
+      title: 'Dealer Purchase Added',
+      description: `Successfully added ${data.mobile}.`,
+    });
+  };
+
+  const toggleDealerPaymentStatus = (id: number) => {
+    setAllDealerPurchases(prev =>
+      prev.map(p =>
+        p.id === id
+          ? { ...p, paymentStatus: p.paymentStatus === 'Done' ? 'Pending' : 'Done' }
+          : p
+      )
+    );
+  };
+  
+  const toggleDealerPortOutStatus = (id: number) => {
+    setAllDealerPurchases(prev =>
+      prev.map(p =>
+        p.id === id
+          ? { ...p, portOutStatus: p.portOutStatus === 'Done' ? 'Pending' : 'Done' }
+          : p
+      )
+    );
+  };
 
   const value = {
     role,
@@ -302,6 +350,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reminders,
     activities,
     employees,
+    dealerPurchases,
     updateNumberStatus,
     toggleSalePaymentStatus,
     markReminderDone,
@@ -311,6 +360,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     checkInNumber,
     sellNumber,
     addNumber,
+    addDealerPurchase,
+    toggleDealerPaymentStatus,
+    toggleDealerPortOutStatus,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

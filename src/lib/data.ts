@@ -61,6 +61,16 @@ export type Activity = {
   timestamp: Date;
 };
 
+export type DealerPurchaseRecord = {
+  id: number;
+  mobile: string;
+  price: number;
+  paymentStatus: 'Pending' | 'Done';
+  portOutStatus: 'Pending' | 'Done';
+}
+
+export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'paymentStatus' | 'portOutStatus'>;
+
 const now = new Date();
 
 export const DUMMY_EMPLOYEES = ['Naeem', 'Ramesh', 'Suresh'];
@@ -103,6 +113,15 @@ export const DUMMY_SALES: SaleRecord[] = DUMMY_NUMBERS.filter(n => n.status === 
   paymentStatus: i % 2 === 0 ? 'Done' : 'Pending',
   saleDate: subDays(now, i),
 }));
+
+export const DUMMY_DEALER_PURCHASES: DealerPurchaseRecord[] = Array.from({ length: 5 }, (_, i) => ({
+    id: i + 1,
+    mobile: `88888888${String(10 + i).padStart(2, '0')}`,
+    price: 50 + i * 10,
+    paymentStatus: i % 2 === 0 ? 'Done' : 'Pending',
+    portOutStatus: i % 3 === 0 ? 'Done' : 'Pending',
+}));
+
 
 export const DUMMY_PURCHASES: PurchaseRecord[] = DUMMY_NUMBERS.map((n, i) => ({
   id: i + 1,

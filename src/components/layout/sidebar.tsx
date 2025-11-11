@@ -21,6 +21,7 @@ import {
   History,
   FileOutput,
   Signal,
+  ShoppingCart,
 } from 'lucide-react';
 import { useApp } from '@/context/app-context';
 import Link from 'next/link';
@@ -32,6 +33,7 @@ const navItems = [
   { href: '/activation', label: 'Activation', icon: Signal, adminOnly: false },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/sales', label: 'Sales', icon: DollarSign, adminOnly: false },
+  { href: '/dealer-purchases', label: 'Dealer Purchases', icon: ShoppingCart, adminOnly: false },
   { href: '/reminders', label: 'Work Reminders', icon: ClipboardList, adminOnly: false },
   { href: '/cocp', label: 'COCP', icon: RadioTower, adminOnly: false },
   { href: '/activities', label: 'Employee Activities', icon: History, adminOnly: true },
