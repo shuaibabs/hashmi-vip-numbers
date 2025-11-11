@@ -5,16 +5,21 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Trash } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function PortOutPage() {
-  const { portOuts, loading } = useApp();
+  const { portOuts, loading, deletePortOuts, role } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
   const totalPages = Math.ceil(portOuts.length / ITEMS_PER_PAGE);
   const paginatedPortOuts = [...portOuts]
@@ -28,16 +33,72 @@ export default function PortOutPage() {
     setCurrentPage(page);
   };
 
+  const handleSelectRow = (id: number) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedRows(paginatedPortOuts.map(p => p.id));
+    } else {
+      setSelectedRows([]);
+    }
+  };
+  
+  const handleDeleteSelected = () => {
+    deletePortOuts(selectedRows);
+    setSelectedRows([]);
+  }
+
+  const isAllOnPageSelected = paginatedPortOuts.length > 0 && paginatedPortOuts.every(p => selectedRows.includes(p.id));
+  const isSomeOnPageSelected = selectedRows.length > 0 && !isAllOnPageSelected;
+
   return (
     <>
       <PageHeader
         title="Port Out History"
         description="A log of all numbers that have been successfully ported out."
-      />
+      >
+        {selectedRows.length > 0 && role === 'admin' && (
+           <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedRows.length})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete {selectedRows.length} record(s) from the port out history.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSelected}>
+                  Yes, delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </PageHeader>
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                {role === 'admin' && (
+                  <Checkbox
+                    checked={isAllOnPageSelected}
+                    onCheckedChange={(checked) => handleSelectAll(checked)}
+                    aria-label="Select all"
+                  />
+                )}
+              </TableHead>
               <TableHead>Sr.No</TableHead>
               <TableHead>Mobile</TableHead>
               <TableHead>Sold To</TableHead>
@@ -50,10 +111,19 @@ export default function PortOutPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={8} />
+                <TableSpinner colSpan={9} />
             ) : paginatedPortOuts.length > 0 ? (
                 paginatedPortOuts.map((record, index) => (
-                <TableRow key={record.id}>
+                <TableRow key={record.id} data-state={selectedRows.includes(record.id) && "selected"}>
+                    <TableCell>
+                      {role === 'admin' && (
+                        <Checkbox
+                          checked={selectedRows.includes(record.id)}
+                          onCheckedChange={() => handleSelectRow(record.id)}
+                          aria-label="Select row"
+                        />
+                      )}
+                    </TableCell>
                     <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
                     <TableCell className="font-medium">{record.mobile}</TableCell>
                     <TableCell>{record.soldTo}</TableCell>
@@ -74,7 +144,7 @@ export default function PortOutPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                         No port out records found.
                     </TableCell>
                 </TableRow>
@@ -92,4 +162,3 @@ export default function PortOutPage() {
     </>
   );
 }
-

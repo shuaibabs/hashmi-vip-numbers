@@ -34,6 +34,7 @@ type AppContextType = {
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: number, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
+  deletePortOuts: (ids: number[]) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -394,6 +395,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deletePortOuts = (ids: number[]) => {
+    setAllPortOuts(prev => prev.filter(p => !ids.includes(p.id)));
+    addActivity({
+        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+        action: 'Deleted Port Out Records',
+        description: `Deleted ${ids.length} record(s) from port out history.`
+    });
+    toast({
+        title: 'Deletion Successful',
+        description: `Successfully deleted ${ids.length} port out record(s).`
+    })
+  }
+
 
   const value = {
     loading,
@@ -417,6 +431,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addNumber,
     addDealerPurchase,
     updateDealerPurchase,
+    deletePortOuts,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
