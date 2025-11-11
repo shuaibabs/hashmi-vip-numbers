@@ -35,6 +35,8 @@ export type SaleRecord = {
   salePrice: number;
   paymentStatus: 'Pending' | 'Done';
   saleDate: string | Date;
+  upcStatus: 'Generated' | 'Pending';
+  portOutStatus: 'Pending' | 'Done';
 };
 
 export type PurchaseRecord = {
@@ -112,6 +114,8 @@ export const DUMMY_SALES: SaleRecord[] = DUMMY_NUMBERS.filter(n => n.status === 
   salePrice: n.salePrice as number,
   paymentStatus: i % 2 === 0 ? 'Done' : 'Pending',
   saleDate: subDays(now, i),
+  upcStatus: n.upcStatus,
+  portOutStatus: i % 3 === 0 ? 'Done' : 'Pending',
 }));
 
 export const DUMMY_DEALER_PURCHASES: DealerPurchaseRecord[] = Array.from({ length: 5 }, (_, i) => ({

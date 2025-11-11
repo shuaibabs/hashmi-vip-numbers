@@ -23,7 +23,7 @@ type AppContextType = {
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
   updateNumberStatus: (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
-  toggleSalePaymentStatus: (id: number) => void;
+  updateSaleStatuses: (id: number, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
   markReminderDone: (id: number) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void;
   assignNumbersToEmployee: (numberIds: number[], employeeName: string) => void;
@@ -151,14 +151,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const toggleSalePaymentStatus = (id: number) => {
+  const updateSaleStatuses = (id: number, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
+    let updatedSale: SaleRecord | undefined;
     setAllSales(prevSales =>
-      prevSales.map(sale =>
-        sale.id === id
-          ? { ...sale, paymentStatus: sale.paymentStatus === 'Done' ? 'Pending' : 'Done' }
-          : sale
-      )
+      prevSales.map(sale => {
+        if (sale.id === id) {
+          updatedSale = { ...sale, ...statuses };
+          return updatedSale;
+        }
+        return sale;
+      })
     );
+    
+    if (updatedSale) {
+      addActivity({
+        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+        action: 'Updated Sale Status',
+        description: `Updated sale for ${updatedSale.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}.`,
+      });
+      toast({
+        title: 'Sale Updated',
+        description: `Sale record for ${updatedSale.mobile} has been updated.`,
+      });
+    }
   };
 
   const markReminderDone = (id: number) => {
@@ -265,7 +280,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       salePrice: details.salePrice,
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
-      saleDate: details.saleDate
+      portOutStatus: 'Pending',
+      upcStatus: details.upcStatus,
+      saleDate: details.saleDate,
     };
 
     setAllSales(prev => [newSale, ...prev]);
@@ -365,7 +382,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     employees,
     dealerPurchases,
     updateNumberStatus,
-    toggleSalePaymentStatus,
+    updateSaleStatuses,
     markReminderDone,
     addActivity,
     assignNumbersToEmployee,
