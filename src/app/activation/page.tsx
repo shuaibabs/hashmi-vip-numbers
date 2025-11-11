@@ -9,12 +9,16 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Pagination } from '@/components/pagination';
 import { Power } from 'lucide-react';
+import { NumberRecord } from '@/lib/data';
+import { ActivationModal } from '@/components/activation-modal';
 
 const ITEMS_PER_PAGE = 15;
 
 export default function ActivationPage() {
-  const { numbers, activateNumber } = useApp();
+  const { numbers } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const pendingActivationNumbers = numbers.filter(n => n.activationStatus !== 'Done');
 
@@ -28,6 +32,11 @@ export default function ActivationPage() {
     setCurrentPage(page);
   };
   
+  const handleActivateClick = (number: NumberRecord) => {
+    setSelectedNumber(number);
+    setIsModalOpen(true);
+  };
+
   const getStatusBadge = (status: 'Done' | 'Pending' | 'Fail') => {
     switch (status) {
       case 'Done':
@@ -64,8 +73,8 @@ export default function ActivationPage() {
                 <TableCell>{getStatusBadge(num.uploadStatus)}</TableCell>
                 <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
                 <TableCell className="text-right">
-                  {num.activationStatus === 'Pending' && (
-                    <Button size="sm" onClick={() => activateNumber(num.id)}>
+                  {num.activationStatus !== 'Done' && (
+                    <Button size="sm" onClick={() => handleActivateClick(num)}>
                       <Power className="mr-2 h-4 w-4" />
                       Activate
                     </Button>
@@ -90,6 +99,13 @@ export default function ActivationPage() {
         itemsPerPage={ITEMS_PER_PAGE}
         totalItems={pendingActivationNumbers.length}
       />
+      {selectedNumber && (
+        <ActivationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          number={selectedNumber}
+        />
+      )}
     </>
   );
 }

@@ -28,6 +28,7 @@ type AppContextType = {
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void;
   assignNumbersToEmployee: (numberIds: number[], employeeName: string) => void;
   activateNumber: (id: number) => void;
+  updateActivationDetails: (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -245,6 +246,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateActivationDetails = (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => {
+    let updatedNumberRef: NumberRecord | undefined;
+    setAllNumbers(prevNumbers =>
+      prevNumbers.map(num => {
+        if (num.id === id) {
+          const isActivated = details.activationStatus === 'Done';
+          const updatedNum = { 
+            ...num, 
+            activationStatus: details.activationStatus,
+            uploadStatus: details.uploadStatus,
+            status: isActivated ? 'RTS' as 'RTS' : num.status,
+            rtsDate: isActivated ? new Date() : num.rtsDate,
+            notes: details.note ? `${num.notes || ''}\n---Activation Note---\n${details.note}`.trim() : num.notes 
+          };
+          updatedNumberRef = updatedNum;
+          return updatedNum;
+        }
+        return num;
+      })
+    );
+
+    if (updatedNumberRef) {
+      addActivity({
+        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+        action: 'Updated Activation Status',
+        description: `Updated ${updatedNumberRef.mobile}. Activation: ${details.activationStatus}, Upload: ${details.uploadStatus}`
+      });
+      toast({
+        title: "Activation Details Updated",
+        description: `Details for number ${updatedNumberRef.mobile} have been updated.`,
+      });
+    }
+  };
+
   const value = {
     role,
     setRole,
@@ -261,6 +296,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addActivity,
     assignNumbersToEmployee,
     activateNumber,
+    updateActivationDetails,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
