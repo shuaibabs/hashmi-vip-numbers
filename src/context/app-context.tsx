@@ -29,6 +29,7 @@ type AppContextType = {
   assignNumbersToEmployee: (numberIds: number[], employeeName: string) => void;
   activateNumber: (id: number) => void;
   updateActivationDetails: (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
+  checkInNumber: (id: number) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -188,6 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         notes: '',
         activationStatus: 'Pending' as 'Pending',
         uploadStatus: 'Pending' as 'Pending',
+        checkInDate: null,
       };
       setAllNumbers(prev => [newNumber, ...prev]);
 
@@ -279,6 +281,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
     }
   };
+  
+  const checkInNumber = (id: number) => {
+    let checkedInNumber: NumberRecord | undefined;
+    setAllNumbers(prevNumbers =>
+      prevNumbers.map(num => {
+        if (num.id === id) {
+          checkedInNumber = { ...num, checkInDate: new Date() };
+          return checkedInNumber;
+        }
+        return num;
+      })
+    );
+
+    if (checkedInNumber) {
+      addActivity({
+        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+        action: 'Checked In Number',
+        description: `Checked in SIM number ${checkedInNumber.mobile}.`
+      });
+      toast({
+        title: "Check-In Successful",
+        description: `Number ${checkedInNumber.mobile} has been checked in.`,
+      });
+    }
+  };
 
   const value = {
     role,
@@ -297,6 +324,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     assignNumbersToEmployee,
     activateNumber,
     updateActivationDetails,
+    checkInNumber,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

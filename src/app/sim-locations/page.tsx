@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -6,11 +7,14 @@ import { PageHeader } from '@/components/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/pagination';
+import { Button } from '@/components/ui/button';
+import { LogIn } from 'lucide-react';
+import { format } from 'date-fns';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function SimLocationsPage() {
-  const { numbers } = useApp();
+  const { numbers, checkInNumber } = useApp();
   const [locationFilter, setLocationFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -56,6 +60,8 @@ export default function SimLocationsPage() {
               <TableHead>Current Location</TableHead>
               <TableHead>Location Type</TableHead>
               <TableHead>Assigned To</TableHead>
+              <TableHead>Last Checked In</TableHead>
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -66,11 +72,18 @@ export default function SimLocationsPage() {
                 <TableCell>{num.currentLocation}</TableCell>
                 <TableCell>{num.locationType}</TableCell>
                 <TableCell>{num.assignedTo}</TableCell>
+                <TableCell>{num.checkInDate ? format(new Date(num.checkInDate), 'PPP p') : 'N/A'}</TableCell>
+                <TableCell className="text-right">
+                  <Button size="sm" variant="outline" onClick={() => checkInNumber(num.id)}>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Check In
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {paginatedNumbers.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                         No locations found for this filter.
                     </TableCell>
                 </TableRow>
