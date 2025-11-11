@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES } from '@/lib/data';
+import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES, NewNumberData } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
 
@@ -28,6 +28,7 @@ type AppContextType = {
   updateActivationDetails: (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
   checkInNumber: (id: number) => void;
   sellNumber: (id: number, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => void;
+  addNumber: (data: NewNumberData) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -269,6 +270,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const addNumber = (data: NewNumberData) => {
+    const newId = Math.max(...allNumbers.map(n => n.id)) + 1;
+    const newNumber: NumberRecord = {
+      id: newId,
+      ...data,
+      status: 'Non-RTS',
+      rtsDate: null,
+      activationStatus: 'Pending',
+      uploadStatus: 'Pending',
+      checkInDate: null,
+      safeCustodyDate: null,
+    };
+    setAllNumbers(prev => [newNumber, ...prev]);
+    addActivity({
+      employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+      action: 'Added Number',
+      description: `Manually added new number ${data.mobile}`
+    });
+    toast({
+      title: "Number Added",
+      description: `Successfully added ${data.mobile} to the inventory.`
+    });
+  };
+
   const value = {
     role,
     setRole,
@@ -285,6 +310,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateActivationDetails,
     checkInNumber,
     sellNumber,
+    addNumber,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

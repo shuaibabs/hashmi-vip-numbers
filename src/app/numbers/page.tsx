@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -165,7 +165,18 @@ export default function AllNumbersPage() {
       <PageHeader
         title="All Numbers (Master Inventory)"
         description="Search, filter, and manage all numbers in the system."
-      />
+      >
+        <div className="flex items-center gap-2">
+            <Button onClick={() => router.push('/numbers/new')}>
+                <PlusCircle className="mr-2 h-4 w-4"/>
+                New Number
+            </Button>
+             <Button variant="outline" onClick={() => router.push('/import-export')}>
+                <FileInput className="mr-2 h-4 w-4"/>
+                Import / Export
+            </Button>
+        </div>
+      </PageHeader>
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-wrap">
@@ -274,8 +285,8 @@ export default function AllNumbersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Mark RTS</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Update RTS Status</DropdownMenuItem>
                          <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={(e) => { e.stopPropagation(); handleSellNumber(num); }}>
                           <DollarSign className="mr-2 h-4 w-4" />

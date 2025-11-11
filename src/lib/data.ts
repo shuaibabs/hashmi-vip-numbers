@@ -25,6 +25,9 @@ export type NumberRecord = {
   safeCustodyDate: Date | null;
 };
 
+export type NewNumberData = Omit<NumberRecord, 'id' | 'status' | 'rtsDate' | 'activationStatus' | 'uploadStatus' | 'checkInDate' | 'safeCustodyDate'>;
+
+
 export type SaleRecord = {
   id: number;
   mobile: string;
@@ -84,6 +87,7 @@ export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) =
     currentLocation: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${assignedEmployee}`,
     assignedTo: i > 20 ? 'Unassigned' : assignedEmployee,
     purchaseDate: subDays(now, i * 3 + 5),
+    notes: 'Initial record',
     activationStatus: isRTS ? 'Done' : 'Pending',
     uploadStatus: i % 5 === 0 ? 'Pending' : 'Done',
     checkInDate: i % 7 === 0 ? null : subDays(now, i % 7),

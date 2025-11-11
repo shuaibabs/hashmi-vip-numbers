@@ -26,6 +26,11 @@ export default function NumberDetailsPage() {
   const { numbers } = useApp();
   const router = useRouter();
 
+  // The 'new' route is now handled by its own page
+  if (id === 'new') {
+    return null;
+  }
+  
   const number: NumberRecord | undefined = numbers.find(n => n.id === Number(id));
 
   if (!number) {
