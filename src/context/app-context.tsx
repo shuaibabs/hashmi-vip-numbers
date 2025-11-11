@@ -25,7 +25,6 @@ type AppContextType = {
   markReminderDone: (id: number) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void;
   assignNumbersToEmployee: (numberIds: number[], employeeName: string) => void;
-  activateNumber: (id: number) => void;
   updateActivationDetails: (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
   checkInNumber: (id: number) => void;
   sellNumber: (id: number, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => void;
@@ -182,31 +181,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const activateNumber = (id: number) => {
-    let activatedNumber: NumberRecord | undefined;
-    setAllNumbers(prevNumbers => 
-      prevNumbers.map(num => {
-        if (num.id === id) {
-          activatedNumber = { ...num, status: 'RTS', activationStatus: 'Done', rtsDate: new Date() };
-          return activatedNumber;
-        }
-        return num;
-      })
-    );
-
-    if (activatedNumber) {
-      addActivity({
-        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
-        action: 'Activated Number',
-        description: `Activated SIM number ${activatedNumber.mobile}.`
-      });
-      toast({
-        title: "Activation Successful",
-        description: `Number ${activatedNumber.mobile} has been activated.`,
-      });
-    }
-  };
-
   const updateActivationDetails = (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => {
     let updatedNumberRef: NumberRecord | undefined;
     setAllNumbers(prevNumbers =>
@@ -308,7 +282,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     markReminderDone,
     addActivity,
     assignNumbersToEmployee,
-    activateNumber,
     updateActivationDetails,
     checkInNumber,
     sellNumber,
