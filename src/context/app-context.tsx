@@ -31,8 +31,7 @@ type AppContextType = {
   sellNumber: (id: number, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => void;
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
-  toggleDealerPaymentStatus: (id: number) => void;
-  toggleDealerPortOutStatus: (id: number) => void;
+  updateDealerPurchase: (id: number, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -322,25 +321,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const toggleDealerPaymentStatus = (id: number) => {
+  const updateDealerPurchase = (id: number, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
+    let updatedPurchase: DealerPurchaseRecord | undefined;
     setAllDealerPurchases(prev =>
-      prev.map(p =>
-        p.id === id
-          ? { ...p, paymentStatus: p.paymentStatus === 'Done' ? 'Pending' : 'Done' }
-          : p
-      )
+      prev.map(p => {
+        if (p.id === id) {
+          updatedPurchase = { ...p, ...statuses };
+          return updatedPurchase;
+        }
+        return p;
+      })
     );
+
+    if (updatedPurchase) {
+      addActivity({
+        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+        action: 'Updated Dealer Purchase',
+        description: `Updated status for ${updatedPurchase.mobile}.`,
+      });
+      toast({
+        title: 'Dealer Purchase Updated',
+        description: 'Statuses have been successfully updated.',
+      });
+    }
   };
-  
-  const toggleDealerPortOutStatus = (id: number) => {
-    setAllDealerPurchases(prev =>
-      prev.map(p =>
-        p.id === id
-          ? { ...p, portOutStatus: p.portOutStatus === 'Done' ? 'Pending' : 'Done' }
-          : p
-      )
-    );
-  };
+
 
   const value = {
     role,
@@ -361,8 +366,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sellNumber,
     addNumber,
     addDealerPurchase,
-    toggleDealerPaymentStatus,
-    toggleDealerPortOutStatus,
+    updateDealerPurchase,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
