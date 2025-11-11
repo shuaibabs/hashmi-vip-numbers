@@ -20,8 +20,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AssignNumbersModal } from '@/components/assign-numbers-modal';
 import { SellNumberModal } from '@/components/sell-number-modal';
 
-const ITEMS_PER_PAGE = 10;
-
 type SortableColumn = keyof NumberRecord;
 
 export default function AllNumbersPage() {
@@ -34,6 +32,7 @@ export default function AllNumbersPage() {
   const [isRtsModalOpen, setIsRtsModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'id', direction: 'ascending'});
@@ -79,10 +78,10 @@ export default function AllNumbersPage() {
     return sortableItems;
   }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig]);
 
-  const totalPages = Math.ceil(sortedAndFilteredNumbers.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(sortedAndFilteredNumbers.length / itemsPerPage);
   const paginatedNumbers = sortedAndFilteredNumbers.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   const requestSort = (key: SortableColumn) => {
@@ -117,6 +116,11 @@ export default function AllNumbersPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+  
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
   };
 
   const handleRowClick = (id: number) => {
@@ -216,6 +220,16 @@ export default function AllNumbersPage() {
                 <SelectItem value="COCP">COCP</SelectItem>
               </SelectContent>
             </Select>
+             <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Items per page" />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 25, 50, 100, 250, 500, 1000].map(val => (
+                   <SelectItem key={val} value={String(val)}>{val} / page</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
            {role === 'admin' && selectedRows.length > 0 && (
              <Button onClick={handleOpenAssignModal}>
@@ -264,7 +278,7 @@ export default function AllNumbersPage() {
                     )}
                   </TableCell>
                   <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
-                    {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                    {(currentPage - 1) * itemsPerPage + index + 1}
                   </TableCell>
                   <TableCell className="font-medium cursor-pointer" onClick={() => handleRowClick(num.id)}>{num.mobile}</TableCell>
                   <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.numberType}</TableCell>
@@ -301,7 +315,7 @@ export default function AllNumbersPage() {
             </TableBody>
           </Table>
         </div>
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} itemsPerPage={ITEMS_PER_PAGE} totalItems={sortedAndFilteredNumbers.length} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} itemsPerPage={itemsPerPage} totalItems={sortedAndFilteredNumbers.length} />
 
       </div>
       {selectedNumber && (
@@ -329,3 +343,5 @@ export default function AllNumbersPage() {
   );
 }
  
+
+    
