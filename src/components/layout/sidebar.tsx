@@ -21,7 +21,7 @@ import {
   History,
   Replace,
   FileOutput,
-  FileInput
+  Signal,
 } from 'lucide-react';
 import { useApp } from '@/context/app-context';
 import Link from 'next/link';
@@ -30,6 +30,7 @@ import { Separator } from '../ui/separator';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: true },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
+  { href: '/activation', label: 'Activation', icon: Signal, adminOnly: false },
   { href: '/rts-status', label: 'RTS / Non-RTS List', icon: Replace, adminOnly: false },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/purchases', label: 'Purchases', icon: ShoppingCart, adminOnly: false },

@@ -27,6 +27,7 @@ type AppContextType = {
   addPurchase: (purchase: Omit<PurchaseRecord, 'id'>) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void;
   assignNumbersToEmployee: (numberIds: number[], employeeName: string) => void;
+  activateNumber: (id: number) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -98,7 +99,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 action: 'Auto-updated to RTS',
                 description: `Number ${num.mobile} automatically became RTS.`
             })
-            return { ...num, status: 'RTS' as 'RTS', rtsDate: null };
+            return { ...num, status: 'RTS' as 'RTS', rtsDate: null, activationStatus: 'Done' as 'Done' };
           }
         }
         return num;
@@ -184,6 +185,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         assignedTo: 'Unassigned',
         purchaseDate: newPurchase.purchaseDate,
         notes: '',
+        activationStatus: 'Pending' as 'Pending',
+        uploadStatus: 'Pending' as 'Pending',
       };
       setAllNumbers(prev => [newNumber, ...prev]);
 
@@ -217,6 +220,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const activateNumber = (id: number) => {
+    let activatedNumber: NumberRecord | undefined;
+    setAllNumbers(prevNumbers => 
+      prevNumbers.map(num => {
+        if (num.id === id) {
+          activatedNumber = { ...num, status: 'RTS', activationStatus: 'Done', rtsDate: new Date() };
+          return activatedNumber;
+        }
+        return num;
+      })
+    );
+
+    if (activatedNumber) {
+      addActivity({
+        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+        action: 'Activated Number',
+        description: `Activated SIM number ${activatedNumber.mobile}.`
+      });
+      toast({
+        title: "Activation Successful",
+        description: `Number ${activatedNumber.mobile} has been activated.`,
+      });
+    }
+  };
+
   const value = {
     role,
     setRole,
@@ -232,6 +260,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addPurchase,
     addActivity,
     assignNumbersToEmployee,
+    activateNumber,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

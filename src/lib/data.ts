@@ -18,6 +18,8 @@ export type NumberRecord = {
   assignedTo: string; // Can be 'Unassigned', or employee name like 'Naeem'
   purchaseDate: string | Date;
   notes?: string;
+  activationStatus: 'Done' | 'Pending' | 'Fail';
+  uploadStatus: 'Done' | 'Pending' | 'Fail';
 };
 
 export type SaleRecord = {
@@ -74,9 +76,10 @@ export const DUMMY_NUMBERS: NumberRecord[] = Array.from({ length: 30 }, (_, i) =
     mobileAlt: `91234567${String(89 + i).padStart(2, '0')}`,
     upcStatus: i % 4 === 0 ? 'Pending' : 'Generated',
     currentLocation: i % 2 === 0 ? 'Store - Mumbai' : `Employee - ${assignedEmployee}`,
-    locationType: i % 2 === 0 ? 'Store' : 'Employee',
     assignedTo: i > 20 ? 'Unassigned' : assignedEmployee,
     purchaseDate: subDays(now, i * 3 + 5),
+    activationStatus: isRTS ? 'Done' : 'Pending',
+    uploadStatus: i % 5 === 0 ? 'Pending' : 'Done',
   };
 });
 
