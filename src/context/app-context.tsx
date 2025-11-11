@@ -13,6 +13,7 @@ type UserRole = 'admin' | 'employee';
 const SIMULATED_EMPLOYEE_NAME = 'Naeem';
 
 type AppContextType = {
+  loading: boolean;
   role: UserRole;
   setRole: (role: UserRole) => void;
   numbers: NumberRecord[];
@@ -39,6 +40,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [role, setRole] = useState<UserRole>('admin');
+  const [loading, setLoading] = useState(true);
   
   // These hold the master list of all data
   const [allNumbers, setAllNumbers] = useState<NumberRecord[]>(DUMMY_NUMBERS);
@@ -54,6 +56,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reminders, setReminders] = useState<Reminder[]>(allReminders);
   const [activities, setActivities] = useState<Activity[]>(allActivities);
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>(allDealerPurchases);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1000); // Simulate loading
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (role === 'admin') {
@@ -348,6 +355,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   const value = {
+    loading,
     role,
     setRole,
     numbers,

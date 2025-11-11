@@ -10,11 +10,12 @@ import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { LogIn } from 'lucide-react';
 import { format } from 'date-fns';
+import { TableSpinner } from '@/components/ui/spinner';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function SimLocationsPage() {
-  const { numbers, checkInNumber } = useApp();
+  const { numbers, checkInNumber, loading } = useApp();
   const [locationFilter, setLocationFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -65,23 +66,26 @@ export default function SimLocationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedNumbers.map((num, index) => (
-              <TableRow key={num.id}>
-                <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
-                <TableCell className="font-medium">{num.mobile}</TableCell>
-                <TableCell>{num.currentLocation}</TableCell>
-                <TableCell>{num.locationType}</TableCell>
-                <TableCell>{num.assignedTo}</TableCell>
-                <TableCell>{num.checkInDate ? format(new Date(num.checkInDate), 'PPP p') : 'N/A'}</TableCell>
-                <TableCell className="text-right">
-                  <Button size="sm" variant="outline" onClick={() => checkInNumber(num.id)}>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Check In
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {paginatedNumbers.length === 0 && (
+            {loading ? (
+                <TableSpinner colSpan={7} />
+            ) : paginatedNumbers.length > 0 ? (
+                paginatedNumbers.map((num, index) => (
+                <TableRow key={num.id}>
+                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                    <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>{num.currentLocation}</TableCell>
+                    <TableCell>{num.locationType}</TableCell>
+                    <TableCell>{num.assignedTo}</TableCell>
+                    <TableCell>{num.checkInDate ? format(new Date(num.checkInDate), 'PPP p') : 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                    <Button size="sm" variant="outline" onClick={() => checkInNumber(num.id)}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Check In
+                    </Button>
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
                 <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
                         No locations found for this filter.

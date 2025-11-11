@@ -19,11 +19,12 @@ import { Pagination } from '@/components/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AssignNumbersModal } from '@/components/assign-numbers-modal';
 import { SellNumberModal } from '@/components/sell-number-modal';
+import { TableSpinner } from '@/components/ui/spinner';
 
 type SortableColumn = keyof NumberRecord;
 
 export default function AllNumbersPage() {
-  const { numbers, role } = useApp();
+  const { numbers, role, loading } = useApp();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -263,55 +264,65 @@ export default function AllNumbersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedNumbers.map((num, index) => (
-                <TableRow 
-                    key={num.id} 
-                    data-state={selectedRows.includes(num.id) && "selected"}
-                >
-                  <TableCell>
-                    {role === 'admin' && (
-                      <Checkbox
-                        checked={selectedRows.includes(num.id)}
-                        onCheckedChange={() => handleSelectRow(num.id)}
-                        aria-label="Select row"
-                      />
+              {loading ? (
+                  <TableSpinner colSpan={10} />
+              ) : paginatedNumbers.length > 0 ? (
+                  paginatedNumbers.map((num, index) => (
+                    <TableRow 
+                        key={num.id} 
+                        data-state={selectedRows.includes(num.id) && "selected"}
+                    >
+                    <TableCell>
+                        {role === 'admin' && (
+                        <Checkbox
+                            checked={selectedRows.includes(num.id)}
+                            onCheckedChange={() => handleSelectRow(num.id)}
+                            aria-label="Select row"
+                        />
+                        )}
+                    </TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
+                        {(currentPage - 1) * itemsPerPage + index + 1}
+                    </TableCell>
+                    <TableCell className="font-medium cursor-pointer" onClick={() => handleRowClick(num.id)}>{num.mobile}</TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.numberType}</TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.assignedTo}</TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
+                        <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
+                    </TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.purchaseFrom}</TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.location}</TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                    {(role === 'admin' || role === 'employee') && (
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>View Details</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Update RTS Status</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={(e) => { e.stopPropagation(); handleSellNumber(num); }}>
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            Mark as Sold
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
-                  </TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
-                    {(currentPage - 1) * itemsPerPage + index + 1}
-                  </TableCell>
-                  <TableCell className="font-medium cursor-pointer" onClick={() => handleRowClick(num.id)}>{num.mobile}</TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.numberType}</TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.assignedTo}</TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
-                    <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
-                  </TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.purchaseFrom}</TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.location}</TableCell>
-                  <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell className="text-right">
-                   {(role === 'admin' || role === 'employee') && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Update RTS Status</DropdownMenuItem>
-                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={(e) => { e.stopPropagation(); handleSellNumber(num); }}>
-                          <DollarSign className="mr-2 h-4 w-4" />
-                          Mark as Sold
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                   )}
-                  </TableCell>
+                    </TableCell>
+                    </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={10} className="h-24 text-center">
+                        No numbers found for the current filters.
+                    </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>

@@ -7,11 +7,12 @@ import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/pagination';
 import { format } from 'date-fns';
+import { TableSpinner } from '@/components/ui/spinner';
 
 const ITEMS_PER_PAGE = 15;
 
 export default function CocpPage() {
-  const { numbers } = useApp();
+  const { numbers, loading } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
 
   const cocpNumbers = useMemo(() => {
@@ -45,15 +46,18 @@ export default function CocpPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedNumbers.map((num, index) => (
-              <TableRow key={num.id}>
-                <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
-                <TableCell className="font-medium">{num.mobile}</TableCell>
-                <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
-                <TableCell>{num.safeCustodyDate ? format(new Date(num.safeCustodyDate), 'PPP') : 'N/A'}</TableCell>
-              </TableRow>
-            ))}
-            {paginatedNumbers.length === 0 && (
+            {loading ? (
+                <TableSpinner colSpan={4} />
+            ) : paginatedNumbers.length > 0 ? (
+                paginatedNumbers.map((num, index) => (
+                <TableRow key={num.id}>
+                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                    <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.safeCustodyDate ? format(new Date(num.safeCustodyDate), 'PPP') : 'N/A'}</TableCell>
+                </TableRow>
+                ))
+            ) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center">
                   No COCP numbers found.

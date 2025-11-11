@@ -7,11 +7,12 @@ import { format } from 'date-fns';
 import { redirect } from "next/navigation";
 import { useState } from "react";
 import { Pagination } from "@/components/pagination";
+import { TableSpinner } from "@/components/ui/spinner";
 
 const ITEMS_PER_PAGE = 15;
 
 export default function ActivitiesPage() {
-  const { activities, role } = useApp();
+  const { activities, role, loading } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
 
   if (role !== 'admin') {
@@ -47,14 +48,24 @@ export default function ActivitiesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedActivities.map((activity) => (
-              <TableRow key={activity.id}>
-                <TableCell className="font-medium">{activity.employeeName}</TableCell>
-                <TableCell>{activity.action}</TableCell>
-                <TableCell>{activity.description}</TableCell>
-                <TableCell>{format(new Date(activity.timestamp), 'PPpp')}</TableCell>
-              </TableRow>
-            ))}
+             {loading ? (
+              <TableSpinner colSpan={4} />
+            ) : paginatedActivities.length > 0 ? (
+                paginatedActivities.map((activity) => (
+                <TableRow key={activity.id}>
+                    <TableCell className="font-medium">{activity.employeeName}</TableCell>
+                    <TableCell>{activity.action}</TableCell>
+                    <TableCell>{activity.description}</TableCell>
+                    <TableCell>{format(new Date(activity.timestamp), 'PPpp')}</TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        No activities found.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

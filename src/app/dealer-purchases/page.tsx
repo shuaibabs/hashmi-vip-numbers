@@ -13,11 +13,12 @@ import { AddDealerPurchaseModal } from '@/components/add-dealer-purchase-modal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EditDealerPurchaseModal } from '@/components/edit-dealer-purchase-modal';
 import { DealerPurchaseRecord } from '@/lib/data';
+import { TableSpinner } from '@/components/ui/spinner';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function DealerPurchasesPage() {
-  const { dealerPurchases } = useApp();
+  const { dealerPurchases, loading } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -64,39 +65,42 @@ export default function DealerPurchasesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedPurchases.map((purchase, index) => (
-              <TableRow key={purchase.id}>
-                <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
-                <TableCell className="font-medium">{purchase.mobile}</TableCell>
-                <TableCell>₹{purchase.price.toLocaleString()}</TableCell>
-                <TableCell>
-                    <Badge variant={purchase.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
-                      {purchase.paymentStatus}
-                    </Badge>
-                </TableCell>
-                <TableCell>
-                     <Badge variant={purchase.portOutStatus === 'Done' ? 'secondary' : 'outline'}>
-                      {purchase.portOutStatus}
-                    </Badge>
-                </TableCell>
-                 <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(purchase)}>
-                          Edit Status
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-              </TableRow>
-            ))}
-             {paginatedPurchases.length === 0 && (
+            {loading ? (
+                <TableSpinner colSpan={6} />
+            ) : paginatedPurchases.length > 0 ? (
+                paginatedPurchases.map((purchase, index) => (
+                <TableRow key={purchase.id}>
+                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                    <TableCell className="font-medium">{purchase.mobile}</TableCell>
+                    <TableCell>₹{purchase.price.toLocaleString()}</TableCell>
+                    <TableCell>
+                        <Badge variant={purchase.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
+                        {purchase.paymentStatus}
+                        </Badge>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={purchase.portOutStatus === 'Done' ? 'secondary' : 'outline'}>
+                        {purchase.portOutStatus}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(purchase)}>
+                            Edit Status
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
                 <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
                         No dealer purchases found.

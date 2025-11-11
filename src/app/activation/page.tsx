@@ -11,11 +11,12 @@ import { Pagination } from '@/components/pagination';
 import { Power } from 'lucide-react';
 import { NumberRecord } from '@/lib/data';
 import { ActivationModal } from '@/components/activation-modal';
+import { TableSpinner } from '@/components/ui/spinner';
 
 const ITEMS_PER_PAGE = 15;
 
 export default function ActivationPage() {
-  const { numbers } = useApp();
+  const { numbers, loading } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,23 +67,26 @@ export default function ActivationPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedNumbers.map((num) => (
-              <TableRow key={num.id}>
-                <TableCell className="font-medium">{num.mobile}</TableCell>
-                <TableCell>{getStatusBadge(num.activationStatus)}</TableCell>
-                <TableCell>{getStatusBadge(num.uploadStatus)}</TableCell>
-                <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
-                <TableCell className="text-right">
-                  {num.activationStatus !== 'Done' && (
-                    <Button size="sm" onClick={() => handleActivateClick(num)}>
-                      <Power className="mr-2 h-4 w-4" />
-                      Activate
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-             {paginatedNumbers.length === 0 && (
+            {loading ? (
+                <TableSpinner colSpan={5} />
+            ) : paginatedNumbers.length > 0 ? (
+                paginatedNumbers.map((num) => (
+                <TableRow key={num.id}>
+                    <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>{getStatusBadge(num.activationStatus)}</TableCell>
+                    <TableCell>{getStatusBadge(num.uploadStatus)}</TableCell>
+                    <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                    {num.activationStatus !== 'Done' && (
+                        <Button size="sm" onClick={() => handleActivateClick(num)}>
+                        <Power className="mr-2 h-4 w-4" />
+                        Activate
+                        </Button>
+                    )}
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                         No numbers pending activation.

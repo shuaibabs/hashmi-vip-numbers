@@ -8,11 +8,12 @@ import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { Pagination } from '@/components/pagination';
+import { TableSpinner } from '@/components/ui/spinner';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function SalesPage() {
-  const { sales, toggleSalePaymentStatus } = useApp();
+  const { sales, toggleSalePaymentStatus, loading } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(sales.length / ITEMS_PER_PAGE);
@@ -47,28 +48,38 @@ export default function SalesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedSales.map((sale, index) => (
-              <TableRow key={sale.id}>
-                <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
-                <TableCell className="font-medium">{sale.mobile}</TableCell>
-                <TableCell>{sale.soldTo}</TableCell>
-                <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
-                <TableCell>{format(new Date(sale.saleDate), 'PPP')}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id={`payment-status-${sale.id}`}
-                      checked={sale.paymentStatus === 'Done'}
-                      onCheckedChange={() => toggleSalePaymentStatus(sale.id)}
-                      aria-label="Toggle payment status"
-                    />
-                    <Badge variant={sale.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
-                      {sale.paymentStatus}
-                    </Badge>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {loading ? (
+                <TableSpinner colSpan={6} />
+            ) : paginatedSales.length > 0 ? (
+                paginatedSales.map((sale, index) => (
+                <TableRow key={sale.id}>
+                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                    <TableCell className="font-medium">{sale.mobile}</TableCell>
+                    <TableCell>{sale.soldTo}</TableCell>
+                    <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
+                    <TableCell>{format(new Date(sale.saleDate), 'PPP')}</TableCell>
+                    <TableCell>
+                    <div className="flex items-center gap-2">
+                        <Switch
+                        id={`payment-status-${sale.id}`}
+                        checked={sale.paymentStatus === 'Done'}
+                        onCheckedChange={() => toggleSalePaymentStatus(sale.id)}
+                        aria-label="Toggle payment status"
+                        />
+                        <Badge variant={sale.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
+                        {sale.paymentStatus}
+                        </Badge>
+                    </div>
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                        No sales records found.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

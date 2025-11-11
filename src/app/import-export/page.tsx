@@ -10,9 +10,10 @@ import { FileInput, FileOutput, Terminal } from 'lucide-react';
 import Papa from 'papaparse';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { TableSpinner } from '@/components/ui/spinner';
 
 export default function ImportExportPage() {
-  const { numbers, addActivity } = useApp();
+  const { numbers, addActivity, loading } = useApp();
   const { toast } = useToast();
 
   const handleExport = () => {
@@ -117,20 +118,24 @@ export default function ImportExportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {numbers.slice(0, 10).map((num, index) => (
-                <TableRow key={num.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell className="font-medium">{num.mobile}</TableCell>
-                  <TableCell>
-                    <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
-                  </TableCell>
-                  <TableCell>{num.purchaseFrom}</TableCell>
-                  <TableCell>₹{num.purchasePrice}</TableCell>
-                  <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>{num.location}</TableCell>
-                  <TableCell><Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge></TableCell>
-                </TableRow>
-              ))}
+              {loading ? (
+                <TableSpinner colSpan={8} />
+              ) : (
+                numbers.slice(0, 10).map((num, index) => (
+                  <TableRow key={num.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>
+                      <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
+                    </TableCell>
+                    <TableCell>{num.purchaseFrom}</TableCell>
+                    <TableCell>₹{num.purchasePrice}</TableCell>
+                    <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.location}</TableCell>
+                    <TableCell><Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge></TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
