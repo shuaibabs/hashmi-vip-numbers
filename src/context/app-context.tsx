@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_PURCHASES, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type PurchaseRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES } from '@/lib/data';
+import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
 
@@ -17,19 +17,18 @@ type AppContextType = {
   setRole: (role: UserRole) => void;
   numbers: NumberRecord[];
   sales: SaleRecord[];
-  purchases: PurchaseRecord[];
   reminders: Reminder[];
   activities: Activity[];
   employees: string[];
   updateNumberStatus: (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   toggleSalePaymentStatus: (id: number) => void;
   markReminderDone: (id: number) => void;
-  addPurchase: (purchase: Omit<PurchaseRecord, 'id'>) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void;
   assignNumbersToEmployee: (numberIds: number[], employeeName: string) => void;
   activateNumber: (id: number) => void;
   updateActivationDetails: (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
   checkInNumber: (id: number) => void;
+  sellNumber: (id: number, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -41,7 +40,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // These hold the master list of all data
   const [allNumbers, setAllNumbers] = useState<NumberRecord[]>(DUMMY_NUMBERS);
   const [allSales, setAllSales] = useState<SaleRecord[]>(DUMMY_SALES);
-  const [allPurchases, setAllPurchases] = useState<PurchaseRecord[]>(DUMMY_PURCHASES);
   const [allReminders, setAllReminders] = useState<Reminder[]>(DUMMY_REMINDERS);
   const [allActivities, setAllActivities] = useState<Activity[]>(DUMMY_ACTIVITIES);
   const [employees] = useState<string[]>(DUMMY_EMPLOYEES);
@@ -49,7 +47,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // These will hold the filtered data based on role
   const [numbers, setNumbers] = useState<NumberRecord[]>(allNumbers);
   const [sales, setSales] = useState<SaleRecord[]>(allSales);
-  const [purchases, setPurchases] = useState<PurchaseRecord[]>(allPurchases);
   const [reminders, setReminders] = useState<Reminder[]>(allReminders);
   const [activities, setActivities] = useState<Activity[]>(allActivities);
 
@@ -57,7 +54,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (role === 'admin') {
       setNumbers(allNumbers);
       setSales(allSales);
-      setPurchases(allPurchases);
       setReminders(allReminders);
       setActivities(allActivities);
     } else {
@@ -66,13 +62,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       const employeeMobiles = new Set(allNumbers.filter(n => n.assignedTo === SIMULATED_EMPLOYEE_NAME).map(n => n.mobile));
       setSales(allSales.filter(s => employeeMobiles.has(s.mobile)));
-      setPurchases(allPurchases.filter(p => employeeMobiles.has(p.mobile)));
       
       setReminders(allReminders.filter(r => r.assignedTo === SIMULATED_EMPLOYEE_NAME));
       // For simplicity, we show all activities to employees for now
       setActivities(allActivities);
     }
-  }, [role, allNumbers, allSales, allPurchases, allReminders, allActivities]);
+  }, [role, allNumbers, allSales, allReminders, allActivities]);
 
 
   const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
@@ -112,6 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const interval = setInterval(checkRtsDates, 5000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allNumbers]);
 
 
@@ -165,43 +161,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             description: `Completed task: ${updatedReminder.taskName}`
         })
     }
-  };
-
-  const addPurchase = (purchase: Omit<PurchaseRecord, 'id'>) => {
-      const newPurchase = { ...purchase, id: allPurchases.length + 1 };
-      setAllPurchases(prev => [newPurchase, ...prev]);
-      const newNumber = {
-        id: allNumbers.length + 1,
-        mobile: newPurchase.mobile,
-        status: 'Non-RTS' as 'Non-RTS',
-        purchaseFrom: newPurchase.purchasedFrom,
-        purchasePrice: newPurchase.purchasePrice,
-        salePrice: '',
-        rtsDate: null,
-        location: 'Store - Mumbai',
-        name: 'Unassigned',
-        mobileAlt: '',
-        upcStatus: 'Pending' as 'Pending',
-        currentLocation: 'Store - Mumbai',
-        locationType: 'Store' as 'Store',
-        assignedTo: 'Unassigned',
-        purchaseDate: newPurchase.purchaseDate,
-        notes: '',
-        activationStatus: 'Pending' as 'Pending',
-        uploadStatus: 'Pending' as 'Pending',
-        checkInDate: null,
-      };
-      setAllNumbers(prev => [newNumber, ...prev]);
-
-      addActivity({
-        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
-        action: 'Added Purchase',
-        description: `Added new purchase for ${newPurchase.mobile}`
-      });
-      toast({
-          title: 'Success!',
-          description: 'New purchase added successfully!',
-      });
   };
 
   const assignNumbersToEmployee = (numberIds: number[], employeeName: string) => {
@@ -307,24 +266,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sellNumber = (id: number, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => {
+    const soldNumber = allNumbers.find(n => n.id === id);
+    if (!soldNumber) return;
+
+    const newSale: SaleRecord = {
+      id: allSales.length + 1,
+      mobile: soldNumber.mobile,
+      salePrice: details.salePrice,
+      soldTo: details.soldTo,
+      paymentStatus: 'Pending',
+      saleDate: details.saleDate
+    };
+
+    setAllSales(prev => [newSale, ...prev]);
+
+    setAllNumbers(prev => prev.filter(n => n.id !== id));
+
+    addActivity({
+      employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+      action: 'Sold Number',
+      description: `Sold number ${soldNumber.mobile} to ${details.soldTo} for ₹${details.salePrice}`
+    });
+
+    toast({
+      title: 'Number Sold!',
+      description: `${soldNumber.mobile} has been moved to sales.`,
+    });
+  };
+
   const value = {
     role,
     setRole,
     numbers,
     sales,
-    purchases,
     reminders,
     activities,
     employees,
     updateNumberStatus,
     toggleSalePaymentStatus,
     markReminderDone,
-    addPurchase,
     addActivity,
     assignNumbersToEmployee,
     activateNumber,
     updateActivationDetails,
     checkInNumber,
+    sellNumber,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

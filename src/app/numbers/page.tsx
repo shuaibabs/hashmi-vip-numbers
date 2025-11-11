@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AssignNumbersModal } from '@/components/assign-numbers-modal';
+import { SellNumberModal } from '@/components/sell-number-modal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -30,6 +31,7 @@ export default function AllNumbersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isRtsModalOpen, setIsRtsModalOpen] = useState(false);
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -104,6 +106,11 @@ export default function AllNumbersPage() {
   const handleMarkRTS = (number: NumberRecord) => {
     setSelectedNumber(number);
     setIsRtsModalOpen(true);
+  };
+
+  const handleSellNumber = (number: NumberRecord) => {
+    setSelectedNumber(number);
+    setIsSellModalOpen(true);
   };
 
   const handlePageChange = (page: number) => {
@@ -255,6 +262,11 @@ export default function AllNumbersPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Mark RTS</DropdownMenuItem>
+                         <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={(e) => { e.stopPropagation(); handleSellNumber(num); }}>
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          Mark as Sold
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                    )}
@@ -274,6 +286,13 @@ export default function AllNumbersPage() {
           number={selectedNumber}
         />
       )}
+       {selectedNumber && (
+        <SellNumberModal
+          isOpen={isSellModalOpen}
+          onClose={() => setIsSellModalOpen(false)}
+          number={selectedNumber}
+        />
+      )}
       {role === 'admin' && (
         <AssignNumbersModal
             isOpen={isAssignModalOpen}
@@ -285,5 +304,3 @@ export default function AllNumbersPage() {
   );
 }
  
-
-    
