@@ -20,7 +20,6 @@ import {
   DollarSign,
   ClipboardList,
   History,
-  Replace,
   FileOutput,
   Signal,
 } from 'lucide-react';
@@ -32,7 +31,6 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
   { href: '/activation', label: 'Activation', icon: Signal, adminOnly: false },
-  { href: '/rts-status', label: 'RTS / Non-RTS List', icon: Replace, adminOnly: false },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/purchases', label: 'Purchases', icon: ShoppingCart, adminOnly: false },
   { href: '/sales', label: 'Sales', icon: DollarSign, adminOnly: false },
@@ -58,13 +56,14 @@ export function AppSidebar() {
           {navItems.map((item) =>
             (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref asChild>
+                <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
-                      isActive={pathname === item.href}
-                      tooltip={item.label}
+                    as="a"
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
                   >
-                      <item.icon />
-                      <span>{item.label}</span>
+                    <item.icon />
+                    <span>{item.label}</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
