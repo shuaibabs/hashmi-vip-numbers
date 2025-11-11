@@ -57,15 +57,14 @@ export function AppSidebar() {
           {navItems.map((item) =>
             (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
-                 <Link href={item.href}>
-                    <SidebarMenuButton
-                        isActive={pathname === item.href}
-                        tooltip={item.label}
-                        asChild={false}
-                    >
-                        <item.icon />
-                        <span>{item.label}</span>
-                    </SidebarMenuButton>
+                <Link href={item.href} passHref>
+                  <SidebarMenuButton
+                      isActive={pathname === item.href}
+                      tooltip={item.label}
+                  >
+                      <item.icon />
+                      <span>{item.label}</span>
+                  </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
             )
