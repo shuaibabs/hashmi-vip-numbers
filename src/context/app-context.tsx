@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES, NewNumberData, DUMMY_DEALER_PURCHASES, DealerPurchaseRecord, NewDealerPurchaseData } from '@/lib/data';
+import { DUMMY_ACTIVITIES, DUMMY_NUMBERS, DUMMY_REMINDERS, DUMMY_SALES, type Activity, type NumberRecord, type Reminder, type SaleRecord, DUMMY_EMPLOYEES, NewNumberData, DUMMY_DEALER_PURCHASES, DealerPurchaseRecord, NewDealerPurchaseData, DUMMY_PORT_OUTS, PortOutRecord } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
 
@@ -18,6 +18,7 @@ type AppContextType = {
   setRole: (role: UserRole) => void;
   numbers: NumberRecord[];
   sales: SaleRecord[];
+  portOuts: PortOutRecord[];
   reminders: Reminder[];
   activities: Activity[];
   employees: string[];
@@ -45,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // These hold the master list of all data
   const [allNumbers, setAllNumbers] = useState<NumberRecord[]>(DUMMY_NUMBERS);
   const [allSales, setAllSales] = useState<SaleRecord[]>(DUMMY_SALES);
+  const [allPortOuts, setAllPortOuts] = useState<PortOutRecord[]>(DUMMY_PORT_OUTS);
   const [allReminders, setAllReminders] = useState<Reminder[]>(DUMMY_REMINDERS);
   const [allActivities, setAllActivities] = useState<Activity[]>(DUMMY_ACTIVITIES);
   const [allDealerPurchases, setAllDealerPurchases] = useState<DealerPurchaseRecord[]>(DUMMY_DEALER_PURCHASES);
@@ -53,6 +55,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // These will hold the filtered data based on role
   const [numbers, setNumbers] = useState<NumberRecord[]>(allNumbers);
   const [sales, setSales] = useState<SaleRecord[]>(allSales);
+  const [portOuts, setPortOuts] = useState<PortOutRecord[]>(allPortOuts);
   const [reminders, setReminders] = useState<Reminder[]>(allReminders);
   const [activities, setActivities] = useState<Activity[]>(allActivities);
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>(allDealerPurchases);
@@ -66,6 +69,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (role === 'admin') {
       setNumbers(allNumbers);
       setSales(allSales);
+      setPortOuts(allPortOuts);
       setReminders(allReminders);
       setActivities(allActivities);
       setDealerPurchases(allDealerPurchases);
@@ -75,13 +79,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       const employeeMobiles = new Set(allNumbers.filter(n => n.assignedTo === SIMULATED_EMPLOYEE_NAME).map(n => n.mobile));
       setSales(allSales.filter(s => employeeMobiles.has(s.mobile)));
+      setPortOuts(allPortOuts.filter(p => employeeMobiles.has(p.mobile)));
       
       setReminders(allReminders.filter(r => r.assignedTo === SIMULATED_EMPLOYEE_NAME));
       setDealerPurchases(allDealerPurchases); // Employees can see all dealer purchases for now
       // For simplicity, we show all activities to employees for now
       setActivities(allActivities);
     }
-  }, [role, allNumbers, allSales, allReminders, allActivities, allDealerPurchases]);
+  }, [role, allNumbers, allSales, allPortOuts, allReminders, allActivities, allDealerPurchases]);
 
 
   const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
@@ -152,27 +157,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSaleStatuses = (id: number, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
-    let updatedSale: SaleRecord | undefined;
-    setAllSales(prevSales =>
-      prevSales.map(sale => {
-        if (sale.id === id) {
-          updatedSale = { ...sale, ...statuses };
-          return updatedSale;
-        }
-        return sale;
-      })
-    );
+    const saleToUpdate = allSales.find(s => s.id === id);
+    if (!saleToUpdate) return;
     
-    if (updatedSale) {
-      addActivity({
-        employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
-        action: 'Updated Sale Status',
-        description: `Updated sale for ${updatedSale.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}.`,
-      });
-      toast({
-        title: 'Sale Updated',
-        description: `Sale record for ${updatedSale.mobile} has been updated.`,
-      });
+    if (statuses.portOutStatus === 'Done') {
+        const { portOutStatus, ...restOfSale } = saleToUpdate;
+        const newPortOut: PortOutRecord = {
+            ...restOfSale,
+            ...statuses,
+            portOutDate: new Date(),
+        };
+        setAllPortOuts(prev => [newPortOut, ...prev]);
+        setAllSales(prev => prev.filter(s => s.id !== id));
+        
+        addActivity({
+            employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+            action: 'Marked Port Out Done',
+            description: `Number ${newPortOut.mobile} has been ported out.`,
+        });
+        toast({
+            title: 'Port Out Completed',
+            description: `${newPortOut.mobile} moved to Port Out history.`,
+        });
+    } else {
+        setAllSales(prevSales =>
+          prevSales.map(sale => {
+            if (sale.id === id) {
+              return { ...sale, ...statuses };
+            }
+            return sale;
+          })
+        );
+        addActivity({
+            employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
+            action: 'Updated Sale Status',
+            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}.`,
+        });
+        toast({
+            title: 'Sale Updated',
+            description: `Sale record for ${saleToUpdate.mobile} has been updated.`,
+        });
     }
   };
 
@@ -377,6 +401,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRole,
     numbers,
     sales,
+    portOuts,
     reminders,
     activities,
     employees,

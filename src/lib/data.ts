@@ -39,6 +39,8 @@ export type SaleRecord = {
   portOutStatus: 'Pending' | 'Done';
 };
 
+export type PortOutRecord = Omit<SaleRecord, 'portOutStatus'> & { portOutDate: Date };
+
 export type PurchaseRecord = {
   id: number;
   mobile: string;
@@ -115,7 +117,7 @@ export const DUMMY_SALES: SaleRecord[] = DUMMY_NUMBERS.filter(n => n.status === 
   paymentStatus: i % 2 === 0 ? 'Done' : 'Pending',
   saleDate: subDays(now, i),
   upcStatus: n.upcStatus,
-  portOutStatus: i % 3 === 0 ? 'Done' : 'Pending',
+  portOutStatus: 'Pending',
 }));
 
 export const DUMMY_DEALER_PURCHASES: DealerPurchaseRecord[] = Array.from({ length: 5 }, (_, i) => ({
@@ -151,3 +153,17 @@ export const DUMMY_ACTIVITIES: Activity[] = [
   { id: 5, employeeName: 'Ramesh', action: 'Sale Recorded', description: 'Sold 9876543210 for 200', timestamp: subDays(now, 3) },
   { id: 6, employeeName: 'Admin', action: 'Exported Excel', description: 'Exported All Numbers list', timestamp: subDays(now, 4) },
 ];
+
+export const DUMMY_PORT_OUTS: PortOutRecord[] = [
+    { 
+        id: 99, 
+        mobile: '9876543299', 
+        soldTo: 'John Doe', 
+        salePrice: 500, 
+        paymentStatus: 'Done', 
+        saleDate: subDays(now, 10), 
+        upcStatus: 'Generated', 
+        portOutDate: subDays(now, 5) 
+    },
+];
+
