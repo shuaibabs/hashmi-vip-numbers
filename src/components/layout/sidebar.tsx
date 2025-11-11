@@ -29,7 +29,7 @@ import Link from 'next/link';
 import { Separator } from '../ui/separator';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: true },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
   { href: '/activation', label: 'Activation', icon: Signal, adminOnly: false },
   { href: '/rts-status', label: 'RTS / Non-RTS List', icon: Replace, adminOnly: false },
@@ -58,7 +58,7 @@ export function AppSidebar() {
           {navItems.map((item) =>
             (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} asChild>
+                <Link href={item.href} passHref asChild>
                   <SidebarMenuButton
                       isActive={pathname === item.href}
                       tooltip={item.label}
