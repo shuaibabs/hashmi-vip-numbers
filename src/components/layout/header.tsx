@@ -45,9 +45,9 @@ export function AppHeader() {
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="relative">
                             <Bell className="h-5 w-5" />
-                            {activities.length > 0 && (
+                            {sortedActivities.length > 0 && (
                                 <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-[10px]">
-                                    {activities.length}
+                                    {sortedActivities.length}
                                 </Badge>
                             )}
                             <span className="sr-only">Notifications</span>
@@ -94,3 +94,5 @@ export function AppHeader() {
         </header>
     );
 }
+
+    

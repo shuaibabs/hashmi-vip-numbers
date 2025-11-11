@@ -26,7 +26,7 @@ type AppContextType = {
   updateNumberStatus: (id: number, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateSaleStatuses: (id: number, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
   markReminderDone: (id: number) => void;
-  addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void;
+  addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: number[], employeeName: string) => void;
   updateActivationDetails: (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
   checkInNumber: (id: number) => void;
@@ -62,9 +62,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>(allDealerPurchases);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000); // Simulate loading
+    setLoading(true);
+    const timer = setTimeout(() => setLoading(false), 500); // Simulate loading
     return () => clearTimeout(timer);
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     if (role === 'admin') {
@@ -90,14 +91,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [role, allNumbers, allSales, allPortOuts, allReminders, allActivities, allDealerPurchases]);
 
 
-  const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>) => {
+  const addActivity = (activity: Omit<Activity, 'id' | 'timestamp'>, showToast = true) => {
     const newActivity = { id: allActivities.length + 1, ...activity, timestamp: new Date() };
     setAllActivities(prev => [newActivity, ...prev]);
     
-    // Show toast notification for admin
-    if (role === 'admin') {
-      toast({
-        title: `Activity: ${activity.employeeName} ${activity.action}`,
+    if (showToast) {
+       toast({
+        title: activity.action,
         description: activity.description,
       });
     }
@@ -115,7 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 employeeName: 'System',
                 action: 'Auto-updated to RTS',
                 description: `Number ${num.mobile} automatically became RTS.`
-            })
+            }, false)
             return { ...num, status: 'RTS' as 'RTS', rtsDate: null, activationStatus: 'Done' as 'Done' };
           }
         }
@@ -150,10 +150,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             action: 'Updated RTS Status',
             description: `Marked ${updatedNumberRef.mobile} as ${status}`
         });
-        toast({
-          title: 'Success!',
-          description: 'Status updated successfully!',
-        });
     }
   };
 
@@ -176,10 +172,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             action: 'Marked Port Out Done',
             description: `Number ${newPortOut.mobile} has been ported out.`,
         });
-        toast({
-            title: 'Port Out Completed',
-            description: `${newPortOut.mobile} moved to Port Out history.`,
-        });
     } else {
         setAllSales(prevSales =>
           prevSales.map(sale => {
@@ -194,20 +186,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
             action: 'Updated Sale Status',
             description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}.`,
         });
-        toast({
-            title: 'Sale Updated',
-            description: `Sale record for ${saleToUpdate.mobile} has been updated.`,
-        });
     }
   };
 
   const markReminderDone = (id: number) => {
+    let updatedReminder: Reminder | undefined;
     setAllReminders(prevReminders =>
-      prevReminders.map(reminder =>
-        reminder.id === id ? { ...reminder, status: 'ACT Done' } : reminder
-      )
+      prevReminders.map(reminder => {
+        if (reminder.id === id) {
+          updatedReminder = { ...reminder, status: 'ACT Done' };
+          return updatedReminder;
+        }
+        return reminder;
+      })
     );
-    const updatedReminder = allReminders.find(r => r.id === id);
+    
     if(updatedReminder) {
         addActivity({
             employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
@@ -230,10 +223,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       action: 'Assigned Numbers',
       description: `Assigned ${numberIds.length} number(s) to ${employeeName}.`
     });
-    toast({
-      title: 'Assignment Successful',
-      description: `${numberIds.length} number(s) have been assigned to ${employeeName}.`
-    });
   };
 
   const updateActivationDetails = (id: number, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => {
@@ -247,7 +236,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             activationStatus: details.activationStatus,
             uploadStatus: details.uploadStatus,
             status: isActivated ? 'RTS' as 'RTS' : num.status,
-            rtsDate: isActivated ? new Date() : num.rtsDate,
+            rtsDate: isActivated && !num.rtsDate ? new Date() : num.rtsDate,
             notes: details.note ? `${num.notes || ''}\n---Activation Note---\n${details.note}`.trim() : num.notes 
           };
           updatedNumberRef = updatedNum;
@@ -262,10 +251,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
         action: 'Updated Activation Status',
         description: `Updated ${updatedNumberRef.mobile}. Activation: ${details.activationStatus}, Upload: ${details.uploadStatus}`
-      });
-      toast({
-        title: "Activation Details Updated",
-        description: `Details for number ${updatedNumberRef.mobile} have been updated.`,
       });
     }
   };
@@ -288,10 +273,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         action: 'Checked In Number',
         description: `Checked in SIM number ${checkedInNumber.mobile}.`
       });
-      toast({
-        title: "Check-In Successful",
-        description: `Number ${checkedInNumber.mobile} has been checked in.`,
-      });
     }
   };
 
@@ -300,7 +281,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!soldNumber) return;
 
     const newSale: SaleRecord = {
-      id: allSales.length + 1,
+      id: allSales.length > 0 ? Math.max(...allSales.map(s => s.id)) + 1 : 1,
       mobile: soldNumber.mobile,
       salePrice: details.salePrice,
       soldTo: details.soldTo,
@@ -318,11 +299,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
       action: 'Sold Number',
       description: `Sold number ${soldNumber.mobile} to ${details.soldTo} for ₹${details.salePrice}`
-    });
-
-    toast({
-      title: 'Number Sold!',
-      description: `${soldNumber.mobile} has been moved to sales.`,
     });
   };
 
@@ -344,10 +320,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       action: 'Added Number',
       description: `Manually added new number ${data.mobile}`
     });
-    toast({
-      title: "Number Added",
-      description: `Successfully added ${data.mobile} to the inventory.`
-    });
   };
   
   const addDealerPurchase = (data: NewDealerPurchaseData) => {
@@ -363,10 +335,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       employeeName: role === 'admin' ? 'Admin' : SIMULATED_EMPLOYEE_NAME,
       action: 'Added Dealer Purchase',
       description: `Added new dealer purchase for ${data.mobile}`,
-    });
-    toast({
-      title: 'Dealer Purchase Added',
-      description: `Successfully added ${data.mobile}.`,
     });
   };
 
@@ -388,10 +356,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         action: 'Updated Dealer Purchase',
         description: `Updated status for ${updatedPurchase.mobile}.`,
       });
-      toast({
-        title: 'Dealer Purchase Updated',
-        description: 'Statuses have been successfully updated.',
-      });
     }
   };
 
@@ -402,10 +366,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         action: 'Deleted Port Out Records',
         description: `Deleted ${ids.length} record(s) from port out history.`
     });
-    toast({
-        title: 'Deletion Successful',
-        description: `Successfully deleted ${ids.length} port out record(s).`
-    })
   }
 
 
@@ -444,3 +404,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
