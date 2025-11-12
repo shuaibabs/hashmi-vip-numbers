@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -18,7 +19,7 @@ import {
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
-import { useAuth } from './auth-context';
+import { useAuth } from '@/context/auth-context';
 import {
   collection,
   query,
@@ -37,7 +38,6 @@ import { SIMULATED_EMPLOYEE_NAME } from '@/lib/constants';
 
 type AppContextType = {
   loading: boolean;
-  role: 'admin' | 'employee';
   numbers: NumberRecord[];
   sales: SaleRecord[];
   portOuts: PortOutRecord[];
@@ -452,45 +452,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   // Filter data based on role
-  const roleFilteredNumbers = role === 'admin' ? numbers : numbers.filter(n => n.assignedTo === SIMULATED_EMPLOYEE_NAME);
+  const roleFilteredNumbers = role === 'admin' ? numbers : numbers.filter(n => n.assignedTo === user?.displayName);
   const roleFilteredSales = role === 'admin' ? sales : sales.filter(s => roleFilteredNumbers.some(n => n.mobile === s.mobile));
   const roleFilteredPortOuts = role === 'admin' ? portOuts : portOuts.filter(p => roleFilteredNumbers.some(n => n.mobile === p.mobile));
-  const roleFilteredReminders = role === 'admin' ? reminders : reminders.filter(r => r.assignedTo === SIMULATED_EMPLOYEE_NAME);
-
-  const value = {
-    loading,
-    role: role || 'employee',
-    numbers: roleFilteredNumbers,
-    sales: roleFilteredSales,
-    portOuts: roleFilteredPortOuts,
-    reminders: roleFilteredReminders,
-    activities,
-    employees,
-    dealerPurchases,
-    seedDatabase,
-    databaseSeeded,
-    isSeeding,
-    updateNumberStatus,
-    updateSaleStatuses,
-    markReminderDone,
-    addActivity,
-    assignNumbersToEmployee,
-    updateActivationDetails,
-    checkInNumber,
-    sellNumber,
-    addNumber,
-    addDealerPurchase,
-    updateDealerPurchase,
-    deletePortOuts,
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
-
-export function useApp() {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
-}
+  const roleFilteredReminders = role === a

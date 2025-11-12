@@ -1,8 +1,11 @@
+
+"use client";
+
 import type { ReactNode } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Spinner } from '@/components/ui/spinner';
 import LoginPage from '@/app/login/page';
-import { ProtectedLayout } from './protected-layout';
+import { ProtectedLayout } from '@/components/layout/protected-layout';
 
 export function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -17,11 +20,12 @@ export function MainLayout({ children }: { children: ReactNode }) {
   }
 
   // If user is not logged in, show the login page for all routes
-  // The login page itself will handle routing to signup if needed
+  // The children will be the page trying to be accessed, we intercept it.
   if (!user) {
-    // We can directly render the children, which will be the public page
-    // like Login or Signup
-    return <>{children}</>;
+    if (typeof window !== 'undefined' && window.location.pathname === '/signup') {
+        return <>{children}</>;
+    }
+    return <LoginPage />;
   }
 
   // If user is logged in, show the protected layout with sidebar and header
