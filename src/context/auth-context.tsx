@@ -6,6 +6,7 @@ import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import type { User } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
 
 type AuthContextType = {
   user: FirebaseUser | null;
@@ -21,9 +22,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<'admin' | 'employee' | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Keep loading if Firebase services are not ready.
     if (!auth || !db) {
       setLoading(true);
       return;
@@ -32,17 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          // If a user is logged in, always assume they might exist in Firestore.
+          const isNewLogin = !user; // Check if it's a transition from logged out to logged in
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            // User exists, set their role from the document.
             setRole(userDoc.data().role);
           } else {
-            // This logic is for auto-promoting the VERY FIRST user to admin.
-            // This should ideally happen on sign-up, but we place it here
-            // as a safeguard for the initial seeding process.
             const usersCollection = collection(db, "users");
             const usersSnap = await getDocs(usersCollection);
             const isFirstUser = usersSnap.empty;
@@ -57,10 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await setDoc(userDocRef, newUser);
             setRole(newRole);
           }
-          // Finally, set the user object itself.
           setUser(firebaseUser);
+          if (isNewLogin) {
+             toast({
+              title: "Logged In Successfully",
+              description: `Welcome back, ${firebaseUser.displayName || firebaseUser.email}!`,
+            });
+          }
         } else {
-          // User is logged out.
           setUser(null);
           setRole(null);
         }
@@ -69,14 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setRole(null);
       } finally {
-        // This is crucial: set loading to false after all auth logic is complete.
         setLoading(false);
       }
     });
 
-    // Cleanup the subscription on component unmount
     return () => unsubscribe();
-  }, [auth, db]); // Rerun effect if auth or db instances change
+  }, [auth, db, toast, user]);
 
   return (
     <AuthContext.Provider value={{ user, role, loading }}>
