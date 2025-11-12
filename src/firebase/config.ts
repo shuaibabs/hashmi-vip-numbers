@@ -2,11 +2,11 @@
 // You can publish a new version of this file by running `npx firebase-frameworks-tools client:web --config=.firebase/hosting.json --out src/firebase/config.ts`
 
 export const firebaseConfig = {
-  "apiKey": "mock-api-key",
+  "apiKey": "AIzaSyDPs_p2_xxxxxxxxxxxxxxxxxxx_xxxxxxxx",
   "authDomain": "studio-7771091082-4e1c2.firebaseapp.com",
   "projectId": "studio-7771091082-4e1c2",
   "storageBucket": "studio-7771091082-4e1c2.appspot.com",
   "messagingSenderId": "7771091082",
   "appId": "1:7771091082:web:65e8a514d3393910c51d6c",
-  "measurementId": "G-MOCK12345"
+  "measurementId": "G-L0V30018E5"
 };
