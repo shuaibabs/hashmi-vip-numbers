@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode, useRef } from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
@@ -23,17 +23,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<'admin' | 'employee' | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const wasInitiallyLoading = useRef(true);
 
   useEffect(() => {
     if (!auth || !db) {
-      setLoading(true);
+      if (wasInitiallyLoading.current) {
+        setLoading(true);
+      }
       return;
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
+        const isLoggingIn = !user && firebaseUser; // Transition from null to a user
+        
         if (firebaseUser) {
-          const isNewLogin = !user; // Check if it's a transition from logged out to logged in
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
           
@@ -55,7 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setRole(newRole);
           }
           setUser(firebaseUser);
-          if (isNewLogin) {
+
+          if (isLoggingIn) {
              toast({
               title: "Logged In Successfully",
               description: `Welcome back, ${firebaseUser.displayName || firebaseUser.email}!`,
@@ -70,12 +75,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setRole(null);
       } finally {
-        setLoading(false);
+        if (wasInitiallyLoading.current) {
+            setLoading(false);
+            wasInitiallyLoading.current = false;
+        }
       }
     });
 
     return () => unsubscribe();
-  }, [auth, db, toast, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth, db, toast]);
 
   return (
     <AuthContext.Provider value={{ user, role, loading }}>

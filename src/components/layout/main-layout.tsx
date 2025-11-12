@@ -8,14 +8,33 @@ import { ProtectedLayout } from '@/components/layout/protected-layout';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+const PUBLIC_PATHS = ['/login', '/signup', '/'];
+
 export function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && user && (pathname === '/login' || pathname === '/signup' || pathname === '/')) {
-      router.push('/dashboard');
+    if (loading) {
+      return; // Do nothing while loading
+    }
+
+    const isPublicPath = PUBLIC_PATHS.includes(pathname);
+
+    // If user is logged in
+    if (user) {
+      // and is on a public path (like /login), redirect to dashboard
+      if (isPublicPath) {
+        router.push('/dashboard');
+      }
+    } 
+    // If user is not logged in
+    else {
+      // and is on a protected path, redirect to login
+      if (!isPublicPath) {
+        router.push('/login');
+      }
     }
   }, [user, loading, pathname, router]);
 
@@ -26,36 +45,12 @@ export function MainLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-
-  if (user) {
-    // If the user is logged in but still on a public page, show a spinner while redirecting.
-    if (pathname === '/login' || pathname === '/signup' || pathname === '/') {
-       return (
-         <div className="flex h-screen w-screen items-center justify-center">
-            <Spinner className="h-10 w-10" />
-        </div>
-       );
-    }
-    // Otherwise, show the protected part of the app.
+  
+  if (user && !PUBLIC_PATHS.includes(pathname)) {
     return <ProtectedLayout>{children}</ProtectedLayout>;
   }
 
-  // If there's no user, and they are not on a public page, this part of the logic
-  // is handled by ProtectedLayout now, but we only render the children if it's a public path.
-  if (!user && (pathname === '/login' || pathname === '/signup' || pathname === '/')) {
-    return <>{children}</>;
-  }
-  
-  // As a fallback, if no user is found and they are trying to access a protected route,
-  // we can redirect them to login from here too.
-  if (!user && pathname !== '/login' && pathname !== '/signup' && pathname !== '/') {
-    router.push('/login');
-    return (
-        <div className="flex h-screen w-screen items-center justify-center">
-            <Spinner className="h-10 w-10" />
-        </div>
-    );
-  }
-
+  // If user is not logged in, or if user is logged in but the redirect hasn't happened yet,
+  // show the children (e.g., login page, or spinner during redirect flicker)
   return <>{children}</>;
 }
