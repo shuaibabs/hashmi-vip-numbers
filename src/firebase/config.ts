@@ -2,11 +2,11 @@
 // You can publish a new version of this file by running `npx firebase-frameworks-tools client:web --config=.firebase/hosting.json --out src/firebase/config.ts`
 
 export const firebaseConfig = {
-  "apiKey": "AIzaSyDPs_p2_R_BfFvT9fJ8fL8eHbS8vVq_KUM",
-  "authDomain": "studio-7771091082-4e1c2.firebaseapp.com",
   "projectId": "studio-7771091082-4e1c2",
+  "appId": "1:928535696937:web:10e30e89ea7e2732ab2e38",
+  "apiKey": "AIzaSyC99LWCujJl4AXlKRBXZ27l9WVvKoCrAU0",
+  "authDomain": "studio-7771091082-4e1c2.firebaseapp.com",
   "storageBucket": "studio-7771091082-4e1c2.appspot.com",
-  "messagingSenderId": "7771091082",
-  "appId": "1:7771091082:web:65e8a514d3393910c51d6c",
+  "messagingSenderId": "928535696937",
   "measurementId": "G-L0V30018E5"
 };
