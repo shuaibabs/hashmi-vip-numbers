@@ -8,7 +8,7 @@ import { ProtectedLayout } from '@/components/layout/protected-layout';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-const PUBLIC_PATHS = ['/login', '/signup', '/'];
+const PUBLIC_PATHS = ['/login', '/'];
 
 export function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();

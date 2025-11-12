@@ -8,14 +8,10 @@ import {
   type NumberRecord,
   type Reminder,
   type SaleRecord,
-  DUMMY_EMPLOYEES,
   NewNumberData,
   type DealerPurchaseRecord,
   NewDealerPurchaseData,
   type PortOutRecord,
-  getDummyNumbers,
-  getDummyReminders,
-  getDummyDealerPurchases,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
@@ -23,7 +19,6 @@ import { useAuth } from '@/context/auth-context';
 import {
   collection,
   query,
-  where,
   addDoc,
   updateDoc,
   doc,
@@ -47,9 +42,6 @@ type AppContextType = {
   activities: Activity[];
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
-  seedDatabase: () => Promise<void>;
-  databaseSeeded: boolean;
-  isSeeding: boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
   markReminderDone: (id: string) => void;
@@ -70,8 +62,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { user, role } = useAuth();
   const db = useFirestore();
-  const [databaseSeeded, setDatabaseSeeded] = useState(true);
-  const [isSeeding, setIsSeeding] = useState(false);
+  const [employees, setEmployees] = useState<string[]>([]);
 
   // Define queries
   const numbersQuery = db ? query(collection(db, 'numbers')) : null;
@@ -80,6 +71,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const remindersQuery = db ? query(collection(db, 'reminders')) : null;
   const activitiesQuery = db ? query(collection(db, 'activities')) : null;
   const dealerPurchasesQuery = db ? query(collection(db, 'dealerPurchases')) : null;
+  const usersQuery = db ? query(collection(db, 'users')) : null;
 
   // --- Firestore Data Hooks ---
   const [numbersSnapshot, numbersLoading] = useCollectionData(numbersQuery, { idField: 'id' });
@@ -88,6 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [remindersSnapshot, remindersLoading] = useCollectionData(remindersQuery, { idField: 'id' });
   const [activitiesSnapshot, activitiesLoading] = useCollectionData(activitiesQuery, { idField: 'id' });
   const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollectionData(dealerPurchasesQuery, { idField: 'id' });
+  const [usersSnapshot, usersLoading] = useCollectionData(usersQuery, { idField: 'id' });
 
   const numbers: NumberRecord[] = (numbersSnapshot as NumberRecord[]) || [];
   const sales: SaleRecord[] = (salesSnapshot as SaleRecord[]) || [];
@@ -96,7 +89,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const activities: Activity[] = (activitiesSnapshot as Activity[]) || [];
   const dealerPurchases: DealerPurchaseRecord[] = (dealerPurchasesSnapshot as DealerPurchaseRecord[]) || [];
   
-  const [employees, setEmployees] = useState<string[]>(DUMMY_EMPLOYEES);
+  useEffect(() => {
+    if (usersSnapshot) {
+      const userNames = usersSnapshot.map((u: any) => u.displayName);
+      setEmployees(userNames);
+    }
+  }, [usersSnapshot]);
 
   const loading =
     numbersLoading ||
@@ -104,77 +102,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     portOutsLoading ||
     remindersLoading ||
     activitiesLoading ||
-    dealerPurchasesLoading;
-
-  useEffect(() => {
-    const checkSeeded = async () => {
-        if (!db || loading) return;
-        const numbersCollection = collection(db, 'numbers');
-        const numbersSnap = await getDocs(numbersCollection);
-        if (numbersSnap.empty) {
-            setDatabaseSeeded(false);
-        } else {
-            setDatabaseSeeded(true);
-        }
-    }
-    checkSeeded();
-  }, [db, loading]);
-  
-  // This function will be called by an admin to seed the database.
-  const seedDatabase = async () => {
-    if (!db || !user) return;
-    setIsSeeding(true);
-    
-    const batch = writeBatch(db);
-
-    // Seed numbers
-    const numbersCol = collection(db, 'numbers');
-    const dummyNumbers = getDummyNumbers(user.uid);
-    dummyNumbers.forEach(num => {
-      const docRef = doc(numbersCol);
-      batch.set(docRef, num);
-    });
-
-    // Seed reminders
-    const remindersCol = collection(db, 'reminders');
-    const dummyReminders = getDummyReminders(user.uid);
-    dummyReminders.forEach(rem => {
-      const docRef = doc(remindersCol);
-      batch.set(docRef, rem);
-    });
-
-    // Seed dealer purchases
-    const dealerPurchasesCol = collection(db, 'dealerPurchases');
-    const dummyDealerPurchases = getDummyDealerPurchases(user.uid);
-    dummyDealerPurchases.forEach(dp => {
-      const docRef = doc(dealerPurchasesCol);
-      batch.set(docRef, dp);
-    });
-
-    batch.commit().then(() => {
-        addActivity({
-            employeeName: user.displayName || 'Admin',
-            action: 'Seeded Database',
-            description: 'Populated the database with initial sample data.',
-        });
-        setDatabaseSeeded(true);
-        toast({
-            title: 'Database Seeded',
-            description: 'Sample data has been successfully added to Firestore.',
-        });
-    }).catch(async (serverError) => {
-        console.error("Error seeding database:", serverError);
-        const permissionError = new FirestorePermissionError({
-            path: `Multiple Collections`,
-            operation: 'create',
-            requestResourceData: {info: "Batch write for seeding database"},
-          });
-        errorEmitter.emit('permission-error', permissionError);
-    }).finally(() => {
-        setIsSeeding(false);
-    });
-  };
-
+    dealerPurchasesLoading ||
+    usersLoading;
 
   const addActivity = (activity: Omit<Activity, 'id' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
@@ -585,9 +514,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activities,
     employees,
     dealerPurchases,
-    seedDatabase,
-    databaseSeeded,
-    isSeeding,
     updateNumberStatus,
     updateSaleStatuses,
     markReminderDone,
