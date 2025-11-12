@@ -5,18 +5,24 @@ service cloud.firestore {
 
     // Helper function to check if a user is an admin by reading their role from their user document.
     function isAdmin() {
+      // Important: This requires that the admin making the request already has their 'admin' role
+      // set in their own user document.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users can create, read, and update their OWN user document.
+    // Rule for the 'users' collection
     match /users/{userId} {
+      // A user can read or update their own document.
+      // A user can create their own document (e.g., on first sign-up).
       allow read, update, create: if request.auth != null && request.auth.uid == userId;
-      // Admins can get a list of all users.
+      
+      // An admin can get a list of all users.
       allow list: if request.auth != null && isAdmin();
     }
 
-    // For all other collections, any authenticated user can perform any action.
-    // In a real production app, these would be much more restrictive.
+    // Rules for all other collections.
+    // Any authenticated user can perform any action.
+    // For a real production app, you would want more granular rules here.
     match /numbers/{docId} {
       allow read, create, update, delete: if request.auth != null;
     }
