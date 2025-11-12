@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RadioTower } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/auth-context';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -22,7 +23,8 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const auth = useFirebaseAuth();
+  const firebaseAuth = useFirebaseAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,30 +32,47 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'admin@numberflow.app',
+      password: 'password',
     },
   });
+  
+  if (authLoading) {
+    // Prevent interaction while auth state is being determined
+    return null;
+  }
+  
+  // If user is already logged in, redirect them.
+  if (user) {
+    router.push('/dashboard');
+    return null;
+  }
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     setError(null);
-    try {
-      if (!auth) {
-        throw new Error("Auth service is not available.");
-      }
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // On success, the onAuthStateChanged listener in AuthProvider
-      // will handle the redirect. We don't need to set loading to false
-      // here because the component will unmount.
-    } catch (err: any) {
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setError('Invalid email or password. Please try again.');
-      } else {
-        setError(err.message || 'An unexpected error occurred.');
-      }
-      setLoading(false); // Reset loading state only on error
+    if (!firebaseAuth) {
+      setError("Auth service is not available.");
+      setLoading(false);
+      return;
     }
+    
+    signInWithEmailAndPassword(firebaseAuth, values.email, values.password)
+      .then((userCredential) => {
+        // On success, the onAuthStateChanged listener in AuthProvider
+        // will handle the redirect. The component will unmount.
+      })
+      .catch((err: any) => {
+        if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+          setError('Invalid email or password. Please try again.');
+        } else {
+          setError(err.message || 'An unexpected error occurred.');
+        }
+      })
+      .finally(() => {
+        // This will run regardless of success or failure.
+        setLoading(false);
+      });
   };
 
   return (
