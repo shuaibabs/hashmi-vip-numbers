@@ -138,8 +138,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   useEffect(() => {
     const checkRtsDates = async () => {
-      // Extra guard clause to ensure db is available
-      if (!db || !numbers || numbers.length === 0) return;
+      // Extra guard clause to ensure db is available before any operation.
+      if (!db || !numbers || numbers.length === 0) {
+        return;
+      }
 
       let updated = false;
       const batch = writeBatch(db);
