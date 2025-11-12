@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useApp } from "@/context/app-context";
@@ -10,8 +11,14 @@ function ActivityTime({ timestamp }: { timestamp: Date }) {
   const [timeAgo, setTimeAgo] = useState('');
 
   useEffect(() => {
+    // This will only run on the client, after hydration
     setTimeAgo(formatDistanceToNow(timestamp, { addSuffix: true }));
   }, [timestamp]);
+
+  // Render a placeholder or nothing on the server
+  if (!timeAgo) {
+    return null;
+  }
 
   return <>{timeAgo}</>;
 }

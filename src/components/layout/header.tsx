@@ -13,6 +13,24 @@ import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from "../ui/scroll-area";
 import Link from "next/link";
 import { Separator } from "../ui/separator";
+import { useState, useEffect } from "react";
+
+function ActivityTime({ timestamp }: { timestamp: Date }) {
+    const [timeAgo, setTimeAgo] = useState('');
+  
+    useEffect(() => {
+      // This will only run on the client, after hydration
+      setTimeAgo(formatDistanceToNow(timestamp, { addSuffix: true }));
+    }, [timestamp]);
+  
+    // Render a placeholder or nothing on the server
+    if (!timeAgo) {
+      return null;
+    }
+  
+    return <>{timeAgo}</>;
+}
+
 
 export function AppHeader() {
     const { activities } = useApp();
@@ -61,7 +79,7 @@ export function AppHeader() {
                                     </p>
                                     <p className="text-sm text-muted-foreground">{activity.description}</p>
                                      <p className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(activity.timestamp.toDate(), { addSuffix: true })}
+                                        <ActivityTime timestamp={activity.timestamp.toDate()} />
                                     </p>
                                 </div>
                             </div>
