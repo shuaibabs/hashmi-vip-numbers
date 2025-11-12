@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, LogOut, Moon, Sun } from "lucide-react";
 import { Button } from "../ui/button";
 import { SidebarTrigger } from "../ui/sidebar";
 import { ThemeToggle } from "../theme-toggle";
@@ -14,6 +14,11 @@ import { ScrollArea } from "../ui/scroll-area";
 import Link from "next/link";
 import { Separator } from "../ui/separator";
 import { useState, useEffect } from "react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { useAuth } from "@/context/auth-context";
+import { getAuth, signOut } from "firebase/auth";
+import { useFirebaseApp } from "@/firebase";
+import { useRouter } from "next/navigation";
 
 function ActivityTime({ timestamp }: { timestamp: Date }) {
     const [timeAgo, setTimeAgo] = useState('');
@@ -34,8 +39,18 @@ function ActivityTime({ timestamp }: { timestamp: Date }) {
 
 export function AppHeader() {
     const { activities } = useApp();
+    const { user, role } = useAuth();
+    const app = useFirebaseApp();
+    const router = useRouter();
     
     const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+
+    const handleLogout = async () => {
+        if (!app) return;
+        const auth = getAuth(app);
+        await signOut(auth);
+        router.push('/login');
+    };
 
     return (
         <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -95,6 +110,32 @@ export function AppHeader() {
                     </PopoverContent>
                 </Popover>
                 <ThemeToggle />
+                 {user && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                                <Avatar className="h-9 w-9">
+                                    <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                                </Avatar>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                            <DropdownMenuLabel className="font-normal">
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium leading-none">{user.displayName || user.email}</p>
+                                    <p className="text-xs leading-none text-muted-foreground">
+                                        {role}
+                                    </p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleLogout}>
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Log out</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                 )}
             </div>
         </header>
     );

@@ -51,16 +51,7 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { role, user } = useAuth();
-  const app = useFirebaseApp();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    if (!app) return;
-    const auth = getAuth(app);
-    await signOut(auth);
-    router.push('/login');
-  };
-
+  
   return (
     <Sidebar>
       <SidebarHeader>
@@ -91,23 +82,6 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <Separator className="my-2 bg-sidebar-border" />
-        {user && (
-          <div className="p-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 border">
-                <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium truncate">{user.displayName || user.email}</p>
-                <p className="text-xs text-sidebar-foreground/70 truncate">{role}</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-            </Button>
-          </div>
-        )}
       </SidebarFooter>
     </Sidebar>
   );

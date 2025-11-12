@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -12,9 +13,12 @@ service cloud.firestore {
 
     // Rule for the 'users' collection
     match /users/{userId} {
-      // A user can read or update their own document.
-      // A user can create their own document (e.g., on first sign-up).
-      allow read, update, create: if request.auth != null && request.auth.uid == userId;
+      // A user can create or update their own document.
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      
+      // Any authenticated user can read any user's document.
+      // This is necessary for the isAdmin function to work.
+      allow read: if request.auth != null;
       
       // An admin can get a list of all users.
       allow list: if request.auth != null && isAdmin();
