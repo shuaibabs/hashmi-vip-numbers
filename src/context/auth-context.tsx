@@ -7,6 +7,8 @@ import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import type { User } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 type AuthContextType = {
   user: FirebaseUser | null;
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (userDoc.exists()) {
             setRole(userDoc.data().role);
           } else {
+            // This logic runs if it's a user's first-ever sign-in to this app.
             const usersCollection = collection(db, "users");
             const usersSnap = await getDocs(usersCollection);
             const isFirstUser = usersSnap.empty;
@@ -70,8 +73,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setRole(null);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error during authentication state change:", error);
+        
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: `users/${firebaseUser?.uid || 'unknown'}`,
+                operation: 'get',
+                requestResourceData: 'User Profile'
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        }
+
         setUser(null);
         setRole(null);
       } finally {
