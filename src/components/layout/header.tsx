@@ -54,12 +54,24 @@ export function AppHeader() {
 
     return (
         <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
-            <div className="md:hidden">
-                <SidebarTrigger />
+            <div className="flex items-center gap-4">
+                <div className="md:hidden">
+                    <SidebarTrigger />
+                </div>
+                {user && (
+                    <div className="hidden md:flex flex-col items-start">
+                        <p className="text-sm font-medium leading-none">{user.displayName || user.email}</p>
+                        <p className="text-xs leading-none text-muted-foreground capitalize">
+                            {role}
+                        </p>
+                    </div>
+                )}
             </div>
+            
             <div className="flex-1">
                 {/* Optional: Add page title or breadcrumbs here */}
             </div>
+
             <div className="flex items-center gap-4">
                 <Popover>
                     <PopoverTrigger asChild>
@@ -123,7 +135,7 @@ export function AppHeader() {
                             <DropdownMenuLabel className="font-normal">
                                 <div className="flex flex-col space-y-1">
                                     <p className="text-sm font-medium leading-none">{user.displayName || user.email}</p>
-                                    <p className="text-xs leading-none text-muted-foreground">
+                                    <p className="text-xs leading-none text-muted-foreground capitalize">
                                         {role}
                                     </p>
                                 </div>
