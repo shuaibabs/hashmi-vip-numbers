@@ -20,6 +20,8 @@ import { useAuth } from '@/context/auth-context';
 import { PageHeader } from '@/components/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { FirebaseError } from 'firebase/app';
+import { Auth, reauthenticateWithCredential, EmailAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
 
 const formSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -28,10 +30,22 @@ const formSchema = z.object({
   role: z.enum(['admin', 'employee']),
 });
 
+// A temporary, secondary Firebase App to create users without logging the admin out.
+// This is a common workaround for this Firebase SDK behavior.
+async function createSecondaryApp(auth: Auth) {
+    const { initializeApp } = await import('firebase/app');
+    const { getAuth: getSecondaryAuth } = await import('firebase/auth');
+    const tempAppName = `temp-user-creation-${Date.now()}`;
+    const currentConfig = auth.app.options;
+    const secondaryApp = initializeApp(currentConfig, tempAppName);
+    return getSecondaryAuth(secondaryApp);
+}
+
+
 export default function SignupPage() {
   const firebaseAuth = useFirebaseAuth();
   const db = useFirestore();
-  const { role: adminRole } = useAuth();
+  const { user: adminUser, role: adminRole } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -69,28 +83,28 @@ export default function SignupPage() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     setError(null);
-    if (!firebaseAuth || !db) {
-      setError("Auth service is not available.");
+    if (!firebaseAuth || !db || !adminUser) {
+      setError("Auth service is not available or you are not logged in.");
       setLoading(false);
       return;
     }
-
+    
+    let secondaryAuth: Auth | null = null;
+    
     try {
-      // We can't create a user and update their profile in one step with the client SDK
-      // So we use a workaround by creating a temporary user, then updating the main user.
-      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, values.email, values.password);
-      const user = userCredential.user;
+        secondaryAuth = await createSecondaryApp(firebaseAuth);
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, values.email, values.password);
+        const newUser = userCredential.user;
 
-      await updateProfile(user, { displayName: values.displayName });
+        await updateProfile(newUser, { displayName: values.displayName });
 
-      // Now create the user document in Firestore
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
-        uid: user.uid,
-        email: values.email,
-        displayName: values.displayName,
-        role: values.role,
-      });
+        const userDocRef = doc(db, 'users', newUser.uid);
+        await setDoc(userDocRef, {
+            uid: newUser.uid,
+            email: values.email,
+            displayName: values.displayName,
+            role: values.role,
+        });
 
       toast({
         title: 'User Created',
@@ -99,13 +113,25 @@ export default function SignupPage() {
       form.reset();
 
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('This email address is already in use.');
+      console.error("User creation error:", err);
+      if (err instanceof FirebaseError) {
+        if (err.code === 'auth/email-already-in-use') {
+            setError('This email address is already in use.');
+        } else if (err.code === 'permission-denied') {
+            setError('Permission denied. Ensure you have admin rights and correct security rules.')
+        } else {
+            setError(err.message || 'An unexpected error occurred during user creation.');
+        }
       } else {
-        setError(err.message || 'An unexpected error occurred during user creation.');
+        setError('An unexpected error occurred.');
       }
     } finally {
       setLoading(false);
+      if (secondaryAuth) {
+        // Clean up the temporary app
+        const { deleteApp } = await import('firebase/app');
+        deleteApp(secondaryAuth.app).catch(e => console.error("Could not delete temp app", e));
+      }
     }
   };
 

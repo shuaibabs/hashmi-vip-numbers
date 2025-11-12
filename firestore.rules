@@ -4,20 +4,25 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is an admin by reading their role from their user document.
+    // Helper function to check if a user is an admin.
+    // It safely checks for the existence of the user document and their role.
     function isAdmin() {
-      // Important: This requires that the admin making the request already has their 'admin' role
-      // set in their own user document.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && userDoc.data.role == 'admin';
     }
 
     // Rule for the 'users' collection
     match /users/{userId} {
-      // A user can create or update their own document.
-      allow create, update: if request.auth != null && request.auth.uid == userId;
+      // Admins can create any user document.
+      // A user can create their own document.
+      allow create: if (request.auth != null && isAdmin()) || (request.auth != null && request.auth.uid == userId);
+
+      // A user can update their own document.
+      // An admin can update any user document.
+      allow update: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && isAdmin());
       
       // Any authenticated user can read any user's document.
-      // This is necessary for the isAdmin function to work.
+      // This is necessary for the isAdmin function to work and for admins to see user lists.
       allow read: if request.auth != null;
       
       // An admin can get a list of all users.
