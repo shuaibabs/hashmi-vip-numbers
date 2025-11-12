@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
-import { Spinner } from '@/components/ui/spinner';
 import type { User } from '@/lib/data';
 
 type AuthContextType = {
@@ -23,39 +22,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Only proceed if Firebase services are initialized
     if (!auth || !db) {
-        setLoading(true);
-        return;
-    };
+      // Keep loading if services are not ready
+      setLoading(true);
+      return;
+    }
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setRole(userDoc.data().role);
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            setRole(userDoc.data().role);
+          } else {
+            // This logic handles the very first admin user creation
+            const usersCollection = collection(db, "users");
+            const usersSnap = await getDocs(usersCollection);
+            const isFirstUser = usersSnap.empty;
+            
+            const newRole = isFirstUser ? 'admin' : 'employee';
+            const newUser: User = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || firebaseUser.email || 'New User',
+              role: newRole,
+            };
+            await setDoc(userDocRef, newUser);
+            setRole(newRole);
+          }
         } else {
-          // This logic handles the very first admin user creation
-          const usersCollection = collection(db, "users");
-          const usersSnap = await getDocs(usersCollection);
-          const isFirstUser = usersSnap.empty;
-          
-          const newRole = isFirstUser ? 'admin' : 'employee';
-          const newUser: User = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            displayName: firebaseUser.displayName || firebaseUser.email || 'New User',
-            role: newRole,
-          };
-          await setDoc(userDocRef, newUser);
-          setRole(newRole);
+          setUser(null);
+          setRole(null);
         }
-      } else {
+      } catch (error) {
+        console.error("Error during authentication state change:", error);
         setUser(null);
         setRole(null);
+      } finally {
+        // Crucially, set loading to false after checking auth state
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
