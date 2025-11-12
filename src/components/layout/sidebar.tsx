@@ -1,7 +1,7 @@
 
 "use client";
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Sidebar,
   SidebarHeader,
@@ -25,11 +25,13 @@ import {
   LogOut,
   UserPlus,
 } from 'lucide-react';
-import { useAuth } from '@/context/auth-context';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
+import { getAuth, signOut } from 'firebase/auth';
+import { useFirebaseApp } from '@/firebase';
+import { useAuth } from '@/context/auth-context';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
@@ -48,7 +50,16 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { role, user, logout } = useAuth();
+  const { role, user } = useAuth();
+  const app = useFirebaseApp();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    if (!app) return;
+    const auth = getAuth(app);
+    await signOut(auth);
+    router.push('/login');
+  };
 
   return (
     <Sidebar>
@@ -84,14 +95,14 @@ export function AppSidebar() {
           <div className="p-4 space-y-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9 border">
-                <AvatarFallback>{user.displayName ? user.displayName.charAt(0) : user.email.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium truncate">{user.displayName || 'User'}</p>
-                <p className="text-xs text-sidebar-foreground/70 truncate">{user.email}</p>
+                <p className="text-sm font-medium truncate">{user.displayName || user.email}</p>
+                <p className="text-xs text-sidebar-foreground/70 truncate">{role}</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="w-full" onClick={logout}>
+            <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
             </Button>

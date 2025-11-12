@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
@@ -21,6 +21,7 @@ import { AssignNumbersModal } from '@/components/assign-numbers-modal';
 import { SellNumberModal } from '@/components/sell-number-modal';
 import { TableSpinner } from '@/components/ui/spinner';
 import { useAuth } from '@/context/auth-context';
+import { Timestamp } from 'firebase/firestore';
 
 type SortableColumn = keyof NumberRecord | 'id';
 

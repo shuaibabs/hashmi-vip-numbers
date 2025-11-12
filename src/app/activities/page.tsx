@@ -4,8 +4,8 @@ import { useApp } from "@/context/app-context";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import { redirect, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Pagination } from "@/components/pagination";
 import { TableSpinner } from "@/components/ui/spinner";
 import { useAuth } from "@/context/auth-context";
@@ -18,12 +18,18 @@ export default function ActivitiesPage() {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
 
-  if (role !== 'admin') {
-    // Using router.push as redirect can cause issues in client components
-    useEffect(() => {
+  useEffect(() => {
+    if (role !== 'admin') {
       router.push('/dashboard');
-    }, [router]);
-    return null;
+    }
+  }, [role, router]);
+
+  if (role !== 'admin') {
+    return (
+        <div className="flex h-full w-full items-center justify-center">
+            <TableSpinner colSpan={1} />
+        </div>
+    );
   }
   
   const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());

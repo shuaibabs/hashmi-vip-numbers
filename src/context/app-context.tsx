@@ -31,10 +31,12 @@ import {
   deleteDoc,
   writeBatch,
   Timestamp,
+  getDocs,
 } from 'firebase/firestore';
-import { useCollectionData, useCollection } from 'react-firebase-hooks/firestore';
+import { useCollectionData } from 'react-firebase-hooks/firestore';
 import { useFirestore } from '@/firebase';
-import { SIMULATED_EMPLOYEE_NAME } from '@/lib/constants';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type AppContextType = {
   loading: boolean;
@@ -71,26 +73,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [databaseSeeded, setDatabaseSeeded] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
 
+  // Define queries
+  const numbersQuery = db ? query(collection(db, 'numbers')) : null;
+  const salesQuery = db ? query(collection(db, 'sales')) : null;
+  const portOutsQuery = db ? query(collection(db, 'portouts')) : null;
+  const remindersQuery = db ? query(collection(db, 'reminders')) : null;
+  const activitiesQuery = db ? query(collection(db, 'activities')) : null;
+  const dealerPurchasesQuery = db ? query(collection(db, 'dealerPurchases')) : null;
+
   // --- Firestore Data Hooks ---
-  const [numbersSnapshot, numbersLoading] = useCollection(db ? collection(db, 'numbers') : null);
-  const numbers: NumberRecord[] = (numbersSnapshot?.docs.map(d => ({ id: d.id, ...d.data() })) as NumberRecord[]) || [];
+  const [numbersSnapshot, numbersLoading] = useCollectionData(numbersQuery, { idField: 'id' });
+  const [salesSnapshot, salesLoading] = useCollectionData(salesQuery, { idField: 'id' });
+  const [portOutsSnapshot, portOutsLoading] = useCollectionData(portOutsQuery, { idField: 'id' });
+  const [remindersSnapshot, remindersLoading] = useCollectionData(remindersQuery, { idField: 'id' });
+  const [activitiesSnapshot, activitiesLoading] = useCollectionData(activitiesQuery, { idField: 'id' });
+  const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollectionData(dealerPurchasesQuery, { idField: 'id' });
 
-  const [salesSnapshot, salesLoading] = useCollection(db ? collection(db, 'sales') : null);
-  const sales: SaleRecord[] = (salesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() })) as SaleRecord[]) || [];
-
-  const [portOutsSnapshot, portOutsLoading] = useCollection(db ? collection(db, 'portouts') : null);
-  const portOuts: PortOutRecord[] = (portOutsSnapshot?.docs.map(d => ({ id: d.id, ...d.data() })) as PortOutRecord[]) || [];
-
-  const [remindersSnapshot, remindersLoading] = useCollection(db ? collection(db, 'reminders') : null);
-  const reminders: Reminder[] = (remindersSnapshot?.docs.map(d => ({ id: d.id, ...d.data() })) as Reminder[]) || [];
-
-  const [activitiesSnapshot, activitiesLoading] = useCollection(db ? query(collection(db, 'activities')) : null);
-  const activities: Activity[] = (activitiesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() })) as Activity[]) || [];
-
-  const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollection(db ? collection(db, 'dealerPurchases') : null);
-  const dealerPurchases: DealerPurchaseRecord[] = (dealerPurchasesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() })) as DealerPurchaseRecord[]) || [];
-
-  const [employees] = useState<string[]>(DUMMY_EMPLOYEES);
+  const numbers: NumberRecord[] = (numbersSnapshot as NumberRecord[]) || [];
+  const sales: SaleRecord[] = (salesSnapshot as SaleRecord[]) || [];
+  const portOuts: PortOutRecord[] = (portOutsSnapshot as PortOutRecord[]) || [];
+  const reminders: Reminder[] = (remindersSnapshot as Reminder[]) || [];
+  const activities: Activity[] = (activitiesSnapshot as Activity[]) || [];
+  const dealerPurchases: DealerPurchaseRecord[] = (dealerPurchasesSnapshot as DealerPurchaseRecord[]) || [];
+  
+  const [employees, setEmployees] = useState<string[]>(DUMMY_EMPLOYEES);
 
   const loading =
     numbersLoading ||
@@ -101,78 +107,92 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dealerPurchasesLoading;
 
   useEffect(() => {
-    if (!loading && numbers.length === 0 && reminders.length === 0 && dealerPurchases.length === 0) {
-      setDatabaseSeeded(false);
-    } else {
-      setDatabaseSeeded(true);
+    const checkSeeded = async () => {
+        if (!db || loading) return;
+        const numbersCollection = collection(db, 'numbers');
+        const numbersSnap = await getDocs(numbersCollection);
+        if (numbersSnap.empty) {
+            setDatabaseSeeded(false);
+        } else {
+            setDatabaseSeeded(true);
+        }
     }
-  }, [loading, numbers.length, reminders.length, dealerPurchases.length]);
+    checkSeeded();
+  }, [db, loading]);
   
   // This function will be called by an admin to seed the database.
   const seedDatabase = async () => {
     if (!db || !user) return;
     setIsSeeding(true);
-    try {
-      const batch = writeBatch(db);
+    
+    const batch = writeBatch(db);
 
-      // Seed numbers
-      const numbersCol = collection(db, 'numbers');
-      const dummyNumbers = getDummyNumbers(user.uid);
-      dummyNumbers.forEach(num => {
-        const docRef = doc(numbersCol);
-        batch.set(docRef, num);
-      });
+    // Seed numbers
+    const numbersCol = collection(db, 'numbers');
+    const dummyNumbers = getDummyNumbers(user.uid);
+    dummyNumbers.forEach(num => {
+      const docRef = doc(numbersCol);
+      batch.set(docRef, num);
+    });
 
-      // Seed reminders
-      const remindersCol = collection(db, 'reminders');
-      const dummyReminders = getDummyReminders(user.uid);
-      dummyReminders.forEach(rem => {
-        const docRef = doc(remindersCol);
-        batch.set(docRef, rem);
-      });
+    // Seed reminders
+    const remindersCol = collection(db, 'reminders');
+    const dummyReminders = getDummyReminders(user.uid);
+    dummyReminders.forEach(rem => {
+      const docRef = doc(remindersCol);
+      batch.set(docRef, rem);
+    });
 
-      // Seed dealer purchases
-      const dealerPurchasesCol = collection(db, 'dealerPurchases');
-      const dummyDealerPurchases = getDummyDealerPurchases(user.uid);
-      dummyDealerPurchases.forEach(dp => {
-        const docRef = doc(dealerPurchasesCol);
-        batch.set(docRef, dp);
-      });
+    // Seed dealer purchases
+    const dealerPurchasesCol = collection(db, 'dealerPurchases');
+    const dummyDealerPurchases = getDummyDealerPurchases(user.uid);
+    dummyDealerPurchases.forEach(dp => {
+      const docRef = doc(dealerPurchasesCol);
+      batch.set(docRef, dp);
+    });
 
-      await batch.commit();
-      
-      addActivity({
-        employeeName: user.displayName || 'Admin',
-        action: 'Seeded Database',
-        description: 'Populated the database with initial sample data.',
-      });
-
-      setDatabaseSeeded(true);
-      toast({
-        title: 'Database Seeded',
-        description: 'Sample data has been successfully added to Firestore.',
-      });
-    } catch (error: any) {
-      console.error("Error seeding database:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Seeding Failed',
-        description: error.message || 'Could not seed the database.',
-      });
-    } finally {
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'Admin',
+            action: 'Seeded Database',
+            description: 'Populated the database with initial sample data.',
+        });
+        setDatabaseSeeded(true);
+        toast({
+            title: 'Database Seeded',
+            description: 'Sample data has been successfully added to Firestore.',
+        });
+    }).catch(async (serverError) => {
+        console.error("Error seeding database:", serverError);
+        const permissionError = new FirestorePermissionError({
+            path: `Multiple Collections`,
+            operation: 'create',
+            requestResourceData: {info: "Batch write for seeding database"},
+          });
+        errorEmitter.emit('permission-error', permissionError);
+    }).finally(() => {
         setIsSeeding(false);
-    }
+    });
   };
 
 
-  const addActivity = async (activity: Omit<Activity, 'id' | 'timestamp' | 'createdBy'>, showToast = true) => {
+  const addActivity = (activity: Omit<Activity, 'id' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
     const newActivity = { 
         ...activity, 
         timestamp: serverTimestamp(),
         createdBy: user.uid,
     };
-    await addDoc(collection(db, 'activities'), newActivity);
+    addDoc(collection(db, 'activities'), newActivity)
+      .catch(async (serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: 'activities',
+            operation: 'create',
+            requestResourceData: newActivity,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+      });
+
     if (showToast) {
        toast({
         title: activity.action,
@@ -182,7 +202,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   useEffect(() => {
-    if (!db) return;
+    if (!db || !numbers || numbers.length === 0) return;
 
     const checkRtsDates = async () => {
       let updated = false;
@@ -210,7 +230,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
 
       if (updated) {
-        await batch.commit();
+        batch.commit().catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: 'numbers',
+                operation: 'update',
+                requestResourceData: {info: 'Batch update for RTS status'},
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
       }
     };
     const interval = setInterval(checkRtsDates, 10000); // Check every 10 seconds
@@ -219,7 +246,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [db, numbers]);
 
 
-  const updateNumberStatus = async (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
+  const updateNumberStatus = (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
     if (!db || !user) return;
     const numDocRef = doc(db, 'numbers', id);
     const num = numbers.find(n => n.id === id);
@@ -232,16 +259,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (note) {
         updateData.notes = `${num.notes || ''}\n${note}`.trim();
     }
-    await updateDoc(numDocRef, updateData);
-
-    addActivity({
-        employeeName: user.displayName || 'User',
-        action: 'Updated RTS Status',
-        description: `Marked ${num.mobile} as ${status}`
+    updateDoc(numDocRef, updateData).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Updated RTS Status',
+            description: `Marked ${num.mobile} as ${status}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: numDocRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
 
-  const updateSaleStatuses = async (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
+  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
     if (!db || !user) return;
     const saleToUpdate = sales.find(s => s.id === id);
     if (!saleToUpdate) return;
@@ -261,63 +295,95 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
         batch.set(doc(portOutsCol), newPortOutData);
         batch.delete(doc(db, 'sales', id));
-        await batch.commit();
-        
-        addActivity({
-            employeeName: user.displayName || 'User',
-            action: 'Marked Port Out Done',
-            description: `Number ${saleToUpdate.mobile} has been ported out.`,
+        batch.commit().then(() => {
+            addActivity({
+                employeeName: user.displayName || 'User',
+                action: 'Marked Port Out Done',
+                description: `Number ${saleToUpdate.mobile} has been ported out.`,
+            });
+        }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: 'sales/portouts',
+                operation: 'create',
+                requestResourceData: {info: 'Batch write for port out'},
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
     } else {
-        await updateDoc(doc(db, 'sales', id), {
+        const saleDocRef = doc(db, 'sales', id);
+        updateDoc(saleDocRef, {
             paymentStatus: statuses.paymentStatus,
             portOutStatus: statuses.portOutStatus,
-        });
-        addActivity({
-            employeeName: user.displayName || 'User',
-            action: 'Updated Sale Status',
-            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}.`,
+        }).then(() => {
+            addActivity({
+                employeeName: user.displayName || 'User',
+                action: 'Updated Sale Status',
+                description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}.`,
+            });
+        }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: saleDocRef.path,
+                operation: 'update',
+                requestResourceData: statuses,
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
     }
   };
 
-  const markReminderDone = async (id: string) => {
+  const markReminderDone = (id: string) => {
     if (!db || !user) return;
     const reminder = reminders.find(r => r.id === id);
     if (!reminder) return;
+    const reminderDocRef = doc(db, 'reminders', id);
     
-    await updateDoc(doc(db, 'reminders', id), { status: 'ACT Done' });
-    
-    addActivity({
-        employeeName: user.displayName || 'User',
-        action: 'Marked Task Done',
-        description: `Completed task: ${reminder.taskName}`
-    })
+    updateDoc(reminderDocRef, { status: 'ACT Done' }).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Marked Task Done',
+            description: `Completed task: ${reminder.taskName}`
+        })
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: reminderDocRef.path,
+            operation: 'update',
+            requestResourceData: { status: 'ACT Done' },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
-  const assignNumbersToEmployee = async (numberIds: string[], employeeName: string) => {
+  const assignNumbersToEmployee = (numberIds: string[], employeeName: string) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
-    numberIds.forEach(id => {
-      const docRef = doc(db, 'numbers', id);
-      batch.update(docRef, {
+    const updateData = {
         assignedTo: employeeName,
         name: employeeName,
         locationType: 'Employee',
         currentLocation: `Employee - ${employeeName}`,
         location: `Employee - ${employeeName}`
-      });
+    };
+    numberIds.forEach(id => {
+      const docRef = doc(db, 'numbers', id);
+      batch.update(docRef, updateData);
     });
-    await batch.commit();
-
-    addActivity({
-      employeeName: 'Admin',
-      action: 'Assigned Numbers',
-      description: `Assigned ${numberIds.length} number(s) to ${employeeName}.`
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: 'Admin',
+            action: 'Assigned Numbers',
+            description: `Assigned ${numberIds.length} number(s) to ${employeeName}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'update',
+            requestResourceData: {info: `Batch assign to ${employeeName}`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
 
-  const updateActivationDetails = async (id: string, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => {
+  const updateActivationDetails = (id: string, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => {
     if (!db || !user) return;
     const numDocRef = doc(db, 'numbers', id);
     const num = numbers.find(n => n.id === id);
@@ -335,29 +401,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateData.notes = `${num.notes || ''}\n---Activation Note---\n${details.note}`.trim();
     }
     
-    await updateDoc(numDocRef, updateData);
-
-    addActivity({
-        employeeName: user.displayName || 'User',
-        action: 'Updated Activation Status',
-        description: `Updated ${num.mobile}. Activation: ${details.activationStatus}, Upload: ${details.uploadStatus}`
+    updateDoc(numDocRef, updateData).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Updated Activation Status',
+            description: `Updated ${num.mobile}. Activation: ${details.activationStatus}, Upload: ${details.uploadStatus}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: numDocRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
   
-  const checkInNumber = async (id: string) => {
+  const checkInNumber = (id: string) => {
     if (!db || !user) return;
     const num = numbers.find(n => n.id === id);
     if (!num) return;
-    await updateDoc(doc(db, 'numbers', id), { checkInDate: Timestamp.now() });
-
-    addActivity({
-        employeeName: user.displayName || 'User',
-        action: 'Checked In Number',
-        description: `Checked in SIM number ${num.mobile}.`
+    const numDocRef = doc(db, 'numbers', id);
+    updateDoc(numDocRef, { checkInDate: Timestamp.now() }).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Checked In Number',
+            description: `Checked in SIM number ${num.mobile}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: numDocRef.path,
+            operation: 'update',
+            requestResourceData: { checkInDate: 'NOW' },
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
 
-  const sellNumber = async (id: string, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => {
+  const sellNumber = (id: string, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => {
     if (!db || !user) return;
     const soldNumber = numbers.find(n => n.id === id);
     if (!soldNumber) return;
@@ -376,16 +457,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const batch = writeBatch(db);
     batch.set(doc(collection(db, 'sales')), newSale);
     batch.delete(doc(db, 'numbers', id));
-    await batch.commit();
-
-    addActivity({
-      employeeName: user.displayName || 'User',
-      action: 'Sold Number',
-      description: `Sold number ${soldNumber.mobile} to ${details.soldTo} for ₹${details.salePrice}`
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Sold Number',
+            description: `Sold number ${soldNumber.mobile} to ${details.soldTo} for ₹${details.salePrice}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'sales',
+            operation: 'create',
+            requestResourceData: { info: `Sell number ${soldNumber.mobile}` },
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
 
-  const addNumber = async (data: NewNumberData) => {
+  const addNumber = (data: NewNumberData) => {
     if (!db || !user) return;
     const newNumber: Omit<NumberRecord, 'id'> = {
       ...data,
@@ -398,15 +486,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createdBy: user.uid,
       purchaseDate: Timestamp.fromDate(data.purchaseDate as Date),
     };
-    await addDoc(collection(db, 'numbers'), newNumber);
-    addActivity({
-      employeeName: user.displayName || 'User',
-      action: 'Added Number',
-      description: `Manually added new number ${data.mobile}`
+    const numbersCollection = collection(db, 'numbers');
+    addDoc(numbersCollection, newNumber).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Added Number',
+            description: `Manually added new number ${data.mobile}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'create',
+            requestResourceData: newNumber,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
   
-  const addDealerPurchase = async (data: NewDealerPurchaseData) => {
+  const addDealerPurchase = (data: NewDealerPurchaseData) => {
     if (!db || !user) return;
     const newPurchase: Omit<DealerPurchaseRecord, 'id'> = {
       ...data,
@@ -414,45 +511,104 @@ export function AppProvider({ children }: { children: ReactNode }) {
       portOutStatus: 'Pending',
       createdBy: user.uid,
     };
-    await addDoc(collection(db, 'dealerPurchases'), newPurchase);
-    addActivity({
-      employeeName: user.displayName || 'User',
-      action: 'Added Dealer Purchase',
-      description: `Added new dealer purchase for ${data.mobile}`,
+    const dealerPurchasesCollection = collection(db, 'dealerPurchases');
+    addDoc(dealerPurchasesCollection, newPurchase).then(() => {
+        addActivity({
+          employeeName: user.displayName || 'User',
+          action: 'Added Dealer Purchase',
+          description: `Added new dealer purchase for ${data.mobile}`,
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'dealerPurchases',
+            operation: 'create',
+            requestResourceData: newPurchase,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
 
-  const updateDealerPurchase = async (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
+  const updateDealerPurchase = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
     if (!db || !user) return;
     const purchase = dealerPurchases.find(p => p.id === id);
     if (!purchase) return;
+    const docRef = doc(db, 'dealerPurchases', id);
 
-    await updateDoc(doc(db, 'dealerPurchases', id), statuses);
-
-    addActivity({
-        employeeName: user.displayName || 'User',
-        action: 'Updated Dealer Purchase',
-        description: `Updated status for ${purchase.mobile}.`,
+    updateDoc(docRef, statuses).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Updated Dealer Purchase',
+            description: `Updated status for ${purchase.mobile}.`,
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: statuses,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
 
-  const deletePortOuts = async (ids: string[]) => {
+  const deletePortOuts = (ids: string[]) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
     ids.forEach(id => {
         batch.delete(doc(db, 'portouts', id));
     });
-    await batch.commit();
-
-    addActivity({
-        employeeName: user.displayName || 'User',
-        action: 'Deleted Port Out Records',
-        description: `Deleted ${ids.length} record(s) from port out history.`
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Deleted Port Out Records',
+            description: `Deleted ${ids.length} record(s) from port out history.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'portouts',
+            operation: 'delete',
+            requestResourceData: {info: `Batch delete ${ids.length} records`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   }
 
   // Filter data based on role
-  const roleFilteredNumbers = role === 'admin' ? numbers : numbers.filter(n => n.assignedTo === user?.displayName);
-  const roleFilteredSales = role === 'admin' ? sales : sales.filter(s => roleFilteredNumbers.some(n => n.mobile === s.mobile));
-  const roleFilteredPortOuts = role === 'admin' ? portOuts : portOuts.filter(p => roleFilteredNumbers.some(n => n.mobile === p.mobile));
-  const roleFilteredReminders = role === a
+  const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
+  const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => r.assignedTo === user?.displayName);
+
+  const value: AppContextType = {
+    loading,
+    numbers: roleFilteredNumbers,
+    sales,
+    portOuts,
+    reminders: roleFilteredReminders,
+    activities,
+    employees,
+    dealerPurchases,
+    seedDatabase,
+    databaseSeeded,
+    isSeeding,
+    updateNumberStatus,
+    updateSaleStatuses,
+    markReminderDone,
+    addActivity,
+    assignNumbersToEmployee,
+    updateActivationDetails,
+    checkInNumber,
+    sellNumber,
+    addNumber,
+    addDealerPurchase,
+    updateDealerPurchase,
+    deletePortOuts,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+export function useApp() {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+}
