@@ -126,11 +126,6 @@ export default function LoginPage() {
             <p className="text-muted-foreground">
                 Only admins can create new users.
             </p>
-             <Button variant="link" asChild className="px-0">
-                <Link href="/signup">
-                    Go to user creation page
-                </Link>
-            </Button>
         </CardFooter>
       </Card>
     </div>
