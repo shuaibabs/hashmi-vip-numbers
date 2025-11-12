@@ -30,8 +30,8 @@ export function LatestActivities() {
 
   return (
     <div className="space-y-4">
-      {sortedActivities.slice(0, 5).map(activity => (
-        <div key={activity.id} className="flex items-center gap-4">
+      {sortedActivities.slice(0, 5).map((activity, index) => (
+        <div key={`${activity.id}-${index}`} className="flex items-center gap-4">
           <Avatar className="h-9 w-9">
             <AvatarFallback>{activity.employeeName?.[0].toUpperCase() || 'A'}</AvatarFallback>
           </Avatar>

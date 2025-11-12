@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell, LogOut, Moon, Sun } from "lucide-react";
+import { Bell, LogOut, Moon, Sun, UserPlus } from "lucide-react";
 import { Button } from "../ui/button";
 import { SidebarTrigger } from "../ui/sidebar";
 import { ThemeToggle } from "../theme-toggle";
@@ -59,7 +59,7 @@ export function AppHeader() {
                     <SidebarTrigger />
                 </div>
                 {user && (
-                    <div className="flex flex-col items-start">
+                    <div className="hidden md:flex flex-col items-start">
                         <p className="text-sm font-medium leading-none">{user.displayName || user.email}</p>
                         <p className="text-xs leading-none text-muted-foreground capitalize">
                             {role}
@@ -95,8 +95,8 @@ export function AppHeader() {
                         {sortedActivities.length === 0 && (
                             <p className="text-sm text-center text-muted-foreground py-8">No new notifications.</p>
                         )}
-                        {sortedActivities.map(activity => (
-                            <div key={activity.id} className="flex items-start gap-4">
+                        {sortedActivities.map((activity, index) => (
+                            <div key={`${activity.id}-${index}`} className="flex items-start gap-4">
                                 <Avatar className="h-8 w-8 border">
                                     <AvatarFallback>{activity.employeeName?.[0].toUpperCase() || 'A'}</AvatarFallback>
                                 </Avatar>
@@ -142,10 +142,12 @@ export function AppHeader() {
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => router.push('/profile')}>
-                                My Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
+                             {role === 'admin' && (
+                                <DropdownMenuItem onClick={() => router.push('/signup')}>
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    <span>Create User</span>
+                                </DropdownMenuItem>
+                             )}
                             <DropdownMenuItem onClick={handleLogout}>
                                 <LogOut className="mr-2 h-4 w-4" />
                                 <span>Log out</span>
