@@ -27,6 +27,7 @@ import {
   writeBatch,
   Timestamp,
   getDocs,
+  where,
 } from 'firebase/firestore';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 import { useFirestore } from '@/firebase';
@@ -60,11 +61,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  const { user, role } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const db = useFirestore();
   const [employees, setEmployees] = useState<string[]>([]);
-
-  // Define queries
+  
+  // Define queries - these will be null until db is ready
   const numbersQuery = db ? query(collection(db, 'numbers')) : null;
   const salesQuery = db ? query(collection(db, 'sales')) : null;
   const portOutsQuery = db ? query(collection(db, 'portouts')) : null;
@@ -96,14 +97,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [usersSnapshot]);
 
+  // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
   const loading =
-    numbersLoading ||
-    salesLoading ||
-    portOutsLoading ||
-    remindersLoading ||
-    activitiesLoading ||
-    dealerPurchasesLoading ||
-    usersLoading;
+    authLoading || 
+    (!!user && (
+      numbersLoading ||
+      salesLoading ||
+      portOutsLoading ||
+      remindersLoading ||
+      activitiesLoading ||
+      dealerPurchasesLoading ||
+      usersLoading
+    ));
+
 
   const addActivity = (activity: Omit<Activity, 'id' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;

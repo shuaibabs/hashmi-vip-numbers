@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
@@ -25,17 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<'admin' | 'employee' | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const wasInitiallyLoading = useRef(true);
 
   useEffect(() => {
     if (!auth || !db) {
-      if (wasInitiallyLoading.current) {
-        setLoading(true);
-      }
+      setLoading(true);
       return;
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       try {
         const isLoggingIn = !user && firebaseUser; // Transition from null to a user
         
@@ -80,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const permissionError = new FirestorePermissionError({
                 path: `users/${firebaseUser?.uid || 'unknown'}`,
                 operation: 'get',
-                requestResourceData: 'User Profile'
             });
             errorEmitter.emit('permission-error', permissionError);
         }
@@ -88,16 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setRole(null);
       } finally {
-        if (wasInitiallyLoading.current) {
-            setLoading(false);
-            wasInitiallyLoading.current = false;
-        }
+        setLoading(false);
       }
     });
 
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth, db, toast]);
+  }, [auth, db]);
 
   return (
     <AuthContext.Provider value={{ user, role, loading }}>
