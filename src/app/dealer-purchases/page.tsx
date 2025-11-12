@@ -26,7 +26,7 @@ export default function DealerPurchasesPage() {
 
   const totalPages = Math.ceil(dealerPurchases.length / ITEMS_PER_PAGE);
   const paginatedPurchases = [...dealerPurchases]
-    .sort((a, b) => (b.id > a.id ? 1 : -1)) // Simple sort by id desc
+    .sort((a, b) => (b.srNo > a.srNo ? 1 : -1)) // Simple sort by id desc
     .slice(
       (currentPage - 1) * ITEMS_PER_PAGE,
       currentPage * ITEMS_PER_PAGE
@@ -68,9 +68,9 @@ export default function DealerPurchasesPage() {
             {loading ? (
                 <TableSpinner colSpan={6} />
             ) : paginatedPurchases.length > 0 ? (
-                paginatedPurchases.map((purchase, index) => (
-                <TableRow key={purchase.id}>
-                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                paginatedPurchases.map((purchase) => (
+                <TableRow key={purchase.srNo}>
+                    <TableCell>{purchase.srNo}</TableCell>
                     <TableCell className="font-medium">{purchase.mobile}</TableCell>
                     <TableCell>₹{purchase.price.toLocaleString()}</TableCell>
                     <TableCell>

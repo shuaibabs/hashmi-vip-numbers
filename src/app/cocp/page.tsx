@@ -49,9 +49,9 @@ export default function CocpPage() {
             {loading ? (
                 <TableSpinner colSpan={4} />
             ) : paginatedNumbers.length > 0 ? (
-                paginatedNumbers.map((num, index) => (
-                <TableRow key={num.id}>
-                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                paginatedNumbers.map((num) => (
+                <TableRow key={num.srNo}>
+                    <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>

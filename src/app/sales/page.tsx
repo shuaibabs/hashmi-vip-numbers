@@ -65,9 +65,9 @@ export default function SalesPage() {
             {loading ? (
                 <TableSpinner colSpan={9} />
             ) : paginatedSales.length > 0 ? (
-                paginatedSales.map((sale, index) => (
-                <TableRow key={sale.id}>
-                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                paginatedSales.map((sale) => (
+                <TableRow key={sale.srNo}>
+                    <TableCell>{sale.srNo}</TableCell>
                     <TableCell className="font-medium">{sale.mobile}</TableCell>
                     <TableCell>{sale.soldTo}</TableCell>
                     <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>

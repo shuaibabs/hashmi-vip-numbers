@@ -115,8 +115,8 @@ export default function PortOutPage() {
             {loading ? (
                 <TableSpinner colSpan={9} />
             ) : paginatedPortOuts.length > 0 ? (
-                paginatedPortOuts.map((record, index) => (
-                <TableRow key={record.id} data-state={selectedRows.includes(record.id) && "selected"}>
+                paginatedPortOuts.map((record) => (
+                <TableRow key={record.srNo} data-state={selectedRows.includes(record.id) && "selected"}>
                     <TableCell>
                       {role === 'admin' && (
                         <Checkbox
@@ -126,7 +126,7 @@ export default function PortOutPage() {
                         />
                       )}
                     </TableCell>
-                    <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                    <TableCell>{record.srNo}</TableCell>
                     <TableCell className="font-medium">{record.mobile}</TableCell>
                     <TableCell>{record.soldTo}</TableCell>
                     <TableCell>₹{record.salePrice.toLocaleString()}</TableCell>

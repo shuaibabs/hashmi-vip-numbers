@@ -54,6 +54,7 @@ export default function ActivitiesPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Sr.No</TableHead>
               <TableHead>Employee Name</TableHead>
               <TableHead>Action</TableHead>
               <TableHead>Description</TableHead>
@@ -62,10 +63,11 @@ export default function ActivitiesPage() {
           </TableHeader>
           <TableBody>
              {loading ? (
-              <TableSpinner colSpan={4} />
+              <TableSpinner colSpan={5} />
             ) : paginatedActivities.length > 0 ? (
                 paginatedActivities.map((activity) => (
-                <TableRow key={activity.id}>
+                <TableRow key={activity.srNo}>
+                    <TableCell>{activity.srNo}</TableCell>
                     <TableCell className="font-medium">{activity.employeeName}</TableCell>
                     <TableCell>{activity.action}</TableCell>
                     <TableCell>{activity.description}</TableCell>
@@ -74,7 +76,7 @@ export default function ActivitiesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                         No activities found.
                     </TableCell>
                 </TableRow>

@@ -39,7 +39,7 @@ export default function AllNumbersPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'id', direction: 'ascending'});
+  const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'srNo', direction: 'ascending'});
 
   const sortedAndFilteredNumbers = useMemo(() => {
     let sortableItems = [...numbers]
@@ -257,7 +257,7 @@ export default function AllNumbersPage() {
                     />
                   )}
                 </TableHead>
-                <TableHead>Sr.No</TableHead>
+                <SortableHeader column="srNo" label="Sr.No" />
                 <SortableHeader column="mobile" label="Mobile" />
                 <SortableHeader column="numberType" label="Number Type" />
                 <SortableHeader column="assignedTo" label="Assigned To" />
@@ -272,13 +272,13 @@ export default function AllNumbersPage() {
               {loading ? (
                   <TableSpinner colSpan={10} />
               ) : paginatedNumbers.length > 0 ? (
-                  paginatedNumbers.map((num, index) => (
+                  paginatedNumbers.map((num) => (
                     <TableRow 
-                        key={`${num.id}-${index}`}
+                        key={num.srNo}
                         data-state={selectedRows.includes(num.id) && "selected"}
                     >
                     <TableCell>
-                        {role === 'admin' && (
+                        {role === 'admin' && num.id && (
                         <Checkbox
                             checked={selectedRows.includes(num.id)}
                             onCheckedChange={() => handleSelectRow(num.id)}
@@ -287,7 +287,7 @@ export default function AllNumbersPage() {
                         )}
                     </TableCell>
                     <TableCell>
-                        {(currentPage - 1) * itemsPerPage + index + 1}
+                        {num.srNo}
                     </TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>{num.numberType}</TableCell>

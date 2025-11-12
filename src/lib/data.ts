@@ -11,6 +11,7 @@ export type User = {
 // Raw record from Firestore
 export type NumberRecord = {
   id: string; // Firestore document ID
+  srNo: number;
   mobile: string;
   status: 'RTS' | 'Non-RTS';
   numberType: 'Prepaid' | 'Postpaid' | 'COCP';
@@ -37,11 +38,12 @@ export type NumberRecord = {
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'createdBy' | 'rtsDate' | 'checkInDate' | 'safeCustodyDate' | 'status' | 'activationStatus' | 'uploadStatus'
+  'id' | 'srNo' | 'createdBy' | 'rtsDate' | 'checkInDate' | 'safeCustodyDate' | 'status' | 'activationStatus' | 'uploadStatus'
 >;
 
 export type SaleRecord = {
   id: string; // Firestore document ID
+  srNo: number;
   mobile: string;
   soldTo: string;
   salePrice: number;
@@ -56,6 +58,7 @@ export type PortOutRecord = Omit<SaleRecord, 'portOutStatus'> & { portOutDate: T
 
 export type Reminder = {
   id: string; // Firestore document ID
+  srNo: number;
   taskName: string;
   assignedTo: string;
   status: 'ACT Done' | 'Upload Pending';
@@ -65,6 +68,7 @@ export type Reminder = {
 
 export type Activity = {
   id: string; // Firestore document ID
+  srNo: number;
   employeeName: string;
   action: string;
   description: string;
@@ -74,6 +78,7 @@ export type Activity = {
 
 export type DealerPurchaseRecord = {
   id: string; // Firestore document ID
+  srNo: number;
   mobile: string;
   price: number;
   paymentStatus: 'Pending' | 'Done';
@@ -81,4 +86,4 @@ export type DealerPurchaseRecord = {
   createdBy: string;
 };
 
-export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'createdBy' | 'paymentStatus' | 'portOutStatus'>;
+export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'srNo' | 'createdBy' | 'paymentStatus' | 'portOutStatus'>;

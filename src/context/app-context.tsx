@@ -34,6 +34,15 @@ import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+// Helper to get the next serial number for a collection
+const getNextSrNo = (records: { srNo?: number }[]): number => {
+  if (!records || records.length === 0) {
+    return 1;
+  }
+  const maxSrNo = Math.max(...records.map(r => r.srNo || 0));
+  return maxSrNo + 1;
+};
+
 type AppContextType = {
   loading: boolean;
   numbers: NumberRecord[];
@@ -46,7 +55,7 @@ type AppContextType = {
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
   markReminderDone: (id: string) => void;
-  addActivity: (activity: Omit<Activity, 'id' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
+  addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
   updateActivationDetails: (id: string, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
   checkInNumber: (id: string) => void;
@@ -111,10 +120,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ));
 
 
-  const addActivity = (activity: Omit<Activity, 'id' | 'timestamp' | 'createdBy'>, showToast = true) => {
+  const addActivity = (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
     const newActivity = { 
         ...activity, 
+        srNo: getNextSrNo(activities),
         timestamp: serverTimestamp(),
         createdBy: user.uid,
     };
@@ -137,9 +147,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   useEffect(() => {
+    if (!db || !numbers || numbers.length === 0) {
+      return;
+    }
     const checkRtsDates = async () => {
       // Extra guard clause to ensure db is available before any operation.
-      if (!db || !numbers || numbers.length === 0) {
+      if (!db) {
         return;
       }
 
@@ -222,6 +235,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const batch = writeBatch(db);
         const portOutsCol = collection(db, 'portouts');
         const newPortOutData: Omit<PortOutRecord, 'id'> = {
+            srNo: getNextSrNo(portOuts),
             mobile: saleToUpdate.mobile,
             soldTo: saleToUpdate.soldTo,
             salePrice: saleToUpdate.salePrice,
@@ -382,6 +396,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!soldNumber) return;
 
     const newSale: Omit<SaleRecord, 'id'> = {
+      srNo: getNextSrNo(sales),
       mobile: soldNumber.mobile,
       salePrice: details.salePrice,
       soldTo: details.soldTo,
@@ -415,6 +430,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!db || !user) return;
     const newNumber: Omit<NumberRecord, 'id'> = {
       ...data,
+      srNo: getNextSrNo(numbers),
       status: 'Non-RTS',
       rtsDate: null,
       activationStatus: 'Pending',
@@ -445,6 +461,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!db || !user) return;
     const newPurchase: Omit<DealerPurchaseRecord, 'id'> = {
       ...data,
+      srNo: getNextSrNo(dealerPurchases),
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
       createdBy: user.uid,
