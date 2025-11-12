@@ -137,93 +137,95 @@ export default function SignupPage() {
   return (
     <>
         <PageHeader title="Create New User" description="Add a new admin or employee to the system." />
-        <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-                <CardTitle>User Details</CardTitle>
-                <CardDescription>Fill out the form to create a new user account.</CardDescription>
-            </CardHeader>
-            <CardContent>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {error && (
-                    <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Creation Failed</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
-                <div className="grid md:grid-cols-2 gap-6">
-                    <FormField
-                        control={form.control}
-                        name="displayName"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                            <Input placeholder="e.g. John Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                            <Input type="email" placeholder="user@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                     <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="role"
-                        render={({ field }) => (
+        <div className="flex justify-center">
+            <Card className="w-full max-w-2xl">
+                <CardHeader>
+                    <CardTitle>User Details</CardTitle>
+                    <CardDescription>Fill out the form to create a new user account.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {error && (
+                        <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Creation Failed</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                    )}
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="displayName"
+                            render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Role</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="employee">Employee</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                <Input placeholder="e.g. John Doe" {...field} />
+                                </FormControl>
                                 <FormMessage />
                             </FormItem>
-                        )}
-                    />
-                </div>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                <Input type="email" placeholder="user@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Password</FormLabel>
+                                <FormControl>
+                                <Input type="password" placeholder="••••••••" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="role"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Role</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a role" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="employee">Employee</SelectItem>
+                                            <SelectItem value="admin">Admin</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
 
-                <div className="flex justify-end pt-4">
-                    <Button type="submit" disabled={loading}>
-                        {loading ? 'Creating...' : <> <UserPlus className="mr-2 h-4 w-4" /> Create User </>}
-                    </Button>
-                </div>
-                </form>
-            </Form>
-            </CardContent>
-        </Card>
+                    <div className="flex justify-end pt-4">
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Creating...' : <> <UserPlus className="mr-2 h-4 w-4" /> Create User </>}
+                        </Button>
+                    </div>
+                    </form>
+                </Form>
+                </CardContent>
+            </Card>
+        </div>
     </>
   );
 }

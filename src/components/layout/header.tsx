@@ -8,7 +8,7 @@ import { ThemeToggle } from "../theme-toggle";
 import { useApp } from "@/context/app-context";
 import { Badge } from "../ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from "../ui/scroll-area";
 import Link from "next/link";
@@ -59,7 +59,7 @@ export function AppHeader() {
                     <SidebarTrigger />
                 </div>
                 {user && (
-                    <div className="hidden md:flex flex-col items-start">
+                    <div className="flex flex-col items-start">
                         <p className="text-sm font-medium leading-none">{user.displayName || user.email}</p>
                         <p className="text-xs leading-none text-muted-foreground capitalize">
                             {role}
@@ -127,6 +127,7 @@ export function AppHeader() {
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                                 <Avatar className="h-9 w-9">
+                                    <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? ''} />
                                     <AvatarFallback>{user.displayName?.[0].toUpperCase() || user.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
                                 </Avatar>
                             </Button>
@@ -140,6 +141,10 @@ export function AppHeader() {
                                     </p>
                                 </div>
                             </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => router.push('/profile')}>
+                                My Profile
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleLogout}>
                                 <LogOut className="mr-2 h-4 w-4" />
