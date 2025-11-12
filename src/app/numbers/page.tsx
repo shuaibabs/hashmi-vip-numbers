@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -274,7 +275,7 @@ export default function AllNumbersPage() {
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num, index) => (
                     <TableRow 
-                        key={num.id} 
+                        key={`${num.id}-${index}`}
                         data-state={selectedRows.includes(num.id) && "selected"}
                     >
                     <TableCell>
