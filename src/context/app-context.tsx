@@ -65,14 +65,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const db = useFirestore();
   const [employees, setEmployees] = useState<string[]>([]);
   
-  // Define queries - these will be null until db is ready
-  const numbersQuery = db ? query(collection(db, 'numbers')) : null;
-  const salesQuery = db ? query(collection(db, 'sales')) : null;
-  const portOutsQuery = db ? query(collection(db, 'portouts')) : null;
-  const remindersQuery = db ? query(collection(db, 'reminders')) : null;
-  const activitiesQuery = db ? query(collection(db, 'activities')) : null;
-  const dealerPurchasesQuery = db ? query(collection(db, 'dealerPurchases')) : null;
-  const usersQuery = db ? query(collection(db, 'users')) : null;
+  // Define queries - these will be null until db and user are ready
+  const numbersQuery = db && user ? query(collection(db, 'numbers')) : null;
+  const salesQuery = db && user ? query(collection(db, 'sales')) : null;
+  const portOutsQuery = db && user ? query(collection(db, 'portouts')) : null;
+  const remindersQuery = db && user ? query(collection(db, 'reminders')) : null;
+  const activitiesQuery = db && user ? query(collection(db, 'activities')) : null;
+  const dealerPurchasesQuery = db && user ? query(collection(db, 'dealerPurchases')) : null;
+  const usersQuery = db && user ? query(collection(db, 'users')) : null;
 
   // --- Firestore Data Hooks ---
   const [numbersSnapshot, numbersLoading] = useCollectionData(numbersQuery, { idField: 'id' });
@@ -137,13 +137,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   useEffect(() => {
-    if (!db || !numbers || numbers.length === 0) return;
-
     const checkRtsDates = async () => {
+      // Extra guard clause to ensure db is available
+      if (!db || !numbers || numbers.length === 0) return;
+
       let updated = false;
       const batch = writeBatch(db);
       
-      const now = new Date();
       numbers.forEach(num => {
         if (num.status === 'Non-RTS' && num.rtsDate) {
           const rtsDateObj = num.rtsDate.toDate();
@@ -175,6 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       }
     };
+
     const interval = setInterval(checkRtsDates, 10000); // Check every 10 seconds
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
