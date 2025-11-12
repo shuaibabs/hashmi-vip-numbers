@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
@@ -22,9 +23,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Only proceed if Firebase services are initialized
+    // Keep loading if Firebase services are not ready.
     if (!auth || !db) {
-      // Keep loading if services are not ready
       setLoading(true);
       return;
     }
@@ -32,13 +32,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          setUser(firebaseUser);
+          // If a user is logged in, always assume they might exist in Firestore.
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
+          
           if (userDoc.exists()) {
+            // User exists, set their role from the document.
             setRole(userDoc.data().role);
           } else {
-            // This logic handles the very first admin user creation
+            // This logic is for auto-promoting the VERY FIRST user to admin.
+            // This should ideally happen on sign-up, but we place it here
+            // as a safeguard for the initial seeding process.
             const usersCollection = collection(db, "users");
             const usersSnap = await getDocs(usersCollection);
             const isFirstUser = usersSnap.empty;
@@ -47,13 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const newUser: User = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || firebaseUser.email || 'New User',
+              displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'New User',
               role: newRole,
             };
             await setDoc(userDocRef, newUser);
             setRole(newRole);
           }
+          // Finally, set the user object itself.
+          setUser(firebaseUser);
         } else {
+          // User is logged out.
           setUser(null);
           setRole(null);
         }
@@ -62,13 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setRole(null);
       } finally {
-        // Crucially, set loading to false after checking auth state
+        // This is crucial: set loading to false after all auth logic is complete.
         setLoading(false);
       }
     });
 
+    // Cleanup the subscription on component unmount
     return () => unsubscribe();
-  }, [auth, db]);
+  }, [auth, db]); // Rerun effect if auth or db instances change
 
   return (
     <AuthContext.Provider value={{ user, role, loading }}>

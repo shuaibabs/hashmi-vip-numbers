@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RadioTower } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
+import { Spinner } from '@/components/ui/spinner';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -37,15 +38,23 @@ export default function LoginPage() {
     },
   });
   
+  // While auth is loading, show a spinner or nothing.
   if (authLoading) {
-    // Prevent interaction while auth state is being determined
-    return null;
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+            <Spinner className="h-10 w-10" />
+        </div>
+    );
   }
   
-  // If user is already logged in, redirect them.
+  // If user is already logged in, redirect them. This can happen on a page refresh.
   if (user) {
     router.push('/dashboard');
-    return null;
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+            <Spinner className="h-10 w-10" />
+        </div>
+    );
   }
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
@@ -58,10 +67,6 @@ export default function LoginPage() {
     }
     
     signInWithEmailAndPassword(firebaseAuth, values.email, values.password)
-      .then((userCredential) => {
-        // On success, the onAuthStateChanged listener in AuthProvider
-        // will handle the redirect. The component will unmount.
-      })
       .catch((err: any) => {
         if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
           setError('Invalid email or password. Please try again.');
@@ -71,6 +76,7 @@ export default function LoginPage() {
       })
       .finally(() => {
         // This will run regardless of success or failure.
+        // On success, the AuthProvider will trigger a re-render and redirect.
         setLoading(false);
       });
   };
