@@ -21,7 +21,7 @@ import { PageHeader } from '@/components/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
-import { Auth, reauthenticateWithCredential, EmailAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
+import { Auth } from 'firebase/auth';
 
 const formSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -31,7 +31,6 @@ const formSchema = z.object({
 });
 
 // A temporary, secondary Firebase App to create users without logging the admin out.
-// This is a common workaround for this Firebase SDK behavior.
 async function createSecondaryApp(auth: Auth) {
     const { initializeApp } = await import('firebase/app');
     const { getAuth: getSecondaryAuth } = await import('firebase/auth');
@@ -138,7 +137,7 @@ export default function SignupPage() {
   return (
     <>
         <PageHeader title="Create New User" description="Add a new admin or employee to the system." />
-        <Card className="w-full max-w-2xl">
+        <Card className="w-full max-w-2xl mx-auto">
             <CardHeader>
                 <CardTitle>User Details</CardTitle>
                 <CardDescription>Fill out the form to create a new user account.</CardDescription>
@@ -153,68 +152,70 @@ export default function SignupPage() {
                     <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
-                <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g. John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                        <Input type="email" placeholder="user@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
+                <div className="grid md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="displayName"
+                        render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Role</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="employee">Employee</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                </SelectContent>
-                            </Select>
-                             <FormMessage />
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. John Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
                         </FormItem>
-                    )}
-                />
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                            <Input type="email" placeholder="user@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                            <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Role</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a role" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="employee">Employee</SelectItem>
+                                        <SelectItem value="admin">Admin</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={loading}>
                         {loading ? 'Creating...' : <> <UserPlus className="mr-2 h-4 w-4" /> Create User </>}
                     </Button>
