@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   status: z.enum(['RTS', 'Non-RTS']),
@@ -44,10 +45,20 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
     resolver: zodResolver(formSchema),
     defaultValues: {
       status: number.status,
-      rtsDate: number.rtsDate ? new Date(number.rtsDate) : undefined,
+      rtsDate: number.rtsDate ? number.rtsDate.toDate() : undefined,
       note: '',
     },
   });
+
+  useEffect(() => {
+    if (number) {
+        form.reset({
+            status: number.status,
+            rtsDate: number.rtsDate ? number.rtsDate.toDate() : undefined,
+            note: '',
+        })
+    }
+  }, [number, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     updateNumberStatus(number.id, values.status, values.rtsDate || null, values.note);

@@ -23,14 +23,18 @@ import {
   Signal,
   ShoppingCart,
   LogOut,
+  UserPlus,
 } from 'lucide-react';
-import { useApp } from '@/context/app-context';
+import { useAuth } from '@/context/auth-context';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Button } from '../ui/button';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
+  { href: '/signup', label: 'Create User', icon: UserPlus, adminOnly: true },
   { href: '/activation', label: 'Activation', icon: Signal, adminOnly: false },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/sales', label: 'Sales', icon: DollarSign, adminOnly: false },
@@ -44,7 +48,7 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { role } = useApp();
+  const { role, user, logout } = useAuth();
 
   return (
     <Sidebar>
@@ -76,9 +80,23 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <Separator className="my-2 bg-sidebar-border" />
-        <div className="text-xs text-sidebar-foreground/50 p-4 text-center">
-            © {new Date().getFullYear()} NumberFlow Inc.
-        </div>
+        {user && (
+          <div className="p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-9 w-9 border">
+                <AvatarFallback>{user.displayName ? user.displayName.charAt(0) : user.email.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 overflow-hidden">
+                <p className="text-sm font-medium truncate">{user.displayName || 'User'}</p>
+                <p className="text-xs text-sidebar-foreground/70 truncate">{user.email}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="w-full" onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+            </Button>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

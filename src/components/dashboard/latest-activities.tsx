@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "../ui/avatar";
 export function LatestActivities() {
   const { activities } = useApp();
 
-  const sortedActivities = [...activities].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
 
   return (
     <div className="space-y-4">
@@ -24,7 +24,7 @@ export function LatestActivities() {
             <p className="text-sm text-muted-foreground">{activity.description}</p>
           </div>
           <div className="ml-auto text-sm text-muted-foreground">
-            {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+            {formatDistanceToNow(activity.timestamp.toDate(), { addSuffix: true })}
           </div>
         </div>
       ))}

@@ -1,11 +1,10 @@
 
 "use client";
 
-import { Bell, UserCircle } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
 import { SidebarTrigger } from "../ui/sidebar";
 import { ThemeToggle } from "../theme-toggle";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useApp } from "@/context/app-context";
 import { Badge } from "../ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,9 +15,9 @@ import Link from "next/link";
 import { Separator } from "../ui/separator";
 
 export function AppHeader() {
-    const { role, setRole, activities } = useApp();
+    const { activities } = useApp();
     
-    const sortedActivities = [...activities].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
 
     return (
         <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -29,18 +28,6 @@ export function AppHeader() {
                 {/* Optional: Add page title or breadcrumbs here */}
             </div>
             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                    <UserCircle className="h-5 w-5 text-muted-foreground" />
-                    <Select value={role} onValueChange={(value) => setRole(value as 'admin' | 'employee')}>
-                        <SelectTrigger className="w-[120px] border-0 focus:ring-0 shadow-none">
-                            <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="employee">Employee</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="relative">
@@ -74,7 +61,7 @@ export function AppHeader() {
                                     </p>
                                     <p className="text-sm text-muted-foreground">{activity.description}</p>
                                      <p className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                                        {formatDistanceToNow(activity.timestamp.toDate(), { addSuffix: true })}
                                     </p>
                                 </div>
                             </div>
@@ -94,5 +81,3 @@ export function AppHeader() {
         </header>
     );
 }
-
-    

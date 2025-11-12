@@ -4,22 +4,29 @@ import { useApp } from "@/context/app-context";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import { redirect } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Pagination } from "@/components/pagination";
 import { TableSpinner } from "@/components/ui/spinner";
+import { useAuth } from "@/context/auth-context";
 
 const ITEMS_PER_PAGE = 15;
 
 export default function ActivitiesPage() {
-  const { activities, role, loading } = useApp();
+  const { activities, loading } = useApp();
+  const { role } = useAuth();
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
 
   if (role !== 'admin') {
-    redirect('/dashboard');
+    // Using router.push as redirect can cause issues in client components
+    useEffect(() => {
+      router.push('/dashboard');
+    }, [router]);
+    return null;
   }
   
-  const sortedActivities = [...activities].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
 
   const totalPages = Math.ceil(sortedActivities.length / ITEMS_PER_PAGE);
   const paginatedActivities = sortedActivities.slice(
@@ -56,7 +63,7 @@ export default function ActivitiesPage() {
                     <TableCell className="font-medium">{activity.employeeName}</TableCell>
                     <TableCell>{activity.action}</TableCell>
                     <TableCell>{activity.description}</TableCell>
-                    <TableCell>{format(new Date(activity.timestamp), 'PPpp')}</TableCell>
+                    <TableCell>{format(activity.timestamp.toDate(), 'PPpp')}</TableCell>
                 </TableRow>
                 ))
             ) : (

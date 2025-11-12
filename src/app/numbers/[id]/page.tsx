@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -11,6 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NumberRecord } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 
 function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -23,15 +23,20 @@ function DetailItem({ label, value }: { label: string; value: React.ReactNode })
 
 export default function NumberDetailsPage() {
   const { id } = useParams();
-  const { numbers } = useApp();
+  const { numbers, loading } = useApp();
   const router = useRouter();
 
-  // The 'new' route is now handled by its own page
-  if (id === 'new') {
-    return null;
+  const numberId = Array.isArray(id) ? id[0] : id;
+
+  const number: NumberRecord | undefined = numbers.find(n => n.id === numberId);
+
+  if (loading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
   }
-  
-  const number: NumberRecord | undefined = numbers.find(n => n.id === Number(id));
 
   if (!number) {
     return (
@@ -84,15 +89,15 @@ export default function NumberDetailsPage() {
             <h4 className="text-lg font-semibold col-span-full">Purchase Information</h4>
             <DetailItem label="Purchased From" value={number.purchaseFrom} />
             <DetailItem label="Purchase Price" value={`₹${number.purchasePrice.toLocaleString()}`} />
-            <DetailItem label="Purchase Date" value={number.purchaseDate ? format(new Date(number.purchaseDate), 'PPP') : 'N/A'} />
-            <DetailItem label="Sale Price" value={number.salePrice ? `₹${number.salePrice.toLocaleString()}` : 'Not for sale'} />
+            <DetailItem label="Purchase Date" value={number.purchaseDate ? format(number.purchaseDate.toDate(), 'PPP') : 'N/A'} />
+            <DetailItem label="Sale Price" value={number.salePrice ? `₹${Number(number.salePrice).toLocaleString()}` : 'Not for sale'} />
           </div>
 
           <Separator />
 
           <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
             <h4 className="text-lg font-semibold col-span-full">Status & Location</h4>
-             <DetailItem label="Scheduled RTS Date" value={number.rtsDate ? format(new Date(number.rtsDate), 'PPP') : 'N/A'} />
+             <DetailItem label="Scheduled RTS Date" value={number.rtsDate ? format(number.rtsDate.toDate(), 'PPP') : 'N/A'} />
             <DetailItem label="UPC Status" value={<Badge variant={number.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{number.upcStatus}</Badge>} />
             <DetailItem label="Current Location" value={number.currentLocation} />
             <DetailItem label="Location Type" value={number.locationType} />

@@ -13,17 +13,19 @@ import { TableSpinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/context/auth-context';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function PortOutPage() {
-  const { portOuts, loading, deletePortOuts, role } = useApp();
+  const { portOuts, loading, deletePortOuts } = useApp();
+  const { role } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const totalPages = Math.ceil(portOuts.length / ITEMS_PER_PAGE);
   const paginatedPortOuts = [...portOuts]
-    .sort((a, b) => new Date(b.portOutDate).getTime() - new Date(a.portOutDate).getTime())
+    .sort((a, b) => a.portOutDate.toDate().getTime() - b.portOutDate.toDate().getTime())
     .slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
@@ -33,7 +35,7 @@ export default function PortOutPage() {
     setCurrentPage(page);
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string) => {
     setSelectedRows(prev => 
       prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
     );
@@ -93,7 +95,7 @@ export default function PortOutPage() {
               <TableHead className="w-12">
                 {role === 'admin' && (
                   <Checkbox
-                    checked={isAllOnPageSelected}
+                    checked={isAllOnPageSelected || isSomeOnPageSelected}
                     onCheckedChange={(checked) => handleSelectAll(checked)}
                     aria-label="Select all"
                   />
@@ -128,7 +130,7 @@ export default function PortOutPage() {
                     <TableCell className="font-medium">{record.mobile}</TableCell>
                     <TableCell>{record.soldTo}</TableCell>
                     <TableCell>₹{record.salePrice.toLocaleString()}</TableCell>
-                    <TableCell>{format(new Date(record.saleDate), 'PPP')}</TableCell>
+                    <TableCell>{format(record.saleDate.toDate(), 'PPP')}</TableCell>
                     <TableCell>
                          <Badge variant={record.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
                             {record.paymentStatus}
@@ -139,7 +141,7 @@ export default function PortOutPage() {
                             {record.upcStatus}
                         </Badge>
                     </TableCell>
-                     <TableCell>{format(new Date(record.portOutDate), 'PPP')}</TableCell>
+                     <TableCell>{format(record.portOutDate.toDate(), 'PPP')}</TableCell>
                 </TableRow>
                 ))
             ) : (

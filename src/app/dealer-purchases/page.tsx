@@ -26,7 +26,7 @@ export default function DealerPurchasesPage() {
 
   const totalPages = Math.ceil(dealerPurchases.length / ITEMS_PER_PAGE);
   const paginatedPurchases = [...dealerPurchases]
-    .sort((a, b) => b.id - a.id)
+    .sort((a, b) => (b.id > a.id ? 1 : -1)) // Simple sort by id desc
     .slice(
       (currentPage - 1) * ITEMS_PER_PAGE,
       currentPage * ITEMS_PER_PAGE

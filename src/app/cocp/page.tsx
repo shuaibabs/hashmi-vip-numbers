@@ -53,8 +53,8 @@ export default function CocpPage() {
                 <TableRow key={num.id}>
                     <TableCell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
-                    <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell>{num.safeCustodyDate ? format(new Date(num.safeCustodyDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                 </TableRow>
                 ))
             ) : (

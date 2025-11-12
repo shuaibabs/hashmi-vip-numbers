@@ -20,11 +20,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AssignNumbersModal } from '@/components/assign-numbers-modal';
 import { SellNumberModal } from '@/components/sell-number-modal';
 import { TableSpinner } from '@/components/ui/spinner';
+import { useAuth } from '@/context/auth-context';
 
-type SortableColumn = keyof NumberRecord;
+type SortableColumn = keyof NumberRecord | 'id';
 
 export default function AllNumbersPage() {
-  const { numbers, role, loading } = useApp();
+  const { numbers, loading } = useApp();
+  const { role } = useAuth();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -34,7 +36,7 @@ export default function AllNumbersPage() {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'id', direction: 'ascending'});
 
@@ -52,8 +54,8 @@ export default function AllNumbersPage() {
 
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
+        const aValue = a[sortConfig.key as keyof NumberRecord];
+        const bValue = b[sortConfig.key as keyof NumberRecord];
 
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
@@ -63,6 +65,8 @@ export default function AllNumbersPage() {
             comparison = aValue.localeCompare(bValue);
         } else if (aValue instanceof Date && bValue instanceof Date) {
             comparison = aValue.getTime() - bValue.getTime();
+        } else if (aValue instanceof Timestamp && bValue instanceof Timestamp) {
+            comparison = aValue.toMillis() - bValue.toMillis();
         } else {
              if (aValue < bValue) {
                 comparison = -1;
@@ -124,11 +128,11 @@ export default function AllNumbersPage() {
     setCurrentPage(1);
   };
 
-  const handleRowClick = (id: number) => {
+  const handleRowClick = (id: string) => {
     router.push(`/numbers/${id}`);
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string) => {
     setSelectedRows(prev => 
       prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
     );
@@ -246,7 +250,7 @@ export default function AllNumbersPage() {
                  <TableHead className="w-12">
                   {role === 'admin' && (
                     <Checkbox
-                      checked={isAllOnPageSelected}
+                      checked={isAllOnPageSelected || isSomeOnPageSelected}
                       onCheckedChange={(checked) => handleSelectAll(checked)}
                       aria-label="Select all"
                     />
@@ -292,7 +296,7 @@ export default function AllNumbersPage() {
                     </TableCell>
                     <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.purchaseFrom}</TableCell>
                     <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.location}</TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                     {(role === 'admin' || role === 'employee') && (
                         <DropdownMenu>
@@ -353,6 +357,4 @@ export default function AllNumbersPage() {
     </>
   );
 }
- 
-
     

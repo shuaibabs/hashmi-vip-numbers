@@ -76,7 +76,7 @@ export default function SimLocationsPage() {
                     <TableCell>{num.currentLocation}</TableCell>
                     <TableCell>{num.locationType}</TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
-                    <TableCell>{num.checkInDate ? format(new Date(num.checkInDate), 'PPP p') : 'N/A'}</TableCell>
+                    <TableCell>{num.checkInDate ? format(num.checkInDate.toDate(), 'PPP p') : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                     <Button size="sm" variant="outline" onClick={() => checkInNumber(num.id)}>
                         <LogIn className="mr-2 h-4 w-4" />

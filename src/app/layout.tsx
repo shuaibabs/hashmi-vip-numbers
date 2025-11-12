@@ -1,9 +1,12 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppProvider } from '@/context/app-context';
 import { Toaster } from '@/components/ui/toaster';
 import { MainLayout } from '@/components/layout/main-layout';
+import { AuthProvider } from '@/context/auth-context';
+import { FirebaseProvider } from '@/firebase';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export const metadata: Metadata = {
   title: 'NumberFlow',
@@ -24,10 +27,15 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AppProvider>
-            <MainLayout>{children}</MainLayout>
-            <Toaster />
-          </AppProvider>
+          <Toaster />
+          <FirebaseProvider>
+            <AuthProvider>
+              <AppProvider>
+                <MainLayout>{children}</MainLayout>
+                <FirebaseErrorListener />
+              </AppProvider>
+            </AuthProvider>
+          </FirebaseProvider>
         </ThemeProvider>
       </body>
     </html>

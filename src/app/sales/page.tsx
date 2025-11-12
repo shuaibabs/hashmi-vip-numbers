@@ -25,7 +25,7 @@ export default function SalesPage() {
 
   const totalPages = Math.ceil(sales.length / ITEMS_PER_PAGE);
   const paginatedSales = [...sales]
-    .sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime())
+    .sort((a, b) => b.saleDate.toDate().getTime() - a.saleDate.toDate().getTime())
     .slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
@@ -71,7 +71,7 @@ export default function SalesPage() {
                     <TableCell className="font-medium">{sale.mobile}</TableCell>
                     <TableCell>{sale.soldTo}</TableCell>
                     <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
-                    <TableCell>{format(new Date(sale.saleDate), 'PPP')}</TableCell>
+                    <TableCell>{format(sale.saleDate.toDate(), 'PPP')}</TableCell>
                     <TableCell>
                          <Badge variant={sale.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
                             {sale.paymentStatus}
