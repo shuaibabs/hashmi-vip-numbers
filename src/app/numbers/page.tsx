@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -287,32 +286,32 @@ export default function AllNumbersPage() {
                         />
                         )}
                     </TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
+                    <TableCell>
                         {(currentPage - 1) * itemsPerPage + index + 1}
                     </TableCell>
-                    <TableCell className="font-medium cursor-pointer" onClick={() => handleRowClick(num.id)}>{num.mobile}</TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.numberType}</TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.assignedTo}</TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">
+                    <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>{num.numberType}</TableCell>
+                    <TableCell>{num.assignedTo}</TableCell>
+                    <TableCell>
                         <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
                     </TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.purchaseFrom}</TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.location}</TableCell>
-                    <TableCell onClick={() => handleRowClick(num.id)} className="cursor-pointer">{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.purchaseFrom}</TableCell>
+                    <TableCell>{num.location}</TableCell>
+                    <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                     {(role === 'admin' || role === 'employee') && (
                         <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
                             <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/numbers/${num.id}`); }}>View Details</DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Update RTS Status</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/numbers/${num.id}`)}>View Details</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Update RTS Status</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={(e) => { e.stopPropagation(); handleSellNumber(num); }}>
+                            <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={() => handleSellNumber(num)}>
                             <DollarSign className="mr-2 h-4 w-4" />
                             Mark as Sold
                             </DropdownMenuItem>
