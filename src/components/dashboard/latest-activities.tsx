@@ -4,6 +4,17 @@ import { useApp } from "@/context/app-context";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from "../ui/avatar";
+import { useEffect, useState } from "react";
+
+function ActivityTime({ timestamp }: { timestamp: Date }) {
+  const [timeAgo, setTimeAgo] = useState('');
+
+  useEffect(() => {
+    setTimeAgo(formatDistanceToNow(timestamp, { addSuffix: true }));
+  }, [timestamp]);
+
+  return <>{timeAgo}</>;
+}
 
 export function LatestActivities() {
   const { activities } = useApp();
@@ -24,7 +35,7 @@ export function LatestActivities() {
             <p className="text-sm text-muted-foreground">{activity.description}</p>
           </div>
           <div className="ml-auto text-sm text-muted-foreground">
-            {formatDistanceToNow(activity.timestamp.toDate(), { addSuffix: true })}
+            <ActivityTime timestamp={activity.timestamp.toDate()} />
           </div>
         </div>
       ))}
