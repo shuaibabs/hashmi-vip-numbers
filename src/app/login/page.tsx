@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -38,18 +38,9 @@ export default function LoginPage() {
     },
   });
   
-  // While auth is loading, show a spinner or nothing.
-  if (authLoading) {
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-background px-4">
-            <Spinner className="h-10 w-10" />
-        </div>
-    );
-  }
-  
-  // If user is already logged in, redirect them. This can happen on a page refresh.
-  if (user) {
-    router.push('/dashboard');
+  // If the user is already authenticated, the main layout will handle redirection.
+  // We can show a spinner here while that happens.
+  if (authLoading || user) {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background px-4">
             <Spinner className="h-10 w-10" />
@@ -75,8 +66,6 @@ export default function LoginPage() {
         }
       })
       .finally(() => {
-        // This will run regardless of success or failure.
-        // On success, the AuthProvider will trigger a re-render and redirect.
         setLoading(false);
       });
   };
