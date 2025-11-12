@@ -98,7 +98,7 @@ export function AppHeader() {
                         {sortedActivities.map(activity => (
                             <div key={activity.id} className="flex items-start gap-4">
                                 <Avatar className="h-8 w-8 border">
-                                    <AvatarFallback>{activity.employeeName.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback>{activity.employeeName?.[0].toUpperCase() || 'A'}</AvatarFallback>
                                 </Avatar>
                                 <div className="grid gap-1 flex-1">
                                     <p className="text-sm font-medium leading-none">
@@ -127,7 +127,7 @@ export function AppHeader() {
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                                 <Avatar className="h-9 w-9">
-                                    <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                                    <AvatarFallback>{user.displayName?.[0].toUpperCase() || user.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
                                 </Avatar>
                             </Button>
                         </DropdownMenuTrigger>

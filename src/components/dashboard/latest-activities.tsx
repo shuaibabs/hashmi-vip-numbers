@@ -33,7 +33,7 @@ export function LatestActivities() {
       {sortedActivities.slice(0, 5).map(activity => (
         <div key={activity.id} className="flex items-center gap-4">
           <Avatar className="h-9 w-9">
-            <AvatarFallback>{activity.employeeName.charAt(0)}</AvatarFallback>
+            <AvatarFallback>{activity.employeeName?.[0].toUpperCase() || 'A'}</AvatarFallback>
           </Avatar>
           <div className="grid gap-1">
             <p className="text-sm font-medium leading-none">
