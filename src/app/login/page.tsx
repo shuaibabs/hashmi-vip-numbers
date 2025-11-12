@@ -43,14 +43,16 @@ export default function LoginPage() {
         throw new Error("Auth service is not available.");
       }
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      // No need to redirect here, the MainLayout will handle it
+      // On success, the onAuthStateChanged listener in AuthProvider
+      // will handle the redirect. We don't need to set loading to false
+      // here because the component will unmount.
     } catch (err: any) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError('Invalid email or password. Please try again.');
       } else {
         setError(err.message || 'An unexpected error occurred.');
       }
-      setLoading(false);
+      setLoading(false); // Reset loading state only on error
     }
   };
 
