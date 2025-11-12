@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   LogOut,
   UserPlus,
+  Database,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
@@ -46,12 +47,15 @@ const navItems = [
   { href: '/cocp', label: 'COCP', icon: RadioTower, adminOnly: false },
   { href: '/activities', label: 'Employee Activities', icon: History, adminOnly: true },
   { href: '/import-export', label: 'Import / Export', icon: FileOutput, adminOnly: false },
+  { href: '/seed-data', label: 'Seed Data', icon: Database, adminOnly: true, devOnly: true },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { role, user } = useAuth();
   
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -62,8 +66,10 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navItems.map((item) =>
-            (!item.adminOnly || role === 'admin') && (
+          {navItems.map((item) => {
+            if (item.devOnly && !isDevelopment) return null;
+            
+            return (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref>
                   <SidebarMenuButton
@@ -77,7 +83,7 @@ export function AppSidebar() {
                 </Link>
               </SidebarMenuItem>
             )
-          )}
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
