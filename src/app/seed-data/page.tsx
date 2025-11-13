@@ -2,13 +2,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore } from '@/firebase';
+import { useAuth } from '@/context/auth-context';
 import {
   collection,
   writeBatch,
   getDocs,
   Timestamp,
   query,
+  doc,
 } from 'firebase/firestore';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
