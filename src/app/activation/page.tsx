@@ -72,7 +72,7 @@ export default function ActivationPage() {
                 <TableSpinner colSpan={5} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
-                <TableRow key={num.id}>
+                <TableRow key={num.srNo}>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>{getStatusBadge(num.activationStatus)}</TableCell>
                     <TableCell>{getStatusBadge(num.uploadStatus)}</TableCell>
