@@ -31,6 +31,8 @@ import {
   where,
   DocumentData,
   Unsubscribe,
+  QuerySnapshot,
+  QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -44,6 +46,15 @@ const getNextSrNo = (records: { srNo?: number }[]): number => {
   const maxSrNo = Math.max(...records.map(r => r.srNo || 0));
   return maxSrNo + 1;
 };
+
+// Helper function to map snapshot to data with ID
+const mapSnapshotToData = <T>(snapshot: QuerySnapshot<DocumentData>): T[] => {
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  } as T));
+};
+
 
 type AppContextType = {
   loading: boolean;
@@ -134,10 +145,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     collectionMappings.forEach(({ name, setter, loader }) => {
       const q = query(collection(db, name));
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const data = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const data = mapSnapshotToData(querySnapshot);
         setter(data as any); // Cast as any because setters have different types
         loader(false);
       }, (error) => {
@@ -165,6 +173,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dealerPurchasesLoading ||
       usersLoading
     ));
+
+  const isMobileNumberDuplicate = (mobile: string): boolean => {
+    const allMobiles = new Set([
+      ...numbers.map(n => n.mobile),
+      ...sales.map(s => s.mobile),
+      ...portOuts.map(p => p.mobile),
+      ...dealerPurchases.map(d => d.mobile),
+    ]);
+    return allMobiles.has(mobile);
+  };
 
 
   const addActivity = (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
@@ -475,6 +493,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addNumber = (data: NewNumberData) => {
     if (!db || !user) return;
+    
+    if (isMobileNumberDuplicate(data.mobile)) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Number',
+        description: `The mobile number ${data.mobile} already exists in the system.`,
+      });
+      return;
+    }
+
     const newNumber: Omit<NumberRecord, 'id'> = {
       ...data,
       srNo: getNextSrNo(numbers),
@@ -506,6 +534,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const addDealerPurchase = (data: NewDealerPurchaseData) => {
     if (!db || !user) return;
+
+    if (isMobileNumberDuplicate(data.mobile)) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Number',
+        description: `The mobile number ${data.mobile} already exists in the system.`,
+      });
+      return;
+    }
+
     const newPurchase: Omit<DealerPurchaseRecord, 'id'> = {
       ...data,
       srNo: getNextSrNo(dealerPurchases),

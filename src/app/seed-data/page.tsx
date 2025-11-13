@@ -11,6 +11,7 @@ import {
   Timestamp,
   query,
   doc,
+  where,
 } from 'firebase/firestore';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { NumberRecord } from '@/lib/data';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { useApp } from '@/context/app-context';
 
 const getNextSrNo = async (
   db: any,
@@ -121,6 +123,17 @@ export default function SeedDataPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { numbers, sales, portOuts, dealerPurchases } = useApp();
+
+  const isMobileNumberDuplicate = (mobile: string): boolean => {
+    const allMobiles = [
+      ...numbers.map(n => n.mobile),
+      ...sales.map(s => s.mobile),
+      ...portOuts.map(p => p.mobile),
+      ...dealerPurchases.map(d => d.mobile),
+    ];
+    return allMobiles.includes(mobile);
+  };
 
   const handleSeedNumbers = async () => {
     if (!db || !user) {
@@ -138,7 +151,13 @@ export default function SeedDataPage() {
       const numbersCol = collection(db, 'numbers');
       let nextSrNo = await getNextSrNo(db, 'numbers');
 
-      sampleNumbers.forEach((numData) => {
+      let addedCount = 0;
+      for (const numData of sampleNumbers) {
+        if (isMobileNumberDuplicate(numData.mobile)) {
+          console.warn(`Skipping duplicate mobile number: ${numData.mobile}`);
+          continue;
+        }
+
         const docRef = doc(numbersCol);
         const newRecord: Omit<NumberRecord, 'id'> = {
           ...numData,
@@ -147,14 +166,23 @@ export default function SeedDataPage() {
         };
         batch.set(docRef, newRecord);
         nextSrNo++;
-      });
+        addedCount++;
+      }
 
-      await batch.commit();
+      if (addedCount > 0) {
+        await batch.commit();
+        toast({
+          title: 'Success',
+          description: `${addedCount} sample numbers have been added to the database.`,
+        });
+      } else {
+         toast({
+          variant: 'destructive',
+          title: 'Seeding Skipped',
+          description: 'All sample numbers already exist in the database.',
+        });
+      }
 
-      toast({
-        title: 'Success',
-        description: `${sampleNumbers.length} sample numbers have been added to the database.`,
-      });
     } catch (error) {
       console.error('Error seeding data:', error);
       toast({
