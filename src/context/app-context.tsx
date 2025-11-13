@@ -29,6 +29,7 @@ import {
   getDocs,
   where,
   DocumentData,
+  QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useFirestore } from '@/firebase';
@@ -572,5 +573,3 @@ export function useApp() {
   }
   return context;
 }
-
-    
