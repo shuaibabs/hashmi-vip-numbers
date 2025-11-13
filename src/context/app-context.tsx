@@ -28,8 +28,9 @@ import {
   Timestamp,
   getDocs,
   where,
+  DocumentData,
 } from 'firebase/firestore';
-import { useCollectionData } from 'react-firebase-hooks/firestore';
+import { useCollection } from 'react-firebase-hooks/firestore';
 import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -42,6 +43,13 @@ const getNextSrNo = (records: { srNo?: number }[]): number => {
   const maxSrNo = Math.max(...records.map(r => r.srNo || 0));
   return maxSrNo + 1;
 };
+
+// Helper function to map snapshot docs to data with IDs
+const mapSnapshotToData = <T extends DocumentData>(snapshot: ReturnType<typeof useCollection>[0]): T[] => {
+  if (!snapshot) return [];
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+};
+
 
 type AppContextType = {
   loading: boolean;
@@ -84,24 +92,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const usersQuery = db && user ? query(collection(db, 'users')) : null;
 
   // --- Firestore Data Hooks ---
-  const [numbersSnapshot, numbersLoading] = useCollectionData(numbersQuery, { idField: 'id' });
-  const [salesSnapshot, salesLoading] = useCollectionData(salesQuery, { idField: 'id' });
-  const [portOutsSnapshot, portOutsLoading] = useCollectionData(portOutsQuery, { idField: 'id' });
-  const [remindersSnapshot, remindersLoading] = useCollectionData(remindersQuery, { idField: 'id' });
-  const [activitiesSnapshot, activitiesLoading] = useCollectionData(activitiesQuery, { idField: 'id' });
-  const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollectionData(dealerPurchasesQuery, { idField: 'id' });
-  const [usersSnapshot, usersLoading] = useCollectionData(usersQuery, { idField: 'id' });
+  const [numbersSnapshot, numbersLoading] = useCollection(numbersQuery);
+  const [salesSnapshot, salesLoading] = useCollection(salesQuery);
+  const [portOutsSnapshot, portOutsLoading] = useCollection(portOutsQuery);
+  const [remindersSnapshot, remindersLoading] = useCollection(remindersQuery);
+  const [activitiesSnapshot, activitiesLoading] = useCollection(activitiesQuery);
+  const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollection(dealerPurchasesQuery);
+  const [usersSnapshot, usersLoading] = useCollection(usersQuery);
 
-  const numbers: NumberRecord[] = (numbersSnapshot as NumberRecord[]) || [];
-  const sales: SaleRecord[] = (salesSnapshot as SaleRecord[]) || [];
-  const portOuts: PortOutRecord[] = (portOutsSnapshot as PortOutRecord[]) || [];
-  const reminders: Reminder[] = (remindersSnapshot as Reminder[]) || [];
-  const activities: Activity[] = (activitiesSnapshot as Activity[]) || [];
-  const dealerPurchases: DealerPurchaseRecord[] = (dealerPurchasesSnapshot as DealerPurchaseRecord[]) || [];
+  const numbers: NumberRecord[] = mapSnapshotToData<NumberRecord>(numbersSnapshot);
+  const sales: SaleRecord[] = mapSnapshotToData<SaleRecord>(salesSnapshot);
+  const portOuts: PortOutRecord[] = mapSnapshotToData<PortOutRecord>(portOutsSnapshot);
+  const reminders: Reminder[] = mapSnapshotToData<Reminder>(remindersSnapshot);
+  const activities: Activity[] = mapSnapshotToData<Activity>(activitiesSnapshot);
+  const dealerPurchases: DealerPurchaseRecord[] = mapSnapshotToData<DealerPurchaseRecord>(dealerPurchasesSnapshot);
   
   useEffect(() => {
     if (usersSnapshot) {
-      const userNames = usersSnapshot.map((u: any) => u.displayName);
+      const userNames = usersSnapshot.docs.map((u: any) => u.data().displayName);
       setEmployees(userNames);
     }
   }, [usersSnapshot]);
@@ -428,7 +436,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addNumber = (data: NewNumberData) => {
     if (!db || !user) return;
-    const newNumber: Omit<NumberRecord, 'id'> = {
+    const newNumber: Omit<NumberRecord, 'id' | 'purchaseDate'> & { purchaseDate: Timestamp } = {
       ...data,
       srNo: getNextSrNo(numbers),
       status: 'Non-RTS',
