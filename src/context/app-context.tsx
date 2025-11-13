@@ -26,12 +26,12 @@ import {
   deleteDoc,
   writeBatch,
   Timestamp,
+  onSnapshot,
   getDocs,
   where,
   DocumentData,
-  QueryDocumentSnapshot,
+  Unsubscribe,
 } from 'firebase/firestore';
-import { useCollection } from 'react-firebase-hooks/firestore';
 import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -44,13 +44,6 @@ const getNextSrNo = (records: { srNo?: number }[]): number => {
   const maxSrNo = Math.max(...records.map(r => r.srNo || 0));
   return maxSrNo + 1;
 };
-
-// Helper function to map snapshot docs to data with IDs
-const mapSnapshotToData = <T extends DocumentData>(snapshot: ReturnType<typeof useCollection>[0]): T[] => {
-  if (!snapshot) return [];
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-};
-
 
 type AppContextType = {
   loading: boolean;
@@ -81,39 +74,84 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { user, role, loading: authLoading } = useAuth();
   const db = useFirestore();
+
+  const [numbers, setNumbers] = useState<NumberRecord[]>([]);
+  const [sales, setSales] = useState<SaleRecord[]>([]);
+  const [portOuts, setPortOuts] = useState<PortOutRecord[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
-  
-  // Define queries - these will be null until db and user are ready
-  const numbersQuery = db && user ? query(collection(db, 'numbers')) : null;
-  const salesQuery = db && user ? query(collection(db, 'sales')) : null;
-  const portOutsQuery = db && user ? query(collection(db, 'portouts')) : null;
-  const remindersQuery = db && user ? query(collection(db, 'reminders')) : null;
-  const activitiesQuery = db && user ? query(collection(db, 'activities')) : null;
-  const dealerPurchasesQuery = db && user ? query(collection(db, 'dealerPurchases')) : null;
-  const usersQuery = db && user ? query(collection(db, 'users')) : null;
 
-  // --- Firestore Data Hooks ---
-  const [numbersSnapshot, numbersLoading] = useCollection(numbersQuery);
-  const [salesSnapshot, salesLoading] = useCollection(salesQuery);
-  const [portOutsSnapshot, portOutsLoading] = useCollection(portOutsQuery);
-  const [remindersSnapshot, remindersLoading] = useCollection(remindersQuery);
-  const [activitiesSnapshot, activitiesLoading] = useCollection(activitiesQuery);
-  const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollection(dealerPurchasesQuery);
-  const [usersSnapshot, usersLoading] = useCollection(usersQuery);
+  const [numbersLoading, setNumbersLoading] = useState(true);
+  const [salesLoading, setSalesLoading] = useState(true);
+  const [portOutsLoading, setPortOutsLoading] = useState(true);
+  const [remindersLoading, setRemindersLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
 
-  const numbers: NumberRecord[] = mapSnapshotToData<NumberRecord>(numbersSnapshot);
-  const sales: SaleRecord[] = mapSnapshotToData<SaleRecord>(salesSnapshot);
-  const portOuts: PortOutRecord[] = mapSnapshotToData<PortOutRecord>(portOutsSnapshot);
-  const reminders: Reminder[] = mapSnapshotToData<Reminder>(remindersSnapshot);
-  const activities: Activity[] = mapSnapshotToData<Activity>(activitiesSnapshot);
-  const dealerPurchases: DealerPurchaseRecord[] = mapSnapshotToData<DealerPurchaseRecord>(dealerPurchasesSnapshot);
-  
   useEffect(() => {
-    if (usersSnapshot) {
-      const userNames = usersSnapshot.docs.map((u: any) => u.data().displayName);
-      setEmployees(userNames);
+    if (!db || !user) {
+      // If not logged in, reset state and stop loading
+      setNumbers([]);
+      setSales([]);
+      setPortOuts([]);
+      setReminders([]);
+      setActivities([]);
+      setDealerPurchases([]);
+      setEmployees([]);
+      setNumbersLoading(false);
+      setSalesLoading(false);
+      setPortOutsLoading(false);
+      setRemindersLoading(false);
+      setActivitiesLoading(false);
+      setDealerPurchasesLoading(false);
+      setUsersLoading(false);
+      return;
     }
-  }, [usersSnapshot]);
+    
+    // Set loading true when user changes
+    setNumbersLoading(true);
+    setSalesLoading(true);
+    setPortOutsLoading(true);
+    setRemindersLoading(true);
+    setActivitiesLoading(true);
+    setDealerPurchasesLoading(true);
+    setUsersLoading(true);
+
+    const subscriptions: Unsubscribe[] = [];
+    const collectionMappings = [
+      { name: 'numbers', setter: setNumbers, loader: setNumbersLoading },
+      { name: 'sales', setter: setSales, loader: setSalesLoading },
+      { name: 'portouts', setter: setPortOuts, loader: setPortOutsLoading },
+      { name: 'reminders', setter: setReminders, loader: setRemindersLoading },
+      { name: 'activities', setter: setActivities, loader: setActivitiesLoading },
+      { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
+      { name: 'users', setter: (data: any[]) => setEmployees(data.map(u => u.displayName)), loader: setUsersLoading },
+    ];
+
+    collectionMappings.forEach(({ name, setter, loader }) => {
+      const q = query(collection(db, name));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const data = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setter(data as any); // Cast as any because setters have different types
+        loader(false);
+      }, (error) => {
+        console.error(`Error fetching ${name}:`, error);
+        loader(false);
+      });
+      subscriptions.push(unsubscribe);
+    });
+
+    return () => {
+      subscriptions.forEach(sub => sub());
+    };
+  }, [db, user]);
+
 
   // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
   const loading =
@@ -437,7 +475,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addNumber = (data: NewNumberData) => {
     if (!db || !user) return;
-    const newNumber: Omit<NumberRecord, 'id' | 'purchaseDate'> & { purchaseDate: Timestamp } = {
+    const newNumber: Omit<NumberRecord, 'id'> = {
       ...data,
       srNo: getNextSrNo(numbers),
       status: 'Non-RTS',
