@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -24,7 +25,7 @@ export default function ImportExportPage() {
         "Purchase From": n.purchaseFrom,
         "Purchase Price": n.purchasePrice,
         "Sale Price": n.salePrice,
-        "RTS Date": n.rtsDate ? format(new Date(n.rtsDate), 'yyyy-MM-dd') : '',
+        "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
         "Location": n.location,
         "UPC Status": n.upcStatus,
     }));
@@ -130,7 +131,7 @@ export default function ImportExportPage() {
                     </TableCell>
                     <TableCell>{num.purchaseFrom}</TableCell>
                     <TableCell>₹{num.purchasePrice}</TableCell>
-                    <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{num.location}</TableCell>
                     <TableCell><Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge></TableCell>
                   </TableRow>
