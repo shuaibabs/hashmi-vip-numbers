@@ -19,7 +19,7 @@ export default function ImportExportPage() {
 
   const handleExport = () => {
     const dataToExport = numbers.map(n => ({
-        "Sr.No": n.id,
+        "Sr.No": n.srNo,
         "Mobile": n.mobile,
         "Status": n.status,
         "Purchase From": n.purchaseFrom,
@@ -122,9 +122,9 @@ export default function ImportExportPage() {
               {loading ? (
                 <TableSpinner colSpan={8} />
               ) : (
-                numbers.slice(0, 10).map((num, index) => (
-                  <TableRow key={num.id}>
-                    <TableCell>{index + 1}</TableCell>
+                numbers.slice(0, 10).map((num) => (
+                  <TableRow key={num.srNo}>
+                    <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>
                       <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
