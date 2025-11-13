@@ -84,13 +84,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const usersQuery = db && user ? query(collection(db, 'users')) : null;
 
   // --- Firestore Data Hooks ---
-  const [numbersSnapshot, numbersLoading] = useCollectionData(numbersQuery, { idField: 'id' });
-  const [salesSnapshot, salesLoading] = useCollectionData(salesQuery, { idField: 'id' });
-  const [portOutsSnapshot, portOutsLoading] = useCollectionData(portOutsQuery, { idField: 'id' });
-  const [remindersSnapshot, remindersLoading] = useCollectionData(remindersQuery, { idField: 'id' });
-  const [activitiesSnapshot, activitiesLoading] = useCollectionData(activitiesQuery, { idField: 'id' });
-  const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollectionData(dealerPurchasesQuery, { idField: 'id' });
-  const [usersSnapshot, usersLoading] = useCollectionData(usersQuery, { idField: 'id' });
+  const [numbersSnapshot, numbersLoading] = useCollectionData(numbersQuery, { options: { idField: 'id' }});
+  const [salesSnapshot, salesLoading] = useCollectionData(salesQuery, { options: { idField: 'id' }});
+  const [portOutsSnapshot, portOutsLoading] = useCollectionData(portOutsQuery, { options: { idField: 'id' }});
+  const [remindersSnapshot, remindersLoading] = useCollectionData(remindersQuery, { options: { idField: 'id' }});
+  const [activitiesSnapshot, activitiesLoading] = useCollectionData(activitiesQuery, { options: { idField: 'id' }});
+  const [dealerPurchasesSnapshot, dealerPurchasesLoading] = useCollectionData(dealerPurchasesQuery, { options: { idField: 'id' }});
+  const [usersSnapshot, usersLoading] = useCollectionData(usersQuery, { options: { idField: 'id' }});
 
   const numbers: NumberRecord[] = (numbersSnapshot as NumberRecord[]) || [];
   const sales: SaleRecord[] = (salesSnapshot as SaleRecord[]) || [];
@@ -564,3 +564,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
