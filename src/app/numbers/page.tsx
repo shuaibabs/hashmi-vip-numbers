@@ -259,6 +259,7 @@ export default function AllNumbersPage() {
                 </TableHead>
                 <SortableHeader column="srNo" label="Sr.No" />
                 <SortableHeader column="mobile" label="Mobile" />
+                <SortableHeader column="sum" label="Sum" />
                 <SortableHeader column="numberType" label="Number Type" />
                 <SortableHeader column="assignedTo" label="Assigned To" />
                 <SortableHeader column="status" label="Status" />
@@ -270,7 +271,7 @@ export default function AllNumbersPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                  <TableSpinner colSpan={10} />
+                  <TableSpinner colSpan={11} />
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num) => (
                     <TableRow 
@@ -290,6 +291,7 @@ export default function AllNumbersPage() {
                         {num.srNo}
                     </TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>{num.sum}</TableCell>
                     <TableCell>{num.numberType}</TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
                     <TableCell>
@@ -323,7 +325,7 @@ export default function AllNumbersPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                         No numbers found for the current filters.
                     </TableCell>
                 </TableRow>

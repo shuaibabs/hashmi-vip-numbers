@@ -52,6 +52,7 @@ export default function SalesPage() {
             <TableRow>
               <TableHead>Sr.No</TableHead>
               <TableHead>Mobile</TableHead>
+              <TableHead>Sum</TableHead>
               <TableHead>Sold To</TableHead>
               <TableHead>Sale Price</TableHead>
               <TableHead>Sale Date</TableHead>
@@ -63,12 +64,13 @@ export default function SalesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={9} />
+                <TableSpinner colSpan={10} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
                 <TableRow key={sale.srNo}>
                     <TableCell>{sale.srNo}</TableCell>
                     <TableCell className="font-medium">{sale.mobile}</TableCell>
+                    <TableCell>{sale.sum}</TableCell>
                     <TableCell>{sale.soldTo}</TableCell>
                     <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
                     <TableCell>{format(sale.saleDate.toDate(), 'PPP')}</TableCell>
@@ -106,7 +108,7 @@ export default function SalesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                         No sales records found.
                     </TableCell>
                 </TableRow>

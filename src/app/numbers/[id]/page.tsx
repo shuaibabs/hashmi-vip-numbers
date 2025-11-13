@@ -67,7 +67,7 @@ export default function NumberDetailsPage() {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-2xl">{number.mobile}</CardTitle>
-              <CardDescription>Assigned to {number.assignedTo}</CardDescription>
+              <CardDescription>Digital Root Sum: {number.sum}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
                 <Badge variant="outline">{number.numberType}</Badge>
@@ -78,7 +78,8 @@ export default function NumberDetailsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+           <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+             <DetailItem label="Assigned To" value={number.assignedTo} />
             <DetailItem label="Assigned Name" value={number.name} />
             <DetailItem label="Alternate Mobile" value={number.mobileAlt || 'N/A'} />
           </div>

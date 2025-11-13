@@ -41,25 +41,27 @@ export default function CocpPage() {
             <TableRow>
               <TableHead>Sr.No</TableHead>
               <TableHead>Number</TableHead>
+              <TableHead>Sum</TableHead>
               <TableHead>RTS Date</TableHead>
               <TableHead>Safe Custody Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={4} />
+                <TableSpinner colSpan={5} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                 <TableRow key={num.srNo}>
                     <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>{num.sum}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                 </TableRow>
                 ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   No COCP numbers found.
                 </TableCell>
               </TableRow>

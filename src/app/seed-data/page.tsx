@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -27,6 +26,7 @@ import type { NumberRecord } from '@/lib/data';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { useApp } from '@/context/app-context';
+import { calculateDigitalRoot } from '@/lib/utils';
 
 const getNextSrNo = async (
   db: any,
@@ -48,7 +48,7 @@ const getNextSrNo = async (
   return maxSrNo + 1;
 };
 
-const sampleNumbers: Omit<NumberRecord, 'id' | 'srNo' | 'createdBy'>[] = [
+const sampleNumbers: Omit<NumberRecord, 'id' | 'srNo' | 'createdBy' | 'sum'>[] = [
   {
     mobile: '9876543210',
     status: 'RTS',
@@ -162,6 +162,7 @@ export default function SeedDataPage() {
         const newRecord: Omit<NumberRecord, 'id'> = {
           ...numData,
           srNo: nextSrNo,
+          sum: calculateDigitalRoot(numData.mobile),
           createdBy: user.uid,
         };
         batch.set(docRef, newRecord);

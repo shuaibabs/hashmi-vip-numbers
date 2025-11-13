@@ -58,6 +58,7 @@ export default function DealerPurchasesPage() {
             <TableRow>
               <TableHead>Sr.No</TableHead>
               <TableHead>Number</TableHead>
+              <TableHead>Sum</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Payment Status</TableHead>
               <TableHead>Port Out Status</TableHead>
@@ -66,12 +67,13 @@ export default function DealerPurchasesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={6} />
+                <TableSpinner colSpan={7} />
             ) : paginatedPurchases.length > 0 ? (
                 paginatedPurchases.map((purchase) => (
                 <TableRow key={purchase.srNo}>
                     <TableCell>{purchase.srNo}</TableCell>
                     <TableCell className="font-medium">{purchase.mobile}</TableCell>
+                    <TableCell>{purchase.sum}</TableCell>
                     <TableCell>₹{purchase.price.toLocaleString()}</TableCell>
                     <TableCell>
                         <Badge variant={purchase.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
@@ -102,7 +104,7 @@ export default function DealerPurchasesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                         No dealer purchases found.
                     </TableCell>
                 </TableRow>

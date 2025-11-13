@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -37,6 +36,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { calculateDigitalRoot } from '@/lib/utils';
 
 // Helper to get the next serial number for a collection
 const getNextSrNo = (records: { srNo?: number }[]): number => {
@@ -302,6 +302,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newPortOutData: Omit<PortOutRecord, 'id'> = {
             srNo: getNextSrNo(portOuts),
             mobile: saleToUpdate.mobile,
+            sum: calculateDigitalRoot(saleToUpdate.mobile),
             soldTo: saleToUpdate.soldTo,
             salePrice: saleToUpdate.salePrice,
             paymentStatus: statuses.paymentStatus,
@@ -463,6 +464,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newSale: Omit<SaleRecord, 'id'> = {
       srNo: getNextSrNo(sales),
       mobile: soldNumber.mobile,
+      sum: calculateDigitalRoot(soldNumber.mobile),
       salePrice: details.salePrice,
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
@@ -506,6 +508,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newNumber: Omit<NumberRecord, 'id'> = {
       ...data,
       srNo: getNextSrNo(numbers),
+      sum: calculateDigitalRoot(data.mobile),
       status: 'Non-RTS',
       rtsDate: null,
       activationStatus: 'Pending',
@@ -547,6 +550,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newPurchase: Omit<DealerPurchaseRecord, 'id'> = {
       ...data,
       srNo: getNextSrNo(dealerPurchases),
+      sum: calculateDigitalRoot(data.mobile),
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
       createdBy: user.uid,

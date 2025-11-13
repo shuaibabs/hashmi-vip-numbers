@@ -103,6 +103,7 @@ export default function PortOutPage() {
               </TableHead>
               <TableHead>Sr.No</TableHead>
               <TableHead>Mobile</TableHead>
+              <TableHead>Sum</TableHead>
               <TableHead>Sold To</TableHead>
               <TableHead>Sale Price</TableHead>
               <TableHead>Sale Date</TableHead>
@@ -113,7 +114,7 @@ export default function PortOutPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={9} />
+                <TableSpinner colSpan={10} />
             ) : paginatedPortOuts.length > 0 ? (
                 paginatedPortOuts.map((record) => (
                 <TableRow key={record.srNo} data-state={selectedRows.includes(record.id) && "selected"}>
@@ -128,6 +129,7 @@ export default function PortOutPage() {
                     </TableCell>
                     <TableCell>{record.srNo}</TableCell>
                     <TableCell className="font-medium">{record.mobile}</TableCell>
+                    <TableCell>{record.sum}</TableCell>
                     <TableCell>{record.soldTo}</TableCell>
                     <TableCell>₹{record.salePrice.toLocaleString()}</TableCell>
                     <TableCell>{format(record.saleDate.toDate(), 'PPP')}</TableCell>
@@ -146,7 +148,7 @@ export default function PortOutPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                         No port out records found.
                     </TableCell>
                 </TableRow>
