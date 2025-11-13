@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -75,7 +76,7 @@ export default function ActivationPage() {
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>{getStatusBadge(num.activationStatus)}</TableCell>
                     <TableCell>{getStatusBadge(num.uploadStatus)}</TableCell>
-                    <TableCell>{num.rtsDate ? format(new Date(num.rtsDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                     {num.activationStatus !== 'Done' && (
                         <Button size="sm" onClick={() => handleActivateClick(num)}>
