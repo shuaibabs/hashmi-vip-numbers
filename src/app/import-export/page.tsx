@@ -249,7 +249,7 @@ export default function ImportExportPage() {
         description="Bulk import and export your number inventory."
       />
       <div className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <Card>
              <CardHeader>
                 <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from File</CardTitle>
@@ -272,7 +272,7 @@ export default function ImportExportPage() {
              <CardContent className="flex flex-col sm:flex-row gap-2">
                  <Button variant="outline" onClick={handleExportAll} disabled={loading}>
                     <FileOutput className="mr-2 h-4 w-4" />
-                    Export All Numbers
+                    Export All
                 </Button>
                  <Button variant="default" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
@@ -289,7 +289,7 @@ export default function ImportExportPage() {
                 <AlertDescription>
                    Successfully imported {importResult.success} records. Failed to import {importResult.failed} records.
                    {failedRecords.length > 0 && (
-                     <Button variant="link" size="sm" className="pl-1" onClick={handleExportFailed}>
+                     <Button variant="link" size="sm" className="pl-1 h-auto py-0" onClick={handleExportFailed}>
                         <Download className="mr-1 h-3 w-3" />
                         Download failed records report.
                     </Button>
