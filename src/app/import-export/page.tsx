@@ -15,12 +15,16 @@ import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Spinner, TableSpinner } from '@/components/ui/spinner';
-import { NewNumberData } from '@/lib/data';
+import { NumberRecord } from '@/lib/data';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Pagination } from '@/components/pagination';
 
 type FailedRecord = {
   record: any;
   reason: string;
 };
+
+const ITEMS_PER_PAGE = 10;
 
 export default function ImportExportPage() {
   const { numbers, addActivity, bulkAddNumbers, loading } = useApp();
@@ -28,9 +32,17 @@ export default function ImportExportPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number, failed: number} | null>(null);
   const [failedRecords, setFailedRecords] = useState<FailedRecord[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const totalPages = Math.ceil(numbers.length / ITEMS_PER_PAGE);
+  const paginatedNumbers = numbers.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
-  const handleExport = () => {
-    const dataToExport = numbers.map(n => ({
+  const exportToCsv = (dataToExport: NumberRecord[], fileName: string) => {
+     const formattedData = dataToExport.map(n => ({
         "Sr.No": n.srNo,
         "Mobile": n.mobile,
         "Status": n.status,
@@ -46,28 +58,53 @@ export default function ImportExportPage() {
         "Purchase Date": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
     }));
 
-    const csv = Papa.unparse(dataToExport);
+    const csv = Papa.unparse(formattedData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'numberflow_export.csv');
+    link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
 
+  const handleExportAll = () => {
+    exportToCsv(numbers, 'numberflow_all_export.csv');
     addActivity({
         employeeName: 'Admin', // Or current user
         action: 'Exported Data',
         description: 'Exported All Numbers list to CSV.'
     });
-
     toast({
         title: "Export Successful",
-        description: "Your data has been exported to CSV.",
+        description: "All numbers have been exported to CSV.",
     });
   };
+
+  const handleExportSelected = () => {
+    const selectedData = numbers.filter(n => selectedRows.includes(n.id));
+    if (selectedData.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No numbers selected",
+        description: "Please select at least one number to export.",
+      });
+      return;
+    }
+    exportToCsv(selectedData, 'numberflow_selected_export.csv');
+     addActivity({
+        employeeName: 'Admin',
+        action: 'Exported Data',
+        description: `Exported ${selectedData.length} selected number(s) to CSV.`
+    });
+    toast({
+        title: "Export Successful",
+        description: `${selectedData.length} selected numbers have been exported to CSV.`,
+    });
+    setSelectedRows([]);
+  }
   
   const handleImportClick = () => {
     document.getElementById('import-file-input')?.click();
@@ -184,6 +221,27 @@ export default function ImportExportPage() {
      });
   }
 
+  const handleSelectRow = (id: string) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    const pageIds = paginatedNumbers.map(n => n.id);
+    if (checked) {
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
+    } else {
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const isAllOnPageSelected = paginatedNumbers.length > 0 && paginatedNumbers.every(n => selectedRows.includes(n.id));
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   return (
     <>
       <PageHeader
@@ -209,12 +267,16 @@ export default function ImportExportPage() {
            <Card>
              <CardHeader>
                 <CardTitle className="flex items-center gap-2"><FileOutput className="w-5 h-5 text-primary" /> Export to CSV</CardTitle>
-                <CardDescription>Download a CSV file of your entire master number inventory.</CardDescription>
+                <CardDescription>Download a CSV file of your master number inventory.</CardDescription>
              </CardHeader>
-             <CardContent>
-                 <Button variant="outline" onClick={handleExport} disabled={loading}>
+             <CardContent className="flex flex-col sm:flex-row gap-2">
+                 <Button variant="outline" onClick={handleExportAll} disabled={loading}>
                     <FileOutput className="mr-2 h-4 w-4" />
                     Export All Numbers
+                </Button>
+                 <Button variant="default" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Selected ({selectedRows.length})
                 </Button>
              </CardContent>
            </Card>
@@ -237,13 +299,20 @@ export default function ImportExportPage() {
         )}
 
         <div>
-          <h3 className="text-lg font-semibold mb-2">Data Preview</h3>
-          <p className="text-sm text-muted-foreground mb-4">A preview of the first 10 records that will be exported.</p>
+          <h3 className="text-lg font-semibold mb-2">Select Numbers to Export</h3>
+          <p className="text-sm text-muted-foreground mb-4">Select records from the table below to export them to a CSV file.</p>
         </div>
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                   <Checkbox
+                        checked={isAllOnPageSelected}
+                        onCheckedChange={handleSelectAllOnPage}
+                        aria-label="Select all on this page"
+                    />
+                </TableHead>
                 <TableHead>Sr.No</TableHead>
                 <TableHead>Mobile</TableHead>
                 <TableHead>Status</TableHead>
@@ -256,10 +325,17 @@ export default function ImportExportPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableSpinner colSpan={8} />
-              ) : (
-                numbers.slice(0, 10).map((num) => (
-                  <TableRow key={num.srNo}>
+                <TableSpinner colSpan={9} />
+              ) : paginatedNumbers.length > 0 ? (
+                paginatedNumbers.map((num) => (
+                  <TableRow key={num.id} data-state={selectedRows.includes(num.id) && "selected"}>
+                    <TableCell>
+                       <Checkbox
+                            checked={selectedRows.includes(num.id)}
+                            onCheckedChange={() => handleSelectRow(num.id)}
+                            aria-label="Select row"
+                        />
+                    </TableCell>
                     <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>
@@ -272,10 +348,23 @@ export default function ImportExportPage() {
                     <TableCell><Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge></TableCell>
                   </TableRow>
                 ))
+              ) : (
+                 <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center">
+                        No numbers found.
+                    </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
+         <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            itemsPerPage={ITEMS_PER_PAGE}
+            totalItems={numbers.length}
+          />
       </div>
     </>
   );
