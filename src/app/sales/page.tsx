@@ -6,39 +6,102 @@ import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EditSaleStatusModal } from '@/components/edit-sale-status-modal';
 import { SaleRecord } from '@/lib/data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Timestamp } from 'firebase/firestore';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
+type SortableColumn = keyof SaleRecord;
+
 
 export default function SalesPage() {
   const { sales, loading } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
 
-  const totalPages = Math.ceil(sales.length / ITEMS_PER_PAGE);
-  const paginatedSales = [...sales]
-    .sort((a, b) => b.saleDate.toDate().getTime() - a.saleDate.toDate().getTime())
-    .slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
+  const sortedSales = useMemo(() => {
+    let sortableItems = [...sales];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof SaleRecord];
+        const bValue = b[sortConfig.key as keyof SaleRecord];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        let comparison = 0;
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+            comparison = aValue.localeCompare(bValue);
+        } else if (aValue instanceof Timestamp && bValue instanceof Timestamp) {
+            comparison = aValue.toMillis() - bValue.toMillis();
+        } else {
+             if (aValue < bValue) {
+                comparison = -1;
+            }
+            if (aValue > bValue) {
+                comparison = 1;
+            }
+        }
+        return sortConfig.direction === 'ascending' ? comparison : -comparison;
+      });
+    }
+    return sortableItems;
+  }, [sales, sortConfig]);
+
+  const totalPages = Math.ceil(sortedSales.length / itemsPerPage);
+  const paginatedSales = sortedSales.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
   
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
+  };
+
   const handleEditClick = (sale: SaleRecord) => {
     setSelectedSale(sale);
     setIsEditModalOpen(true);
   };
+
+  const requestSort = (key: SortableColumn) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1);
+  };
+  
+  const getSortIcon = (columnKey: SortableColumn) => {
+    if (!sortConfig || sortConfig.key !== columnKey) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    }
+    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
+
+  const SortableHeader = ({ column, label }: { column: SortableColumn, label: string }) => (
+    <TableHead>
+        <Button variant="ghost" onClick={() => requestSort(column)} className="px-0 hover:bg-transparent">
+            {label}
+            {getSortIcon(column)}
+        </Button>
+    </TableHead>
+  );
 
   return (
     <>
@@ -46,19 +109,33 @@ export default function SalesPage() {
         title="Sales"
         description="View and manage all sales records."
       />
+       <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-4 flex-wrap">
+             <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Items per page" />
+              </SelectTrigger>
+              <SelectContent>
+                {ITEMS_PER_PAGE_OPTIONS.map(val => (
+                   <SelectItem key={val} value={String(val)}>{val} / page</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Sr.No</TableHead>
-              <TableHead>Mobile</TableHead>
-              <TableHead>Sum</TableHead>
-              <TableHead>Sold To</TableHead>
-              <TableHead>Sale Price</TableHead>
-              <TableHead>Sale Date</TableHead>
-              <TableHead>Payment Status</TableHead>
-              <TableHead>UPC Status</TableHead>
-              <TableHead>Portout Status</TableHead>
+              <SortableHeader column="srNo" label="Sr.No" />
+              <SortableHeader column="mobile" label="Mobile" />
+              <SortableHeader column="sum" label="Sum" />
+              <SortableHeader column="soldTo" label="Sold To" />
+              <SortableHeader column="salePrice" label="Sale Price" />
+              <SortableHeader column="saleDate" label="Sale Date" />
+              <SortableHeader column="paymentStatus" label="Payment Status" />
+              <SortableHeader column="upcStatus" label="UPC Status" />
+              <SortableHeader column="portOutStatus" label="Portout Status" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -120,7 +197,7 @@ export default function SalesPage() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={itemsPerPage}
         totalItems={sales.length}
       />
       {selectedSale && (
