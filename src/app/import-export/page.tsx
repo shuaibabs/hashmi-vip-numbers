@@ -270,11 +270,11 @@ export default function ImportExportPage() {
                 <CardDescription>Download a CSV file of your master number inventory.</CardDescription>
              </CardHeader>
              <CardContent className="flex flex-col sm:flex-row gap-2">
-                 <Button variant="outline" onClick={handleExportAll} disabled={loading}>
+                 <Button variant="outline" onClick={handleExportAll} disabled={loading} className="w-full sm:w-auto">
                     <FileOutput className="mr-2 h-4 w-4" />
                     Export All
                 </Button>
-                 <Button variant="default" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                 <Button variant="default" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0} className="w-full sm:w-auto">
                     <Download className="mr-2 h-4 w-4" />
                     Export Selected ({selectedRows.length})
                 </Button>

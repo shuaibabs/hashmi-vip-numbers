@@ -16,7 +16,7 @@ function DetailItem({ label, value }: { label: string; value: React.ReactNode })
   return (
     <div className="grid grid-cols-2 gap-2">
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className="text-sm">{value}</p>
+      <p className="text-sm break-words">{value}</p>
     </div>
   );
 }
@@ -64,12 +64,12 @@ export default function NumberDetailsPage() {
       
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
               <CardTitle className="text-2xl">{number.mobile}</CardTitle>
               <CardDescription>Digital Root Sum: {number.sum}</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline">{number.numberType}</Badge>
                 <Badge variant={number.status === 'RTS' ? 'default' : 'destructive'} className={number.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>
                 {number.status}

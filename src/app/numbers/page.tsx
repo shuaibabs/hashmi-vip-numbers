@@ -194,20 +194,20 @@ export default function AllNumbersPage() {
         title="All Numbers (Master Inventory)"
         description="Search, filter, and manage all numbers in the system."
       >
-        <div className="flex items-center gap-2">
-            <Button onClick={() => router.push('/numbers/new')}>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+            <Button onClick={() => router.push('/numbers/new')} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4"/>
                 New Number
             </Button>
-             <Button variant="outline" onClick={() => router.push('/import-export')}>
+             <Button variant="outline" onClick={() => router.push('/import-export')} className="w-full sm:w-auto">
                 <FileInput className="mr-2 h-4 w-4"/>
                 Import / Export
             </Button>
         </div>
       </PageHeader>
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap w-full">
             <Input 
               placeholder="Search by mobile number..."
               value={searchTerm}
@@ -215,13 +215,13 @@ export default function AllNumbersPage() {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="max-w-sm"
+              className="max-w-full sm:max-w-sm"
             />
             <Select value={statusFilter} onValueChange={(value) => {
               setStatusFilter(value);
               setCurrentPage(1);
             }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -234,7 +234,7 @@ export default function AllNumbersPage() {
               setTypeFilter(value);
               setCurrentPage(1);
             }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
@@ -245,7 +245,7 @@ export default function AllNumbersPage() {
               </SelectContent>
             </Select>
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px]">
                 <SelectValue placeholder="Items per page" />
               </SelectTrigger>
               <SelectContent>
@@ -256,7 +256,7 @@ export default function AllNumbersPage() {
             </Select>
           </div>
            {role === 'admin' && selectedRows.length > 0 && (
-             <Button onClick={handleOpenAssignModal}>
+             <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
                <UserPlus className="mr-2 h-4 w-4" />
                Assign Selected ({selectedRows.length})
              </Button>

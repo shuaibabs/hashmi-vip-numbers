@@ -96,7 +96,7 @@ export default function NewNumberPage() {
               <CardTitle>Number Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField
                   control={form.control}
                   name="mobile"
@@ -167,7 +167,7 @@ export default function NewNumberPage() {
               <CardTitle>Purchase &amp; Sale Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-               <div className="grid md:grid-cols-2 gap-6">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
                     name="purchaseFrom"
@@ -220,7 +220,7 @@ export default function NewNumberPage() {
                     )}
                   />
                </div>
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
                         name="purchasePrice"
@@ -256,7 +256,7 @@ export default function NewNumberPage() {
                 <CardTitle>Location &amp; Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                 <div className="grid md:grid-cols-2 gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
                         name="location"
@@ -284,7 +284,7 @@ export default function NewNumberPage() {
                         )}
                     />
                  </div>
-                 <div className="grid md:grid-cols-2 gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
                         name="locationType"
