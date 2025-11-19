@@ -38,7 +38,6 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
   { href: '/signup', label: 'Create User', icon: UserPlus, adminOnly: true },
-  { href: '/activation', label: 'Activation', icon: Signal, adminOnly: false },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/sales', label: 'Sales', icon: DollarSign, adminOnly: false },
   { href: '/port-out', label: 'Port Out', icon: LogOut, adminOnly: false },
@@ -47,7 +46,6 @@ const navItems = [
   { href: '/cocp', label: 'COCP', icon: RadioTower, adminOnly: false },
   { href: '/activities', label: 'Employee Activities', icon: History, adminOnly: true },
   { href: '/import-export', label: 'Import / Export', icon: FileOutput, adminOnly: false },
-  { href: '/seed-data', label: 'Seed Data', icon: Database, adminOnly: true, devOnly: true },
 ];
 
 export function AppSidebar() {
