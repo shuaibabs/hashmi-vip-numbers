@@ -269,12 +269,12 @@ export default function ImportExportPage() {
                 <CardTitle className="flex items-center gap-2"><FileOutput className="w-5 h-5 text-primary" /> Export to CSV</CardTitle>
                 <CardDescription>Download a CSV file of your master number inventory.</CardDescription>
              </CardHeader>
-             <CardContent className="flex flex-col sm:flex-row gap-2">
-                 <Button variant="outline" onClick={handleExportAll} disabled={loading} className="w-full sm:w-auto">
+             <CardContent className="flex flex-wrap gap-2">
+                 <Button variant="outline" onClick={handleExportAll} disabled={loading}>
                     <FileOutput className="mr-2 h-4 w-4" />
                     Export All
                 </Button>
-                 <Button variant="default" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0} className="w-full sm:w-auto">
+                 <Button variant="default" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
                     Export Selected ({selectedRows.length})
                 </Button>
