@@ -378,5 +378,3 @@ export default function NewNumberPage() {
     </>
   );
 }
-
-    

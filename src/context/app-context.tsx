@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -13,7 +14,7 @@ import {
   type PortOutRecord,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { isToday, isPast } from 'date-fns';
+import { isToday, isPast, parse, isValid } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import {
   collection,
@@ -37,13 +38,15 @@ import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { calculateDigitalRoot } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 
 // Helper to get the next serial number for a collection
 const getNextSrNo = (records: { srNo?: number }[]): number => {
   if (!records || records.length === 0) {
     return 1;
   }
-  const maxSrNo = Math.max(...records.map(r => r.srNo || 0));
+  const maxSrNo = Math.max(...records.map(r => r.SrNo || r.srNo || 0));
   return maxSrNo + 1;
 };
 
@@ -55,6 +58,10 @@ const mapSnapshotToData = <T>(snapshot: QuerySnapshot<DocumentData>): T[] => {
   } as T));
 };
 
+type BulkAddResult = {
+  validRecords: NewNumberData[];
+  failedRecords: { record: any, reason: string }[];
+}
 
 type AppContextType = {
   loading: boolean;
@@ -70,13 +77,13 @@ type AppContextType = {
   markReminderDone: (id: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
-  updateActivationDetails: (id: string, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => void;
   checkInNumber: (id: string) => void;
   sellNumber: (id: string, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => void;
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
   deletePortOuts: (ids: string[]) => void;
+  bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -175,6 +182,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ));
 
   const isMobileNumberDuplicate = (mobile: string): boolean => {
+    if (!mobile) return false;
     const allMobiles = new Set([
       ...numbers.map(n => n.mobile),
       ...sales.map(s => s.mobile),
@@ -233,7 +241,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             batch.update(docRef, {
                 status: 'RTS',
                 rtsDate: null,
-                activationStatus: 'Done'
             });
             addActivity({
                 employeeName: 'System',
@@ -400,40 +407,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         errorEmitter.emit('permission-error', permissionError);
     });
   };
-
-  const updateActivationDetails = (id: string, details: { activationStatus: 'Done' | 'Pending' | 'Fail', uploadStatus: 'Done' | 'Pending' | 'Fail', note?: string }) => {
-    if (!db || !user) return;
-    const numDocRef = doc(db, 'numbers', id);
-    const num = numbers.find(n => n.id === id);
-    if (!num) return;
-
-    const isActivated = details.activationStatus === 'Done';
-    const updateData: any = {
-        activationStatus: details.activationStatus,
-        uploadStatus: details.uploadStatus,
-        status: isActivated ? 'RTS' : num.status,
-        rtsDate: isActivated && !num.rtsDate ? Timestamp.now() : num.rtsDate
-    };
-
-    if (details.note) {
-        updateData.notes = `${num.notes || ''}\n---Activation Note---\n${details.note}`.trim();
-    }
-    
-    updateDoc(numDocRef, updateData).then(() => {
-        addActivity({
-            employeeName: user.displayName || 'User',
-            action: 'Updated Activation Status',
-            description: `Updated ${num.mobile}. Activation: ${details.activationStatus}, Upload: ${details.uploadStatus}`
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: numDocRef.path,
-            operation: 'update',
-            requestResourceData: updateData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-  };
   
   const checkInNumber = (id: string) => {
     if (!db || !user) return;
@@ -511,12 +484,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sum: calculateDigitalRoot(data.mobile),
       status: 'Non-RTS',
       rtsDate: null,
-      activationStatus: 'Pending',
-      uploadStatus: 'Pending',
       checkInDate: null,
       safeCustodyDate: null,
       createdBy: user.uid,
-      purchaseDate: Timestamp.fromDate(data.purchaseDate as Date),
+      purchaseDate: Timestamp.fromDate(data.purchaseDate),
     };
     const numbersCollection = collection(db, 'numbers');
     addDoc(numbersCollection, newNumber).then(() => {
@@ -616,6 +587,103 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
+    if (!db || !user) return { validRecords: [], failedRecords: [] };
+    
+    let currentSrNo = getNextSrNo(numbers);
+    const validRecords: NewNumberData[] = [];
+    const failedRecords: { record: any, reason: string }[] = [];
+
+    // Create a set of all current mobile numbers for faster duplicate checking
+    const existingMobiles = new Set([
+        ...numbers.map(n => n.mobile),
+        ...sales.map(s => s.mobile),
+        ...portOuts.map(p => p.mobile),
+        ...dealerPurchases.map(d => d.mobile),
+    ]);
+
+    for (const record of records) {
+        const mobile = record.Mobile?.toString().trim();
+
+        if (!mobile || !/^\d{10}$/.test(mobile)) {
+            failedRecords.push({ record, reason: 'Invalid or missing mobile number.' });
+            continue;
+        }
+        if (existingMobiles.has(mobile)) {
+            failedRecords.push({ record, reason: 'Duplicate mobile number.' });
+            continue;
+        }
+
+        const purchaseDate = parse(record.PurchaseDate, 'yyyy-MM-dd', new Date());
+        if (!isValid(purchaseDate)) {
+             failedRecords.push({ record, reason: 'Invalid PurchaseDate format. Use YYYY-MM-DD.' });
+             continue;
+        }
+        
+        const purchasePrice = parseFloat(record.PurchasePrice);
+        const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
+
+        if (isNaN(purchasePrice)) {
+            failedRecords.push({ record, reason: 'Invalid PurchasePrice. Must be a number.' });
+            continue;
+        }
+        
+        const newRecord: NewNumberData = {
+            mobile: mobile,
+            name: record.Name || 'N/A',
+            numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
+            purchaseFrom: record.PurchaseFrom || 'N/A',
+            purchasePrice: purchasePrice,
+            salePrice: isNaN(salePrice) ? 0 : salePrice,
+            purchaseDate: purchaseDate,
+            location: record.Location || 'N/A',
+            currentLocation: record.CurrentLocation || record.Location || 'N/A',
+            locationType: ['Store', 'Employee', 'Customer'].includes(record.LocationType) ? record.LocationType : 'Store',
+            assignedTo: record.AssignedTo || 'Unassigned',
+            upcStatus: ['Generated', 'Pending'].includes(record.UPCStatus) ? record.UPCStatus : 'Pending',
+            mobileAlt: record.MobileAlt || '',
+            notes: record.Notes || '',
+        };
+        validRecords.push(newRecord);
+        existingMobiles.add(mobile); // Add to set to prevent duplicate within the same file
+    }
+
+    if (validRecords.length > 0) {
+      const batch = writeBatch(db);
+      const numbersCollection = collection(db, 'numbers');
+      
+      validRecords.forEach(record => {
+        const newDocRef = doc(numbersCollection);
+        const newNumber: Omit<NumberRecord, 'id'> = {
+            ...record,
+            srNo: currentSrNo++,
+            sum: calculateDigitalRoot(record.mobile),
+            status: 'Non-RTS',
+            rtsDate: null,
+            checkInDate: null,
+            safeCustodyDate: null,
+            createdBy: user.uid,
+            purchaseDate: Timestamp.fromDate(record.purchaseDate),
+        };
+        batch.set(newDocRef, newNumber);
+      });
+
+      await batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'create',
+            requestResourceData: {info: `Bulk add of ${validRecords.length} records.`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        // If the whole batch fails, we'll treat them all as failed.
+        validRecords.forEach(vr => failedRecords.push({ record: vr, reason: "Firestore permission denied."}));
+        return { validRecords: [], failedRecords };
+      });
+    }
+    
+    return { validRecords, failedRecords };
+  };
+
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
   const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => r.assignedTo === user?.displayName);
@@ -634,13 +702,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     markReminderDone,
     addActivity,
     assignNumbersToEmployee,
-    updateActivationDetails,
     checkInNumber,
     sellNumber,
     addNumber,
     addDealerPurchase,
     updateDealerPurchase,
     deletePortOuts,
+    bulkAddNumbers,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

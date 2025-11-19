@@ -1,3 +1,4 @@
+
 import { Timestamp } from 'firebase/firestore';
 
 // Base User profile stored in Firestore
@@ -29,8 +30,6 @@ export type NumberRecord = {
   assignedTo: string; // Can be 'Unassigned', or employee name
   purchaseDate: Timestamp;
   notes?: string;
-  activationStatus: 'Done' | 'Pending' | 'Fail';
-  uploadStatus: 'Done' | 'Pending' | 'Fail';
   checkInDate: Timestamp | null;
   safeCustodyDate: Timestamp | null;
   createdBy: string; // UID of user who created it
@@ -39,7 +38,7 @@ export type NumberRecord = {
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'rtsDate' | 'checkInDate' | 'safeCustodyDate' | 'status' | 'activationStatus' | 'uploadStatus' | 'purchaseDate' | 'sum'
+  'id' | 'srNo' | 'createdBy' | 'rtsDate' | 'checkInDate' | 'safeCustodyDate' | 'status' | 'purchaseDate' | 'sum'
 > & { purchaseDate: Date };
 
 export type SaleRecord = {
