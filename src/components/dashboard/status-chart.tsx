@@ -1,10 +1,10 @@
+
 "use client"
 
 import * as React from "react"
 import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts"
 import { useApp } from "@/context/app-context";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useTheme } from "next-themes";
 
 
@@ -37,16 +37,12 @@ export function StatusChart() {
     }
   }
 
-  const total = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.value, 0)
-  }, [chartData])
-
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto aspect-square h-full"
+      className="mx-auto aspect-square h-full max-h-[250px]"
     >
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={250}>
         <PieChart>
            <ChartTooltip
             cursor={false}
