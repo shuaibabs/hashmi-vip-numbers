@@ -73,6 +73,7 @@ type AppContextType = {
   activities: Activity[];
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
+  isMobileNumberDuplicate: (mobile: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
   markReminderDone: (id: string, note?: string) => void;
@@ -620,10 +621,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const mobile = record.Mobile?.toString().trim();
 
         if (!mobile || !/^\d{10}$/.test(mobile)) {
-            failedRecords.push({ record, reason: 'Invalid or missing mobile number.' });
+            failedRecords.push({ record, reason: 'Invalid or missing mobile number (must be 10 digits).' });
             continue;
         }
-        if (existingMobiles.has(mobile)) {
+        if (isMobileNumberDuplicate(mobile)) {
             failedRecords.push({ record, reason: 'Duplicate mobile number.' });
             continue;
         }
@@ -756,6 +757,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activities,
     employees,
     dealerPurchases,
+    isMobileNumberDuplicate,
     updateNumberStatus,
     updateSaleStatuses,
     markReminderDone,

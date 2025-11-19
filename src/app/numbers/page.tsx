@@ -22,13 +22,15 @@ import { SellNumberModal } from '@/components/sell-number-modal';
 import { TableSpinner } from '@/components/ui/spinner';
 import { useAuth } from '@/context/auth-context';
 import { Timestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
 export default function AllNumbersPage() {
-  const { numbers, loading } = useApp();
+  const { numbers, loading, isMobileNumberDuplicate } = useApp();
   const { role } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -186,6 +188,27 @@ export default function AllNumbersPage() {
         )}
       </span>
     );
+  };
+
+  const handleAddFromSearch = () => {
+    const trimmedSearch = searchTerm.trim();
+    if (!/^\d{10}$/.test(trimmedSearch)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Number',
+        description: 'Mobile number must be exactly 10 digits.',
+      });
+      return;
+    }
+    if (isMobileNumberDuplicate(trimmedSearch)) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Number',
+        description: 'This mobile number already exists in the system.',
+      });
+      return;
+    }
+    router.push(`/numbers/new?mobile=${trimmedSearch}`);
   };
 
   return (
@@ -349,7 +372,7 @@ export default function AllNumbersPage() {
                         {searchTerm && (
                            <Button 
                              variant="link"
-                             onClick={() => router.push(`/numbers/new?mobile=${searchTerm}`)}
+                             onClick={handleAddFromSearch}
                            >
                              Add this number
                            </Button>
