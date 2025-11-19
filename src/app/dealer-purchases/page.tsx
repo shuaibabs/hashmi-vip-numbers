@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, ArrowUpDown, Trash } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { AddDealerPurchaseModal } from '@/components/add-dealer-purchase-modal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -15,18 +15,24 @@ import { EditDealerPurchaseModal } from '@/components/edit-dealer-purchase-modal
 import { DealerPurchaseRecord } from '@/lib/data';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from '@/context/auth-context';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 type SortableColumn = keyof DealerPurchaseRecord;
 
 export default function DealerPurchasesPage() {
-  const { dealerPurchases, loading } = useApp();
+  const { dealerPurchases, loading, deleteDealerPurchases } = useApp();
+  const { role } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<DealerPurchaseRecord | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'srNo', direction: 'descending' });
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const sortedPurchases = useMemo(() => {
     let sortableItems = [...dealerPurchases];
@@ -80,6 +86,29 @@ export default function DealerPurchasesPage() {
     setSortConfig({ key, direction });
     setCurrentPage(1);
   };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    const pageIds = paginatedPurchases.map(p => p.id);
+    if (checked) {
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
+    } else {
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    deleteDealerPurchases(selectedRows);
+    setSelectedRows([]);
+  };
+
+  const isAllOnPageSelected = paginatedPurchases.length > 0 && paginatedPurchases.every(p => selectedRows.includes(p.id));
+
   
   const getSortIcon = (columnKey: SortableColumn) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
@@ -103,15 +132,41 @@ export default function DealerPurchasesPage() {
         title="Purchase from Other Dealers"
         description="A list of numbers purchased from other dealers."
       >
-        <Button onClick={() => setIsAddModalOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4"/>
-          Add New Number
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+            {selectedRows.length > 0 && role === 'admin' && (
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete Selected ({selectedRows.length})
+                </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete {selectedRows.length} record(s) from your dealer purchases.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteSelected}>
+                    Yes, delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            )}
+            <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4"/>
+                Add New Number
+            </Button>
+        </div>
       </PageHeader>
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px]">
                 <SelectValue placeholder="Items per page" />
               </SelectTrigger>
               <SelectContent>
@@ -126,6 +181,15 @@ export default function DealerPurchasesPage() {
         <Table>
           <TableHeader>
             <TableRow>
+                <TableHead className="w-12">
+                   {role === 'admin' && (
+                    <Checkbox
+                        checked={isAllOnPageSelected}
+                        onCheckedChange={handleSelectAllOnPage}
+                        aria-label="Select all on this page"
+                    />
+                  )}
+                </TableHead>
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
               <SortableHeader column="sum" label="Sum" />
@@ -137,10 +201,19 @@ export default function DealerPurchasesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={7} />
+                <TableSpinner colSpan={8} />
             ) : paginatedPurchases.length > 0 ? (
                 paginatedPurchases.map((purchase) => (
-                <TableRow key={purchase.srNo}>
+                <TableRow key={purchase.srNo} data-state={selectedRows.includes(purchase.id) && "selected"}>
+                    <TableCell>
+                       {role === 'admin' && (
+                        <Checkbox
+                            checked={selectedRows.includes(purchase.id)}
+                            onCheckedChange={() => handleSelectRow(purchase.id)}
+                            aria-label="Select row"
+                        />
+                       )}
+                    </TableCell>
                     <TableCell>{purchase.srNo}</TableCell>
                     <TableCell className="font-medium">{purchase.mobile}</TableCell>
                     <TableCell>{purchase.sum}</TableCell>
@@ -174,7 +247,7 @@ export default function DealerPurchasesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                         No dealer purchases found.
                     </TableCell>
                 </TableRow>

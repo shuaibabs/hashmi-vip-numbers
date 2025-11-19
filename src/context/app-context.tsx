@@ -87,6 +87,7 @@ type AppContextType = {
   deletePortOuts: (ids: string[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData) => void;
+  deleteDealerPurchases: (ids: string[]) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -595,6 +596,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  const deleteDealerPurchases = (ids: string[]) => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+        batch.delete(doc(db, 'dealerPurchases', id));
+    });
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Deleted Dealer Purchases',
+            description: `Deleted ${ids.length} record(s) from dealer purchases.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'dealerPurchases',
+            operation: 'delete',
+            requestResourceData: {info: `Batch delete ${ids.length} records`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  }
+
   // Helper to convert Excel serial date to JS Date
   const excelSerialToDate = (serial: number) => {
     // Excel's epoch starts on 1900-01-01, but it incorrectly thinks 1900 is a leap year.
@@ -771,6 +794,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deletePortOuts,
     bulkAddNumbers,
     addReminder,
+    deleteDealerPurchases,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -783,5 +807,3 @@ export function useApp() {
   }
   return context;
 }
-
-    
