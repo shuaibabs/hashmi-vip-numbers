@@ -48,9 +48,7 @@ export default function AllNumbersPage() {
         (typeFilter === 'all' || num.numberType === typeFilter)
       )
       .filter(num => 
-        num.mobile.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        num.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        num.location.toLowerCase().includes(searchTerm.toLowerCase())
+        num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
     if (sortConfig !== null) {
@@ -191,7 +189,7 @@ export default function AllNumbersPage() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <Input 
-              placeholder="Search by mobile, name, location..."
+              placeholder="Search by mobile number..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -326,7 +324,16 @@ export default function AllNumbersPage() {
               ) : (
                 <TableRow>
                     <TableCell colSpan={11} className="h-24 text-center">
-                        No numbers found for the current filters.
+                        {searchTerm && `No number found for "${searchTerm}".`}
+                        {!searchTerm && "No numbers found for the current filters."}
+                        {searchTerm && (
+                           <Button 
+                             variant="link"
+                             onClick={() => router.push(`/numbers/new?mobile=${searchTerm}`)}
+                           >
+                             Add this number
+                           </Button>
+                        )}
                     </TableCell>
                 </TableRow>
               )}
@@ -360,4 +367,6 @@ export default function AllNumbersPage() {
     </>
   );
 }
+    
+
     

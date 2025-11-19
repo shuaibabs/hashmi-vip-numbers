@@ -4,7 +4,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import { NewNumberData } from '@/lib/data';
 import { PageHeader } from '@/components/page-header';
@@ -21,6 +21,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
@@ -42,6 +43,7 @@ const formSchema = z.object({
 export default function NewNumberPage() {
   const { addNumber, employees } = useApp();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -62,6 +64,13 @@ export default function NewNumberPage() {
       notes: '',
     },
   });
+
+  useEffect(() => {
+    const mobileParam = searchParams.get('mobile');
+    if (mobileParam) {
+      form.setValue('mobile', mobileParam);
+    }
+  }, [searchParams, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     addNumber(values as NewNumberData);
@@ -155,7 +164,7 @@ export default function NewNumberPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Purchase & Sale Information</CardTitle>
+              <CardTitle>Purchase &amp; Sale Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
                <div className="grid md:grid-cols-2 gap-6">
@@ -244,7 +253,7 @@ export default function NewNumberPage() {
 
           <Card>
             <CardHeader>
-                <CardTitle>Location & Status</CardTitle>
+                <CardTitle>Location &amp; Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
                  <div className="grid md:grid-cols-2 gap-6">
@@ -369,3 +378,5 @@ export default function NewNumberPage() {
     </>
   );
 }
+
+    
