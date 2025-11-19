@@ -75,7 +75,7 @@ type AppContextType = {
   dealerPurchases: DealerPurchaseRecord[];
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
-  markReminderDone: (id: string) => void;
+  markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
   checkInNumber: (id: string) => void;
@@ -358,13 +358,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const markReminderDone = (id: string) => {
+  const markReminderDone = (id: string, note?: string) => {
     if (!db || !user) return;
     const reminder = reminders.find(r => r.id === id);
     if (!reminder) return;
     const reminderDocRef = doc(db, 'reminders', id);
+
+    const updateData: { status: 'Done'; notes?: string } = { status: 'Done' };
+    if (note) {
+      updateData.notes = note;
+    }
     
-    updateDoc(reminderDocRef, { status: 'ACT Done' }).then(() => {
+    updateDoc(reminderDocRef, updateData).then(() => {
         addActivity({
             employeeName: user.displayName || 'User',
             action: 'Marked Task Done',
@@ -374,7 +379,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const permissionError = new FirestorePermissionError({
             path: reminderDocRef.path,
             operation: 'update',
-            requestResourceData: { status: 'ACT Done' },
+            requestResourceData: { status: 'Done', note },
         });
         errorEmitter.emit('permission-error', permissionError);
     });
@@ -716,7 +721,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newReminder: Omit<Reminder, 'id'> = {
       ...data,
       srNo: getNextSrNo(reminders),
-      status: 'Upload Pending',
+      status: 'Pending',
       dueDate: Timestamp.fromDate(data.dueDate),
       createdBy: user.uid,
     };

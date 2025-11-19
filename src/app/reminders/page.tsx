@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -6,19 +7,23 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { User, Calendar, PlusCircle } from 'lucide-react';
+import { User, Calendar, PlusCircle, Check } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useState } from 'react';
 import { AddReminderModal } from '@/components/add-reminder-modal';
 import { useAuth } from '@/context/auth-context';
+import { Reminder } from '@/lib/data';
+import { MarkReminderDoneModal } from '@/components/mark-reminder-done-modal';
 
 export default function RemindersPage() {
-  const { reminders, markReminderDone, loading } = useApp();
+  const { reminders, loading } = useApp();
   const { role } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDoneModalOpen, setIsDoneModalOpen] = useState(false);
+  const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
   
   const sortedReminders = [...reminders].sort((a, b) => a.dueDate.toDate().getTime() - b.dueDate.toDate().getTime())
-                                        .sort((a, b) => (a.status === 'Upload Pending' ? -1 : 1) - (b.status === 'ACT Done' ? -1 : 1));
+                                        .sort((a, b) => (a.status === 'Pending' ? -1 : 1) - (b.status === 'Done' ? 1 : -1));
 
   if (loading) {
     return (
@@ -27,6 +32,11 @@ export default function RemindersPage() {
         </div>
     )
   }
+
+  const handleMarkDoneClick = (reminder: Reminder) => {
+    setSelectedReminder(reminder);
+    setIsDoneModalOpen(true);
+  };
 
   return (
     <>
@@ -54,7 +64,7 @@ export default function RemindersPage() {
                 <CardHeader>
                 <div className="flex justify-between items-start">
                     <CardTitle>{reminder.taskName}</CardTitle>
-                    <Badge variant={reminder.status === 'ACT Done' ? 'secondary' : 'destructive'} className={reminder.status === 'ACT Done' ? `bg-green-500/20 text-green-700` : `bg-yellow-500/20 text-yellow-700`}>
+                    <Badge variant={reminder.status === 'Done' ? 'secondary' : 'destructive'} className={reminder.status === 'Done' ? `bg-green-500/20 text-green-700` : `bg-yellow-500/20 text-yellow-700`}>
                         {reminder.status}
                     </Badge>
                 </div>
@@ -64,18 +74,25 @@ export default function RemindersPage() {
                     </div>
                 </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow">
-                <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="mr-2 h-4 w-4" /> Due: <span className="font-medium ml-1">{format(reminder.dueDate.toDate(), 'PPP')}</span>
-                </div>
+                <CardContent className="flex-grow space-y-2">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" /> Due: <span className="font-medium ml-1">{format(reminder.dueDate.toDate(), 'PPP')}</span>
+                    </div>
+                    {reminder.notes && (
+                        <div className="text-sm">
+                            <p className="font-medium">Completion Note:</p>
+                            <p className="text-muted-foreground whitespace-pre-wrap">{reminder.notes}</p>
+                        </div>
+                    )}
                 </CardContent>
                 <CardFooter>
-                {reminder.status === 'Upload Pending' && (
-                    <Button className="w-full" onClick={() => markReminderDone(reminder.id)}>
-                    Mark as Done
+                {reminder.status === 'Pending' && (
+                    <Button className="w-full" onClick={() => handleMarkDoneClick(reminder)}>
+                        <Check className="mr-2 h-4 w-4" />
+                        Mark as Done
                     </Button>
                 )}
-                {reminder.status === 'ACT Done' && (
+                {reminder.status === 'Done' && (
                     <p className="w-full text-center text-sm text-green-600 font-medium">Task Completed</p>
                 )}
                 </CardFooter>
@@ -84,6 +101,13 @@ export default function RemindersPage() {
         </div>
       )}
       <AddReminderModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      {selectedReminder && (
+        <MarkReminderDoneModal
+            isOpen={isDoneModalOpen}
+            onClose={() => setIsDoneModalOpen(false)}
+            reminder={selectedReminder}
+        />
+      )}
     </>
   );
 }

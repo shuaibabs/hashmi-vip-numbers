@@ -62,12 +62,13 @@ export type Reminder = {
   srNo: number;
   taskName: string;
   assignedTo: string;
-  status: 'ACT Done' | 'Upload Pending';
+  status: 'Done' | 'Pending';
   dueDate: Timestamp;
   createdBy: string;
+  notes?: string;
 };
 
-export type NewReminderData = Omit<Reminder, 'id' | 'srNo' | 'createdBy' | 'status' | 'dueDate'> & { dueDate: Date };
+export type NewReminderData = Omit<Reminder, 'id' | 'srNo' | 'createdBy' | 'status' | 'dueDate' | 'notes'> & { dueDate: Date };
 
 
 export type Activity = {
