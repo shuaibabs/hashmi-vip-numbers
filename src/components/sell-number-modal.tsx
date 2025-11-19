@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,6 +34,7 @@ type SellNumberModalProps = {
 
 export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProps) {
   const { sellNumber, employees } = useApp();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -140,7 +141,7 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Sale Date</FormLabel>
-                    <Popover>
+                    <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -163,7 +164,10 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setIsDatePickerOpen(false);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>

@@ -21,7 +21,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
@@ -44,6 +44,7 @@ export default function NewNumberPage() {
   const { addNumber, employees } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -187,7 +188,7 @@ export default function NewNumberPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Purchase Date</FormLabel>
-                        <Popover>
+                        <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -210,7 +211,10 @@ export default function NewNumberPage() {
                             <Calendar
                               mode="single"
                               selected={field.value}
-                              onSelect={field.onChange}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setIsDatePickerOpen(false);
+                              }}
                               initialFocus
                             />
                           </PopoverContent>

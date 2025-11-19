@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from './ui/calendar';
+import { useState } from 'react';
 
 const formSchema = z.object({
   taskName: z.string().min(1, 'Task name is required.'),
@@ -30,6 +31,7 @@ type AddReminderModalProps = {
 
 export function AddReminderModal({ isOpen, onClose }: AddReminderModalProps) {
   const { addReminder, employees } = useApp();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -103,7 +105,7 @@ export function AddReminderModal({ isOpen, onClose }: AddReminderModalProps) {
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Due Date</FormLabel>
-                  <Popover>
+                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -126,7 +128,10 @@ export function AddReminderModal({ isOpen, onClose }: AddReminderModalProps) {
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setIsDatePickerOpen(false);
+                        }}
                         initialFocus
                       />
                     </PopoverContent>

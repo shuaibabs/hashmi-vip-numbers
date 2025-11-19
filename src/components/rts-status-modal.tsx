@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   status: z.enum(['RTS', 'Non-RTS']),
@@ -40,6 +40,7 @@ type RtsStatusModalProps = {
 
 export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps) {
   const { updateNumberStatus } = useApp();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -111,7 +112,7 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Schedule RTS Date</FormLabel>
-                    <Popover>
+                    <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -134,7 +135,10 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setIsDatePickerOpen(false);
+                          }}
                           disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
                           initialFocus
                         />
