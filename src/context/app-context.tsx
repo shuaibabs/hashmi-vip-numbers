@@ -14,7 +14,7 @@ import {
   type PortOutRecord,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { isToday, isPast, parse, isValid } from 'date-fns';
+import { isToday, isPast, parse, isValid, parseISO } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import {
   collection,
@@ -46,12 +46,12 @@ const getNextSrNo = (records: { srNo?: number }[]): number => {
   if (!records || records.length === 0) {
     return 1;
   }
-  const maxSrNo = Math.max(...records.map(r => r.SrNo || r.srNo || 0));
+  const maxSrNo = Math.max(...records.map(r => r.srNo || 0));
   return maxSrNo + 1;
 };
 
 // Helper function to map snapshot to data with ID
-const mapSnapshotToData = <T>(snapshot: QuerySnapshot<DocumentData>): T[] => {
+const mapSnapshotToData = <T extends { id: string }>(snapshot: QuerySnapshot<DocumentData>): T[] => {
   return snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
@@ -587,6 +587,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // Helper to convert Excel serial date to JS Date
+  const excelSerialToDate = (serial: number) => {
+    // Excel's epoch starts on 1900-01-01, but it incorrectly thinks 1900 is a leap year.
+    // The subtraction of 2 accounts for this and the 1-based vs 0-based day count.
+    return new Date(Math.round((serial - 25569) * 86400 * 1000));
+  };
+  
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
     if (!db || !user) return { validRecords: [], failedRecords: [] };
     
@@ -613,10 +620,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
             failedRecords.push({ record, reason: 'Duplicate mobile number.' });
             continue;
         }
+        
+        let purchaseDate: Date;
+        const rawDate = record.PurchaseDate;
 
-        const purchaseDate = parse(record.PurchaseDate, 'yyyy-MM-dd', new Date());
+        if (rawDate instanceof Date) {
+            purchaseDate = rawDate;
+        } else if (typeof rawDate === 'number') {
+            purchaseDate = excelSerialToDate(rawDate);
+        } else if (typeof rawDate === 'string') {
+            // Try parsing various string formats
+            purchaseDate = parse(rawDate, 'yyyy-MM-dd', new Date());
+            if (!isValid(purchaseDate)) {
+                purchaseDate = parseISO(rawDate); // For ISO 8601 formats
+            }
+        } else {
+             failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate.' });
+             continue;
+        }
+
         if (!isValid(purchaseDate)) {
-             failedRecords.push({ record, reason: 'Invalid PurchaseDate format. Use YYYY-MM-DD.' });
+             failedRecords.push({ record, reason: 'Invalid PurchaseDate format. Use YYYY-MM-DD or a valid date.' });
              continue;
         }
         
@@ -721,3 +745,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
