@@ -33,11 +33,11 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
   // If we get here, user is authenticated and not on a public page. Render the app.
   return (
     <SidebarProvider>
-        <div className="flex">
+        <div className="flex min-h-screen w-full">
             <AppSidebar />
-            <div className="flex flex-col flex-1 min-h-screen">
+            <div className="flex flex-col w-full min-w-0">
                 <AppHeader />
-                <main className="flex-1 p-4 md:p-6 lg:p-8">
+                <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
                     {children}
                 </main>
             </div>
