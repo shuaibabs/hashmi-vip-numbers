@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useApp } from "@/context/app-context";
@@ -10,11 +11,13 @@ import { useAuth } from "@/context/auth-context";
 
 export default function DashboardPage() {
   const { role } = useAuth();
-  const { numbers, reminders } = useApp();
+  const { numbers, reminders, sales, portOuts } = useApp();
 
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
   const pendingUploads = reminders.filter(r => r.status === 'Upload Pending').length;
+  const salesCount = sales.length;
+  const portOutsCount = portOuts.length;
 
 
   const title = role === 'admin' ? "Admin Dashboard" : "My Dashboard";
@@ -38,8 +41,10 @@ export default function DashboardPage() {
                 A summary of all number statuses and pending work.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col md:flex-row items-center justify-center gap-8">
-              <StatusChart />
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div className="min-h-[250px] w-full">
+                <StatusChart />
+              </div>
                <div className="flex flex-col gap-4 text-sm">
                 <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-2))]"></span>
@@ -55,6 +60,16 @@ export default function DashboardPage() {
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-4))]"></span>
                     <span className="font-medium">Pending Uploads</span>
                     <span className="ml-auto text-muted-foreground">{pendingUploads}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-1))]"></span>
+                    <span className="font-medium">Sales</span>
+                    <span className="ml-auto text-muted-foreground">{salesCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-3))]"></span>
+                    <span className="font-medium">Port Outs</span>
+                    <span className="ml-auto text-muted-foreground">{portOutsCount}</span>
                 </div>
             </div>
             </CardContent>
