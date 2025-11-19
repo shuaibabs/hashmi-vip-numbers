@@ -1,50 +1,74 @@
 "use client"
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
+import * as React from "react"
+import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts"
 import { useApp } from "@/context/app-context";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useTheme } from "next-themes";
+
 
 export function StatusChart() {
-  const { numbers } = useApp();
+  const { numbers, reminders } = useApp();
+  const { theme } = useTheme();
+  
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
-  
-  const data = [
-    {
-      name: "Status",
-      RTS: rtsCount,
-      "Non-RTS": nonRtsCount,
-    },
+  const pendingUploads = reminders.filter(r => r.status === 'Upload Pending').length;
+
+  const chartData = [
+    { name: "RTS", value: rtsCount, fill: "hsl(var(--chart-2))" },
+    { name: "Non-RTS", value: nonRtsCount, fill: "hsl(var(--chart-5))" },
+    { name: "Pending Uploads", value: pendingUploads, fill: "hsl(var(--chart-4))" },
   ];
 
-  const chartConfig = {
-    RTS: {
+   const chartConfig = {
+    rts: {
       label: "RTS",
       color: "hsl(var(--chart-2))",
     },
-    "Non-RTS": {
+    "non-rts": {
       label: "Non-RTS",
       color: "hsl(var(--chart-5))",
     },
+    "pending-uploads": {
+        label: "Pending Uploads",
+        color: "hsl(var(--chart-4))"
+    }
   }
 
+  const total = React.useMemo(() => {
+    return chartData.reduce((acc, curr) => acc + curr.value, 0)
+  }, [chartData])
+
   return (
-    <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-        <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
-                <XAxis type="number" hide />
-                <YAxis
-                dataKey="name"
-                type="category"
-                tickLine={false}
-                axisLine={false}
-                tick={false}
+    <ChartContainer
+      config={chartConfig}
+      className="mx-auto aspect-square h-full"
+    >
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+           <ChartTooltip
+            cursor={false}
+            content={<ChartTooltipContent hideLabel />}
+          />
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={60}
+            strokeWidth={5}
+          >
+             {chartData.map((entry) => (
+                <Cell
+                    key={`cell-${entry.name}`}
+                    fill={entry.fill}
+                    stroke={theme === 'dark' ? 'hsl(var(--background))' : 'hsl(var(--card))'}
                 />
-                <Tooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Bar dataKey="RTS" stackId="a" fill="var(--color-RTS)" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="Non-RTS" stackId="a" fill="var(--color-Non-RTS)" radius={[4, 0, 0, 4]} />
-            </BarChart>
-        </ResponsiveContainer>
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
     </ChartContainer>
-  )
+  );
 }

@@ -5,11 +5,17 @@ import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { StatusChart } from "@/components/dashboard/status-chart";
 import { LatestActivities } from "@/components/dashboard/latest-activities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/context/auth-context";
 
 export default function DashboardPage() {
   const { role } = useAuth();
+  const { numbers, reminders } = useApp();
+
+  const rtsCount = numbers.filter(n => n.status === "RTS").length;
+  const nonRtsCount = numbers.length - rtsCount;
+  const pendingUploads = reminders.filter(r => r.status === 'Upload Pending').length;
+
 
   const title = role === 'admin' ? "Admin Dashboard" : "My Dashboard";
   const description = role === 'admin' 
@@ -28,9 +34,29 @@ export default function DashboardPage() {
           <Card className="lg:col-span-4">
             <CardHeader>
               <CardTitle>Status Breakdown</CardTitle>
+              <CardDescription>
+                A summary of all number statuses and pending work.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="pl-2">
+            <CardContent className="flex flex-col md:flex-row items-center justify-center gap-8">
               <StatusChart />
+               <div className="flex flex-col gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-2))]"></span>
+                    <span className="font-medium">RTS</span>
+                    <span className="ml-auto text-muted-foreground">{rtsCount}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-5))]"></span>
+                    <span className="font-medium">Non-RTS</span>
+                    <span className="ml-auto text-muted-foreground">{nonRtsCount}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-4))]"></span>
+                    <span className="font-medium">Pending Uploads</span>
+                    <span className="ml-auto text-muted-foreground">{pendingUploads}</span>
+                </div>
+            </div>
             </CardContent>
           </Card>
           <Card className="lg:col-span-3">

@@ -2,23 +2,25 @@
 
 import { useApp } from "@/context/app-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, CheckCircle, Clock, UploadCloud, Check } from "lucide-react";
+import { Smartphone, CheckCircle, Clock, UploadCloud, Check, DollarSign, LogOut } from "lucide-react";
 
 export function SummaryCards() {
-  const { numbers, reminders } = useApp();
+  const { numbers, reminders, sales, portOuts } = useApp();
 
   const totalNumbers = numbers.length;
   const rtsNumbers = numbers.filter(n => n.status === 'RTS').length;
   const nonRtsNumbers = totalNumbers - rtsNumbers;
   const pendingUploads = reminders.filter(r => r.status === 'Upload Pending').length;
-  const completedActivations = numbers.filter(n => n.status === 'RTS').length;
+  const totalSales = sales.length;
+  const totalPortOuts = portOuts.length;
+
 
   const summaryData = [
     { title: "Total Numbers", value: totalNumbers, icon: Smartphone, color: "text-blue-500" },
     { title: "RTS Numbers", value: rtsNumbers, icon: CheckCircle, color: "text-green-500" },
     { title: "Non-RTS Numbers", value: nonRtsNumbers, icon: Clock, color: "text-red-500" },
-    { title: "Pending Uploads", value: pendingUploads, icon: UploadCloud, color: "text-yellow-500" },
-    { title: "Completed Activations", value: completedActivations, icon: Check, color: "text-indigo-500" },
+    { title: "Sales", value: totalSales, icon: DollarSign, color: "text-indigo-500" },
+    { title: "Port Outs", value: totalPortOuts, icon: LogOut, color: "text-purple-500" },
   ];
 
   return (
