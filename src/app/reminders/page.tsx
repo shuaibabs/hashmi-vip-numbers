@@ -6,14 +6,19 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { User, Calendar } from 'lucide-react';
+import { User, Calendar, PlusCircle } from 'lucide-react';
 import { TableSpinner } from '@/components/ui/spinner';
+import { useState } from 'react';
+import { AddReminderModal } from '@/components/add-reminder-modal';
+import { useAuth } from '@/context/auth-context';
 
 export default function RemindersPage() {
   const { reminders, markReminderDone, loading } = useApp();
+  const { role } = useAuth();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   const sortedReminders = [...reminders].sort((a, b) => a.dueDate.toDate().getTime() - b.dueDate.toDate().getTime())
-                                        .sort((a, b) => (a.status === 'Upload Pending' ? -1 : 1) - (b.status === 'Upload Pending' ? -1 : 1));
+                                        .sort((a, b) => (a.status === 'Upload Pending' ? -1 : 1) - (b.status === 'ACT Done' ? -1 : 1));
 
   if (loading) {
     return (
@@ -28,7 +33,14 @@ export default function RemindersPage() {
       <PageHeader
         title="Work Reminders"
         description="Manage and track your assigned tasks and reminders."
-      />
+      >
+        {role === 'admin' && (
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4"/>
+            New Reminder
+          </Button>
+        )}
+      </PageHeader>
       {sortedReminders.length === 0 && !loading ? (
         <Card>
             <CardContent className="pt-6">
@@ -71,6 +83,7 @@ export default function RemindersPage() {
             ))}
         </div>
       )}
+      <AddReminderModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
     </>
   );
 }

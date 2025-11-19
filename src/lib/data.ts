@@ -67,6 +67,9 @@ export type Reminder = {
   createdBy: string;
 };
 
+export type NewReminderData = Omit<Reminder, 'id' | 'srNo' | 'createdBy' | 'status' | 'dueDate'> & { dueDate: Date };
+
+
 export type Activity = {
   id: string; // Firestore document ID
   srNo: number;

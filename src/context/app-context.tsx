@@ -12,6 +12,7 @@ import {
   type DealerPurchaseRecord,
   NewDealerPurchaseData,
   type PortOutRecord,
+  NewReminderData,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast, parse, isValid, parseISO } from 'date-fns';
@@ -84,6 +85,7 @@ type AppContextType = {
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
   deletePortOuts: (ids: string[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
+  addReminder: (data: NewReminderData) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -708,6 +710,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { validRecords, failedRecords };
   };
 
+  const addReminder = (data: NewReminderData) => {
+    if (!db || !user) return;
+
+    const newReminder: Omit<Reminder, 'id'> = {
+      ...data,
+      srNo: getNextSrNo(reminders),
+      status: 'Upload Pending',
+      dueDate: Timestamp.fromDate(data.dueDate),
+      createdBy: user.uid,
+    };
+    
+    const remindersCollection = collection(db, 'reminders');
+    addDoc(remindersCollection, newReminder).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Added Reminder',
+            description: `Assigned task "${data.taskName}" to ${data.assignedTo}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'reminders',
+            operation: 'create',
+            requestResourceData: newReminder,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
   const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => r.assignedTo === user?.displayName);
@@ -733,6 +763,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateDealerPurchase,
     deletePortOuts,
     bulkAddNumbers,
+    addReminder,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -745,5 +776,3 @@ export function useApp() {
   }
   return context;
 }
-
-    
