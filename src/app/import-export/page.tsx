@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,7 @@ import { FileInput, FileOutput, Terminal, Download } from 'lucide-react';
 import Papa from 'papaparse';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { TableSpinner } from '@/components/ui/spinner';
+import { Spinner, TableSpinner } from '@/components/ui/spinner';
 import { NewNumberData } from '@/lib/data';
 
 type FailedRecord = {
