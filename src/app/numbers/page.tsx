@@ -168,6 +168,26 @@ export default function AllNumbersPage() {
     </TableHead>
   );
 
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -288,7 +308,7 @@ export default function AllNumbersPage() {
                     <TableCell>
                         {num.srNo}
                     </TableCell>
-                    <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                     <TableCell>{num.sum}</TableCell>
                     <TableCell>{num.numberType}</TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
