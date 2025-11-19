@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { User, Calendar, PlusCircle } from 'lucide-react';
-import { TableSpinner } from '@/components/ui/spinner';
+import { Spinner } from '@/components/ui/spinner';
 import { useState } from 'react';
 import { AddReminderModal } from '@/components/add-reminder-modal';
 import { useAuth } from '@/context/auth-context';
@@ -23,7 +23,7 @@ export default function RemindersPage() {
   if (loading) {
     return (
         <div className="flex h-full w-full items-center justify-center">
-            <TableSpinner colSpan={1} />
+            <Spinner className="h-8 w-8" />
         </div>
     )
   }
