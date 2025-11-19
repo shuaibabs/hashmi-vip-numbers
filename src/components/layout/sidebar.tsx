@@ -86,6 +86,28 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <Separator className="my-2 bg-sidebar-border" />
+         <div className="p-4 text-center text-xs text-sidebar-foreground/70 space-y-2 group-data-[collapsible=icon]:hidden">
+            <p>&copy; {new Date().getFullYear()} Hashmi VIP Numbers. <br/> All rights reserved.</p>
+            <div className="flex items-center justify-center gap-2">
+                <span>Powered by</span>
+                 <a href="https://trionex.digital" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 font-semibold text-sidebar-foreground/90 hover:text-sidebar-foreground transition-colors">
+                    <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        >
+                        <path
+                            fillRule="evenodd"
+                            clipRule="evenodd"
+                            d="M12 2L2 7V17L12 22L22 17V7L12 2ZM12 4.236L19.95 8.718L12 13.2L4.05 8.718L12 4.236ZM13 14.3V19.8L20 16V10.5L13 14.3ZM11 14.3L4 10.5V16L11 19.8V14.3Z"
+                            fill="currentColor"
+                        />
+                    </svg>
+                    <span>Trionex Digital</span>
+                 </a>
+            </div>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
