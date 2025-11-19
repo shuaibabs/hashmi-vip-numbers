@@ -43,7 +43,9 @@ export function AppHeader() {
     const app = useFirebaseApp();
     const router = useRouter();
     
-    const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+    const sortedActivities = [...activities]
+        .filter(activity => activity.timestamp) // Ensure timestamp is not null
+        .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
 
     const handleLogout = async () => {
         if (!app) return;
