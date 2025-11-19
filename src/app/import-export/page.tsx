@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { FileInput, FileOutput, Terminal, Download } from 'lucide-react';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Spinner, TableSpinner } from '@/components/ui/spinner';
@@ -71,6 +72,25 @@ export default function ImportExportPage() {
   const handleImportClick = () => {
     document.getElementById('import-file-input')?.click();
   };
+
+  const processImportedData = async (data: any[], fileName: string) => {
+    const { validRecords, failedRecords: newFailedRecords } = await bulkAddNumbers(data as any[]);
+    
+    setImportResult({ success: validRecords.length, failed: newFailedRecords.length });
+    setFailedRecords(newFailedRecords);
+    setIsImporting(false);
+
+    toast({
+      title: "Import Complete",
+      description: `${validRecords.length} records imported successfully. ${newFailedRecords.length} records failed.`,
+    });
+
+    addActivity({
+        employeeName: 'Admin',
+        action: 'Imported Data',
+        description: `Attempted to import ${data.length} records from ${fileName}.`
+    });
+  }
   
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -80,39 +100,63 @@ export default function ImportExportPage() {
     setImportResult(null);
     setFailedRecords([]);
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const { validRecords, failedRecords: newFailedRecords } = await bulkAddNumbers(results.data as any[]);
-        
-        setImportResult({ success: validRecords.length, failed: newFailedRecords.length });
-        setFailedRecords(newFailedRecords);
-        setIsImporting(false);
+    const reader = new FileReader();
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
-        toast({
-          title: "Import Complete",
-          description: `${validRecords.length} records imported successfully. ${newFailedRecords.length} records failed.`,
+    if (fileExtension === 'csv') {
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                processImportedData(results.data, file.name);
+            },
+            error: (error) => {
+                setIsImporting(false);
+                toast({
+                    variant: "destructive",
+                    title: "CSV Import Error",
+                    description: error.message,
+                });
+            }
         });
-
-        addActivity({
-            employeeName: 'Admin',
-            action: 'Imported Data',
-            description: `Attempted to import ${results.data.length} records from ${file.name}.`
-        });
-
-        // Reset file input
-        event.target.value = '';
-      },
-      error: (error) => {
+    } else if (fileExtension === 'xls' || fileExtension === 'xlsx') {
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+                processImportedData(json, file.name);
+            } catch (error: any) {
+                 setIsImporting(false);
+                toast({
+                    variant: "destructive",
+                    title: "Excel Import Error",
+                    description: error.message || "Could not parse the Excel file.",
+                });
+            }
+        };
+        reader.onerror = () => {
+             setIsImporting(false);
+            toast({
+                variant: "destructive",
+                title: "File Read Error",
+                description: "Could not read the selected file.",
+            });
+        }
+        reader.readAsBinaryString(file);
+    } else {
         setIsImporting(false);
         toast({
             variant: "destructive",
-            title: "Import Error",
-            description: error.message,
+            title: "Unsupported File Type",
+            description: "Please upload a .csv, .xls, or .xlsx file.",
         });
-      }
-    });
+    }
+
+    // Reset file input
+    event.target.value = '';
   };
 
   const handleExportFailed = () => {
@@ -150,15 +194,15 @@ export default function ImportExportPage() {
         <div className="grid md:grid-cols-2 gap-6">
            <Card>
              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from CSV</CardTitle>
-                <CardDescription>Upload a CSV file to add multiple numbers to the master inventory.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from File</CardTitle>
+                <CardDescription>Upload a CSV or Excel file to add multiple numbers to the master inventory.</CardDescription>
              </CardHeader>
              <CardContent>
                 <Button onClick={handleImportClick} disabled={isImporting}>
                   {isImporting ? <Spinner className="mr-2 h-4 w-4" /> : <FileInput className="mr-2 h-4 w-4" />}
-                  {isImporting ? 'Importing...' : 'Import from CSV'}
+                  {isImporting ? 'Importing...' : 'Import from File'}
                 </Button>
-                <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
+                <input type="file" id="import-file-input" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileImport} />
                  <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, Location, CurrentLocation, LocationType, AssignedTo, UPCStatus.</p>
              </CardContent>
            </Card>
