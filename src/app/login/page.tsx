@@ -77,7 +77,7 @@ export default function LoginPage() {
             <div className="flex justify-center items-center mb-4">
                 <RadioTower className="w-10 h-10 text-primary" />
             </div>
-          <CardTitle className="text-2xl">Welcome to NumberFlow</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Hashmi VIP Numbers</CardTitle>
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent>

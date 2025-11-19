@@ -9,7 +9,7 @@ import { FirebaseProvider } from '@/firebase';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export const metadata: Metadata = {
-  title: 'NumberFlow',
+  title: 'Hashmi VIP Numbers',
   description: 'Number Management System',
 };
 

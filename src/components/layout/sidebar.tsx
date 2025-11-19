@@ -59,7 +59,7 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className="flex items-center gap-2 p-2">
             <RadioTower className="w-8 h-8 text-primary"/>
-            <h1 className="text-xl font-bold text-sidebar-foreground">NumberFlow</h1>
+            <h1 className="text-xl font-bold text-sidebar-foreground">Hashmi VIP Numbers</h1>
         </div>
       </SidebarHeader>
       <SidebarContent>
