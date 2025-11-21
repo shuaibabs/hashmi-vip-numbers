@@ -98,6 +98,8 @@ type AppContextType = {
   activities: Activity[];
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
+  seenActivitiesCount: number;
+  markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
@@ -143,6 +145,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
+
+  const markActivitiesAsSeen = useCallback(() => {
+    setSeenActivitiesCount(activities.length);
+  }, [activities.length]);
 
   const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
@@ -1021,6 +1028,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activities: roleFilteredActivities,
     employees,
     dealerPurchases,
+    seenActivitiesCount,
+    markActivitiesAsSeen,
     isMobileNumberDuplicate,
     updateNumberStatus,
     updateSaleStatuses,

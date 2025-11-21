@@ -5,7 +5,7 @@ import { useApp } from "@/context/app-context";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pagination } from "@/components/pagination";
 import { TableSpinner } from "@/components/ui/spinner";
 import { useAuth } from "@/context/auth-context";
@@ -18,11 +18,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 1000];
 
 export default function ActivitiesPage() {
-  const { activities, loading, deleteActivities } = useApp();
+  const { activities, loading, deleteActivities, markActivitiesAsSeen } = useApp();
   const { role } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  useEffect(() => {
+    markActivitiesAsSeen();
+  }, [markActivitiesAsSeen]);
 
   const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
 

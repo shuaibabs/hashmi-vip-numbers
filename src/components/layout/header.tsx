@@ -38,7 +38,7 @@ function ActivityTime({ timestamp }: { timestamp: Date }) {
 
 
 export function AppHeader() {
-    const { activities } = useApp();
+    const { activities, seenActivitiesCount } = useApp();
     const { user, role } = useAuth();
     const app = useFirebaseApp();
     const router = useRouter();
@@ -46,6 +46,8 @@ export function AppHeader() {
     const sortedActivities = [...activities]
         .filter(activity => activity.timestamp) // Ensure timestamp is not null
         .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+
+    const newActivityCount = sortedActivities.length - seenActivitiesCount;
 
     const handleLogout = async () => {
         if (!app) return;
@@ -79,9 +81,9 @@ export function AppHeader() {
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="relative">
                             <Bell className="h-5 w-5" />
-                            {sortedActivities.length > 0 && (
+                            {newActivityCount > 0 && (
                                 <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-[10px]">
-                                    {sortedActivities.length > 9 ? '9+' : sortedActivities.length}
+                                    {newActivityCount > 9 ? '9+' : newActivityCount}
                                 </Badge>
                             )}
                             <span className="sr-only">Notifications</span>
