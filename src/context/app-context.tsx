@@ -98,7 +98,7 @@ type AppContextType = {
   activities: Activity[];
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
-  isMobileNumberDuplicate: (mobile: string) => boolean;
+  isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
   markSaleAsPortedOut: (saleId: string) => void;
@@ -155,6 +155,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dealerPurchasesLoading ||
       usersLoading
     ));
+
+  const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
+    if (!db || !user) return;
+    const newActivity = { 
+        ...activity, 
+        srNo: getNextSrNo(activities),
+        timestamp: serverTimestamp(),
+        createdBy: user.uid,
+    };
+    addDoc(collection(db, 'activities'), newActivity)
+      .catch(async (serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: 'activities',
+            operation: 'create',
+            requestResourceData: newActivity,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+      });
+
+    if (showToast) {
+       toast({
+        title: activity.action,
+        description: activity.description,
+      });
+    }
+  }, [db, user, activities, toast]);
+  
 
   useEffect(() => {
     if (!db || !user) {
@@ -228,44 +255,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [activities, role, user, loading]);
 
 
-  const isMobileNumberDuplicate = (mobile: string): boolean => {
+  const isMobileNumberDuplicate = (mobile: string, currentId?: string): boolean => {
     if (!mobile) return false;
-    const allMobiles = new Set([
-      ...numbers.map(n => n.mobile),
-      ...sales.map(s => s.mobile),
-      ...portOuts.map(p => p.mobile),
-      ...dealerPurchases.map(d => d.mobile),
-    ]);
-    return allMobiles.has(mobile);
+    const allNumbers: { id?: string, mobile: string }[] = [
+      ...numbers,
+      ...sales,
+      ...portOuts,
+      ...dealerPurchases,
+    ];
+  
+    return allNumbers.some(item => 
+      item.mobile === mobile && item.id !== currentId
+    );
   };
 
 
-  const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
-    if (!db || !user) return;
-    const newActivity = { 
-        ...activity, 
-        srNo: getNextSrNo(activities),
-        timestamp: serverTimestamp(),
-        createdBy: user.uid,
-    };
-    addDoc(collection(db, 'activities'), newActivity)
-      .catch(async (serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: 'activities',
-            operation: 'create',
-            requestResourceData: newActivity,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-      });
-
-    if (showToast) {
-       toast({
-        title: activity.action,
-        description: activity.description,
-      });
-    }
-  }, [db, user, activities, toast]);
-  
   useEffect(() => {
     if (!db || !numbers || numbers.length === 0 || numbersLoading) {
       return;
@@ -573,8 +577,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...restoredNumberData,
         assignedTo: 'Unassigned',
         name: 'Unassigned',
-        status: 'Non-RTS',
-        rtsDate: null,
+        // Preserve the original status and rtsDate from the backup
+        status: restoredNumberData.status || 'Non-RTS',
+        rtsDate: restoredNumberData.rtsDate || null, 
     };
 
     const batch = writeBatch(db);
