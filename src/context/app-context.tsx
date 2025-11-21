@@ -15,7 +15,7 @@ import {
   NewReminderData,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { isToday, isPast, isValid, isFuture, parse } from 'date-fns';
+import { isToday, isPast, isValid, parse } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import {
   collection,
@@ -251,7 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   useEffect(() => {
-    if (!db || !numbers || numbers.length === 0) {
+    if (!db || !numbers || numbers.length === 0 || numbersLoading) {
       return;
     }
     const checkRtsDates = async () => {
@@ -259,14 +259,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      let updated = false;
       const batch = writeBatch(db);
+      let updated = false;
       
       numbers.forEach(num => {
         if (num.status === 'Non-RTS' && num.rtsDate) {
            const rtsDateObj = num.rtsDate.toDate();
           if (isValid(rtsDateObj) && (isToday(rtsDateObj) || isPast(rtsDateObj))) {
-            updated = true;
             const docRef = doc(db, 'numbers', num.id);
             batch.update(docRef, {
                 status: 'RTS',
@@ -277,12 +276,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 action: 'Auto-updated to RTS',
                 description: `Number ${num.mobile} automatically became RTS.`
             }, false);
+            updated = true;
           }
         }
       });
 
       if (updated) {
-        batch.commit().catch(async (serverError) => {
+        await batch.commit().catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: 'numbers',
                 operation: 'update',
@@ -293,10 +293,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const interval = setInterval(checkRtsDates, 10000); // Check every 10 seconds
+    // Run once on load, then set an interval
+    checkRtsDates();
+    const interval = setInterval(checkRtsDates, 60000); // Check every minute
+    
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, numbers]);
+  }, [db, numbers, numbersLoading]);
 
 
   const updateNumberStatus = (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
@@ -812,15 +815,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Handle Excel serial date (which is read as a number)
         if (typeof rawDate === 'number') {
-            const date = XLSX.SSF.parse_date_code(rawDate);
-            if (date) {
-                return new Date(date.y, date.m - 1, date.d, date.H, date.M, date.S);
-            }
+            // Excel's epoch starts on 1900-01-01, but has a bug where it thinks 1900 is a leap year.
+            // Javascript's epoch is 1970-01-01. The difference is 25569 days for dates after 1900-02-28.
+            const excelEpochDiff = 25569;
+            const date = new Date((rawDate - excelEpochDiff) * 24 * 60 * 60 * 1000);
+            if (isValid(date)) return date;
         }
 
         if (typeof rawDate === 'string') {
             const dateFormats = [
                 'dd-MM-yyyy',
+                'MM-dd-yyyy',
                 'yyyy-MM-dd',
                 'MM/dd/yyyy',
                 'yyyy/MM/dd'
