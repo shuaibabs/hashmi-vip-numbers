@@ -109,7 +109,7 @@ type AppContextType = {
   cancelSale: (saleId: string) => void;
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
-  updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
+  updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
   deletePortOuts: (records: PortOutRecord[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData) => void;
@@ -658,7 +658,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateDealerPurchase = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
+  const updateDealerPurchase = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => {
     if (!db || !user) return;
     const purchase = dealerPurchases.find(p => p.id === id);
     if (!purchase) return;
