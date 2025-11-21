@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -142,6 +143,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
 
+    // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
+  const loading =
+    authLoading || 
+    (!!user && (
+      numbersLoading ||
+      salesLoading ||
+      portOutsLoading ||
+      remindersLoading ||
+      activitiesLoading ||
+      dealerPurchasesLoading ||
+      usersLoading
+    ));
+
   useEffect(() => {
     if (!db || !user) {
       // If not logged in, reset state and stop loading
@@ -199,19 +213,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       subscriptions.forEach(sub => sub());
     };
   }, [db, user]);
-
-  // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
-  const loading =
-    authLoading || 
-    (!!user && (
-      numbersLoading ||
-      salesLoading ||
-      portOutsLoading ||
-      remindersLoading ||
-      activitiesLoading ||
-      dealerPurchasesLoading ||
-      usersLoading
-    ));
 
   useEffect(() => {
     if (loading || !user) return;
@@ -607,6 +608,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
+    
+    const assignedToUser = user.displayName || 'User';
 
     const newNumber: Omit<NumberRecord, 'id'> = {
       ...data,
@@ -614,8 +617,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sum: calculateDigitalRoot(data.mobile),
       upcStatus: 'Pending',
       rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
-      assignedTo: 'Unassigned',
-      name: 'Unassigned',
+      assignedTo: assignedToUser,
+      name: assignedToUser,
       checkInDate: null,
       safeCustodyDate: null,
       createdBy: user.uid,
@@ -813,6 +816,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let currentSrNo = getNextSrNo(numbers);
     const validRecords: any[] = [];
     const failedRecords: { record: any, reason: string }[] = [];
+    const assignedToUser = user.displayName || 'User';
 
     const existingMobiles = new Set([
         ...numbers.map(n => n.mobile),
@@ -822,23 +826,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
     
     const parseDate = (rawDate: any): Date | null => {
-        if (!rawDate) return null;
-
-        if (rawDate instanceof Date) {
-            return isValid(rawDate) ? rawDate : null;
+        if (rawDate instanceof Date && isValid(rawDate)) {
+            return rawDate;
         }
-
-        // Handle Excel serial date (which is read as a number)
-        if (typeof rawDate === 'number') {
-            try {
-                // This formula converts Excel serial number to JS date.
-                // It accounts for the 1900 leap year bug in Excel.
-                const excelEpoch = new Date(1899, 11, 30);
-                const jsDate = new Date(excelEpoch.getTime() + rawDate * 86400000);
-                if (isValid(jsDate)) return jsDate;
-            } catch (e) { /* ignore parse error */ }
-        }
-
         if (typeof rawDate === 'string') {
             const dateFormats = [
                 'dd-MM-yyyy', 'MM-dd-yyyy', 'yyyy-MM-dd', 'MM/dd/yyyy', 'yyyy/MM/dd', 
@@ -848,6 +838,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const parsed = parse(rawDate, formatStr, new Date());
                 if (isValid(parsed)) return parsed;
             }
+        }
+        if (typeof rawDate === 'number') {
+           try {
+             return XLSX.SSF.parse_date_code(rawDate);
+           } catch(e) { /* ignore */}
         }
         return null;
     };
@@ -889,7 +884,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         const newRecord = {
             mobile: mobile,
-            name: 'Unassigned',
+            name: assignedToUser,
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
             status: status,
             rtsDate: rtsDateValue || null,
@@ -930,7 +925,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
             rtsDate: rtsDateForDb,
-            assignedTo: 'Unassigned',
+            assignedTo: assignedToUser,
         };
         batch.set(newDocRef, newNumber);
       });

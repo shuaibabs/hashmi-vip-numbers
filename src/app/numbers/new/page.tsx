@@ -25,7 +25,6 @@ import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
-  name: z.string().min(1, 'Name is required.'),
   numberType: z.enum(['Prepaid', 'Postpaid', 'COCP']),
   purchaseFrom: z.string().min(1, 'Purchase from is required.'),
   purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative.'),
@@ -56,7 +55,6 @@ export default function NewNumberPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       mobile: '',
-      name: '',
       numberType: 'Prepaid',
       purchaseFrom: '',
       purchasePrice: 0,
@@ -107,45 +105,29 @@ export default function NewNumberPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
+                 <FormField
                   control={form.control}
-                  name="name"
+                  name="numberType"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. John Doe" {...field} />
-                      </FormControl>
+                      <FormItem>
+                      <FormLabel>Number Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select number type" />
+                          </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                          <SelectItem value="Prepaid">Prepaid</SelectItem>
+                          <SelectItem value="Postpaid">Postpaid</SelectItem>
+                          <SelectItem value="COCP">COCP</SelectItem>
+                          </SelectContent>
+                      </Select>
                       <FormMessage />
-                    </FormItem>
+                      </FormItem>
                   )}
-                />
+                  />
               </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                    control={form.control}
-                    name="numberType"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Number Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select number type" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="Prepaid">Prepaid</SelectItem>
-                            <SelectItem value="Postpaid">Postpaid</SelectItem>
-                            <SelectItem value="COCP">COCP</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-
             </CardContent>
           </Card>
 
