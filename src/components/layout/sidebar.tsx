@@ -44,7 +44,7 @@ const navItems = [
   { href: '/dealer-purchases', label: 'Dealer Purchases', icon: ShoppingCart, adminOnly: false },
   { href: '/reminders', label: 'Work Reminders', icon: ClipboardList, adminOnly: false },
   { href: '/cocp', label: 'COCP', icon: RadioTower, adminOnly: false },
-  { href: '/activities', label: 'Employee Activities', icon: History, adminOnly: true },
+  { href: '/activities', label: 'Activities', icon: History, adminOnly: false },
   { href: '/import-export', label: 'Import / Export', icon: FileOutput, adminOnly: false },
 ];
 
