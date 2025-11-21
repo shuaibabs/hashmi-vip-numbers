@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -51,11 +52,11 @@ export default function RemindersPage() {
           </Button>
         )}
       </PageHeader>
-      {sortedReminders.length === 0 && !loading ? (
+      {sortedReminders.length === 0 ? (
         <Card>
-            <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">No reminders found.</p>
-            </CardContent>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">No reminders found.</p>
+          </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

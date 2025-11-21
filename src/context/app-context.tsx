@@ -3,7 +3,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   type Activity,
   type NumberRecord,
@@ -240,7 +240,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
 
-  const addActivity = (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
+  const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
     const newActivity = { 
         ...activity, 
@@ -264,7 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         description: activity.description,
       });
     }
-  };
+  }, [db, user, activities, toast]);
   
   useEffect(() => {
     if (!db || !numbers || numbers.length === 0 || numbersLoading) {
@@ -314,8 +314,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(checkRtsDates, 60000); // Check every minute
     
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, numbers, numbersLoading]);
+  }, [db, numbers, numbersLoading, addActivity]);
 
 
   const updateNumberStatus = (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {

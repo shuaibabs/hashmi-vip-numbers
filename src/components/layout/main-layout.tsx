@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -8,7 +9,7 @@ import { ProtectedLayout } from '@/components/layout/protected-layout';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-const PUBLIC_PATHS = ['/login', '/'];
+const PUBLIC_PATHS = ['/login'];
 
 export function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -19,28 +20,18 @@ export function MainLayout({ children }: { children: ReactNode }) {
     if (loading) {
       return; // Do nothing while auth state is loading
     }
+    
+    const pathIsPublic = PUBLIC_PATHS.includes(pathname) || pathname === '/';
+    const isUserLoggedIn = !!user;
 
-    const pathIsPublic = PUBLIC_PATHS.includes(pathname);
-
-    // If user is logged in
-    if (user) {
-      // If they are on a public path (like /login), redirect them to the dashboard
-      if (pathIsPublic) {
-        router.push('/dashboard');
-      }
-      // Otherwise, they are on a protected path and can stay.
-    } 
-    // If user is not logged in
-    else {
-      // If they are on a protected path, redirect them to login
-      if (!pathIsPublic) {
-        router.push('/login');
-      }
-      // Otherwise, they are on a public path and can stay.
+    if (isUserLoggedIn && pathIsPublic) {
+      router.replace('/dashboard');
+    } else if (!isUserLoggedIn && !pathIsPublic) {
+      router.replace('/login');
     }
   }, [user, loading, pathname, router]);
 
-  // While loading, show a spinner to prevent flicker or premature rendering
+  // While loading, show a full-screen spinner
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
@@ -49,11 +40,11 @@ export function MainLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // If a user is logged in and not on a public path, render the protected app layout
-  if (user && !PUBLIC_PATHS.includes(pathname)) {
+  // If user is logged in, show the protected layout.
+  // Otherwise, show the public page (e.g., login page).
+  if (user) {
     return <ProtectedLayout>{children}</ProtectedLayout>;
   }
 
-  // Otherwise, render the children (this will be the login/signup page for unauthenticated users)
   return <>{children}</>;
 }

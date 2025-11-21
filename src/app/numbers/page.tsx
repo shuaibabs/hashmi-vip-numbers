@@ -130,10 +130,6 @@ export default function AllNumbersPage() {
     setCurrentPage(1);
   };
 
-  const handleRowClick = (id: string) => {
-    router.push(`/numbers/${id}`);
-  };
-
   const handleSelectRow = (id: string) => {
     setSelectedRows(prev => 
       prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
