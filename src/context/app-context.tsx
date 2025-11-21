@@ -595,10 +595,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...data,
       srNo: getNextSrNo(numbers),
       sum: calculateDigitalRoot(data.mobile),
-      status: 'Non-RTS',
       upcStatus: 'Pending',
-      rtsDate: null,
+      rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
       assignedTo: 'Unassigned',
+      name: 'Unassigned',
       checkInDate: null,
       safeCustodyDate: null,
       createdBy: user.uid,
@@ -762,13 +762,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
 
-  // Helper to convert Excel serial date to JS Date
-  const excelSerialToDate = (serial: number) => {
-    // Excel's epoch starts on 1900-01-01, but it incorrectly thinks 1900 is a leap year.
-    // The subtraction of 2 accounts for this and the 1-based vs 0-based day count.
-    return new Date(Math.round((serial - 25569) * 86400 * 1000));
-  };
-  
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
     if (!db || !user) return { validRecords: [], failedRecords: [] };
     
@@ -776,7 +769,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const validRecords: NewNumberData[] = [];
     const failedRecords: { record: any, reason: string }[] = [];
 
-    // Create a set of all current mobile numbers for faster duplicate checking
     const existingMobiles = new Set([
         ...numbers.map(n => n.mobile),
         ...sales.map(s => s.mobile),
@@ -791,39 +783,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
             failedRecords.push({ record, reason: 'Invalid or missing mobile number (must be 10 digits).' });
             continue;
         }
-        if (isMobileNumberDuplicate(mobile)) {
+        if (existingMobiles.has(mobile)) {
             failedRecords.push({ record, reason: 'Duplicate mobile number.' });
             continue;
         }
         
         const parseDate = (rawDate: any): Date | null => {
             if (!rawDate) return null;
-            
-            // Handle Excel serial number date
-            const numericDate = Number(rawDate);
-            if (!isNaN(numericDate) && numericDate > 1) {
-                 const date = excelSerialToDate(numericDate);
-                 return isValid(date) ? date : null;
-            }
-
             if (typeof rawDate === 'string') {
-                // Try parsing dd-MM-yyyy first
-                let date = parse(rawDate, 'dd-MM-yyyy', new Date());
-                if (isValid(date)) return date;
-
-                // Then try yyyy-MM-dd
-                date = parse(rawDate, 'yyyy-MM-dd', new Date());
-                if (isValid(date)) return date;
-
-                // Finally try ISO format
-                date = parseISO(rawDate);
-                if (isValid(date)) return date;
+                const parts = rawDate.split('-');
+                if (parts.length === 3) {
+                    const date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                    if (isValid(date)) return date;
+                }
+                const isoDate = parseISO(rawDate);
+                if (isValid(isoDate)) return isoDate;
             }
             return null;
         }
-        
-        const purchaseDate = parseDate(record.PurchaseDate);
 
+        const purchaseDate = parseDate(record.PurchaseDate);
         if (!purchaseDate) {
              failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate. Use dd-MM-yyyy format.' });
              continue;
@@ -837,10 +816,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
         
+        const status = record.Status;
+        if (!status || !['RTS', 'Non-RTS'].includes(status)) {
+            failedRecords.push({ record, reason: 'Invalid or missing Status. Must be "RTS" or "Non-RTS".' });
+            continue;
+        }
+
+        let rtsDate: Date | null = null;
+        if (status === 'Non-RTS') {
+            rtsDate = parseDate(record.RTSDate);
+            if (!rtsDate) {
+                failedRecords.push({ record, reason: 'RTSDate is required when Status is "Non-RTS". Use dd-MM-yyyy format.' });
+                continue;
+            }
+        }
+        
         const newRecord: NewNumberData = {
             mobile: mobile,
-            name: record.Name || 'N/A',
+            name: 'Unassigned',
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
+            status: status,
+            rtsDate: rtsDate || undefined,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
@@ -850,7 +846,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             notes: record.Notes || '',
         };
         validRecords.push(newRecord);
-        existingMobiles.add(mobile); // Add to set to prevent duplicate within the same file
+        existingMobiles.add(mobile);
     }
 
     if (validRecords.length > 0) {
@@ -863,13 +859,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
-            status: 'Non-RTS',
             upcStatus: 'Pending',
             checkInDate: null,
             safeCustodyDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
-            rtsDate: null,
+            rtsDate: record.rtsDate ? Timestamp.fromDate(record.rtsDate) : null,
             assignedTo: 'Unassigned',
         };
         batch.set(newDocRef, newNumber);
@@ -882,7 +877,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             requestResourceData: {info: `Bulk add of ${validRecords.length} records.`},
         });
         errorEmitter.emit('permission-error', permissionError);
-        // If the whole batch fails, we'll treat them all as failed.
         validRecords.forEach(vr => failedRecords.push({ record: vr, reason: "Firestore permission denied."}));
         return { validRecords: [], failedRecords };
       });

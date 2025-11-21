@@ -5,7 +5,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import { NewNumberData } from '@/lib/data';
 import { PageHeader } from '@/components/page-header';
@@ -15,7 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
@@ -35,13 +34,23 @@ const formSchema = z.object({
   currentLocation: z.string().min(1, 'Current location is required.'),
   locationType: z.enum(['Store', 'Employee', 'Dealer']),
   notes: z.string().optional(),
+  status: z.enum(['RTS', 'Non-RTS']),
+  rtsDate: z.date().optional(),
+}).refine(data => {
+  if (data.status === 'Non-RTS') {
+    return !!data.rtsDate;
+  }
+  return true;
+}, {
+  message: 'RTS Date is required for Non-RTS status.',
+  path: ['rtsDate'],
 });
 
 export default function NewNumberPage() {
-  const { addNumber, employees } = useApp();
+  const { addNumber } = useApp();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
+  const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,15 +65,9 @@ export default function NewNumberPage() {
       currentLocation: '',
       locationType: 'Store',
       notes: '',
+      status: 'Non-RTS',
     },
   });
-
-  useEffect(() => {
-    const mobileParam = searchParams.get('mobile');
-    if (mobileParam) {
-      form.setValue('mobile', mobileParam);
-    }
-  }, [searchParams, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     addNumber(values as NewNumberData);
@@ -240,42 +243,115 @@ export default function NewNumberPage() {
 
           <Card>
             <CardHeader>
-                <CardTitle>Location &amp; Assignment</CardTitle>
+              <CardTitle>Status & Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <FormField
-                        control={form.control}
-                        name="currentLocation"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Current Location</FormLabel>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={(value) => {
+                          field.onChange(value);
+                          if (value === 'RTS') {
+                              form.setValue('rtsDate', undefined);
+                              form.clearErrors('rtsDate');
+                          }
+                      }} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="RTS">RTS</SelectItem>
+                          <SelectItem value="Non-RTS">Non-RTS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {form.watch('status') === 'Non-RTS' && (
+                  <FormField
+                    control={form.control}
+                    name="rtsDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Schedule RTS Date</FormLabel>
+                        <Popover open={isRtsDatePickerOpen} onOpenChange={setIsRtsDatePickerOpen}>
+                          <PopoverTrigger asChild>
                             <FormControl>
-                            <Input placeholder="e.g. Mumbai Store" {...field} />
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                     <FormField
-                      control={form.control}
-                      name="locationType"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Location Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                              <SelectItem value="Store">Store</SelectItem>
-                              <SelectItem value="Employee">Employee</SelectItem>
-                              <SelectItem value="Dealer">Dealer</SelectItem>
-                          </SelectContent>
-                          </Select>
-                          <FormMessage />
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setIsRtsDatePickerOpen(false);
+                              }}
+                              disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
                       </FormItem>
-                      )}
+                    )}
                   />
-                 </div>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="currentLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Mumbai Store" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="locationType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="Store">Store</SelectItem>
+                          <SelectItem value="Employee">Employee</SelectItem>
+                          <SelectItem value="Dealer">Dealer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
           

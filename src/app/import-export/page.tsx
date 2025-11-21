@@ -137,32 +137,34 @@ export default function ImportExportPage() {
     setImportResult(null);
     setFailedRecords([]);
 
+    const reader = new FileReader();
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
     if (fileExtension !== 'csv') {
-        setIsImporting(false);
-        toast({
-            variant: "destructive",
-            title: "Unsupported File Type",
-            description: "Please upload a .csv file.",
-        });
-        return;
+      setIsImporting(false);
+      toast({
+        variant: 'destructive',
+        title: 'Unsupported File Type',
+        description: 'Please upload a .csv file.',
+      });
+      event.target.value = ''; // Reset file input
+      return;
     }
 
     Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-            processImportedData(results.data, file.name);
-        },
-        error: (error) => {
-            setIsImporting(false);
-            toast({
-                variant: "destructive",
-                title: "CSV Import Error",
-                description: error.message,
-            });
-        }
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        processImportedData(results.data, file.name);
+      },
+      error: (error: any) => {
+        setIsImporting(false);
+        toast({
+          variant: 'destructive',
+          title: 'CSV Parse Error',
+          description: error.message,
+        });
+      },
     });
 
     // Reset file input
