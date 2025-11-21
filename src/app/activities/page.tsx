@@ -4,7 +4,6 @@ import { useApp } from "@/context/app-context";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Pagination } from "@/components/pagination";
 import { TableSpinner } from "@/components/ui/spinner";
@@ -15,23 +14,8 @@ const ITEMS_PER_PAGE = 15;
 export default function ActivitiesPage() {
   const { activities, loading } = useApp();
   const { role } = useAuth();
-  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    if (role !== 'admin') {
-      router.push('/dashboard');
-    }
-  }, [role, router]);
-
-  if (role !== 'admin') {
-    return (
-        <div className="flex h-full w-full items-center justify-center">
-            <TableSpinner colSpan={1} />
-        </div>
-    );
-  }
-  
   const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
 
   const totalPages = Math.ceil(sortedActivities.length / ITEMS_PER_PAGE);
@@ -44,11 +28,16 @@ export default function ActivitiesPage() {
     setCurrentPage(page);
   };
 
+  const pageTitle = role === 'admin' ? "Employee Activity Log" : "My Activity Log";
+  const pageDescription = role === 'admin' 
+    ? "A log of all actions performed by employees in the system."
+    : "A log of all actions you have performed in the system.";
+
   return (
     <>
       <PageHeader
-        title="Employee Activity Log"
-        description="A log of all actions performed by employees in the system."
+        title={pageTitle}
+        description={pageDescription}
       />
       <div className="border rounded-lg">
         <Table>

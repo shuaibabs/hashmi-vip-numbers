@@ -131,6 +131,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
+  
+  const [roleFilteredActivities, setRoleFilteredActivities] = useState<Activity[]>([]);
 
   const [numbersLoading, setNumbersLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(true);
@@ -198,7 +200,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [db, user]);
 
-
   // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
   const loading =
     authLoading || 
@@ -211,6 +212,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dealerPurchasesLoading ||
       usersLoading
     ));
+
+  useEffect(() => {
+    if (loading || !user) return;
+
+    if (role === 'admin') {
+      setRoleFilteredActivities(activities);
+    } else {
+      const filtered = activities.filter(
+        (activity) => activity.employeeName === user.displayName
+      );
+      setRoleFilteredActivities(filtered);
+    }
+  }, [activities, role, user, loading]);
+
 
   const isMobileNumberDuplicate = (mobile: string): boolean => {
     if (!mobile) return false;
@@ -809,32 +824,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const parseDate = (rawDate: any): Date | null => {
         if (!rawDate) return null;
 
-        if (rawDate instanceof Date && isValid(rawDate)) {
-            return rawDate;
+        if (rawDate instanceof Date) {
+            return isValid(rawDate) ? rawDate : null;
         }
 
         // Handle Excel serial date (which is read as a number)
         if (typeof rawDate === 'number') {
-            // Excel's epoch starts on 1900-01-01, but has a bug where it thinks 1900 is a leap year.
-            // Javascript's epoch is 1970-01-01. The difference is 25569 days for dates after 1900-02-28.
-            const excelEpochDiff = 25569;
-            const date = new Date((rawDate - excelEpochDiff) * 24 * 60 * 60 * 1000);
-            if (isValid(date)) return date;
+            try {
+                // This formula converts Excel serial number to JS date.
+                // It accounts for the 1900 leap year bug in Excel.
+                const excelEpoch = new Date(1899, 11, 30);
+                const jsDate = new Date(excelEpoch.getTime() + rawDate * 86400000);
+                if (isValid(jsDate)) return jsDate;
+            } catch (e) { /* ignore parse error */ }
         }
 
         if (typeof rawDate === 'string') {
             const dateFormats = [
-                'dd-MM-yyyy',
-                'MM-dd-yyyy',
-                'yyyy-MM-dd',
-                'MM/dd/yyyy',
-                'yyyy/MM/dd'
+                'dd-MM-yyyy', 'MM-dd-yyyy', 'yyyy-MM-dd', 'MM/dd/yyyy', 'yyyy/MM/dd', 
+                "M/d/yy", "M/d/yyyy", "MM/dd/yy",
             ];
             for (const formatStr of dateFormats) {
                 const parsed = parse(rawDate, formatStr, new Date());
-                if (isValid(parsed)) {
-                    return parsed;
-                }
+                if (isValid(parsed)) return parsed;
             }
         }
         return null;
@@ -861,14 +873,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         const rtsDateValue = record.RTSDate || record['RTSDate '];
         
-        if (status === 'Non-RTS' && !rtsDateValue) {
-            failedRecords.push({ record, reason: 'RTSDate is a required field.' });
-            continue;
-        }
-
         const purchaseDate = parseDate(record.PurchaseDate);
         if (!purchaseDate) {
-             failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate. Use dd-MM-yyyy format.' });
+             failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate.' });
              continue;
         }
         
@@ -885,7 +892,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             name: 'Unassigned',
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
             status: status,
-            rtsDate: rtsDateValue,
+            rtsDate: rtsDateValue || null,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
@@ -906,7 +913,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newDocRef = doc(numbersCollection);
 
         let rtsDateForDb: Timestamp | null = null;
-        if (record.rtsDate) {
+        if (record.status === 'Non-RTS' && record.rtsDate) {
             const parsedRts = parseDate(record.rtsDate);
             if (parsedRts) {
                 rtsDateForDb = Timestamp.fromDate(parsedRts);
@@ -981,7 +988,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sales,
     portOuts,
     reminders: roleFilteredReminders,
-    activities,
+    activities: roleFilteredActivities,
     employees,
     dealerPurchases,
     isMobileNumberDuplicate,

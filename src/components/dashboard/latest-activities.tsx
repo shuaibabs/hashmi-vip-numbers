@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/context/auth-context";
 
 function ActivityTime({ timestamp }: { timestamp: Date }) {
   const [timeAgo, setTimeAgo] = useState('');
@@ -25,8 +26,11 @@ function ActivityTime({ timestamp }: { timestamp: Date }) {
 
 export function LatestActivities() {
   const { activities } = useApp();
+  const { role } = useAuth();
 
   const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+  
+  const cardTitle = role === 'admin' ? "Latest Activities" : "My Recent Activities";
 
   return (
     <div className="space-y-4">
@@ -46,6 +50,11 @@ export function LatestActivities() {
           </div>
         </div>
       ))}
+       {sortedActivities.length === 0 && (
+        <div className="text-center text-muted-foreground py-4">
+            No activities to display.
+        </div>
+       )}
     </div>
   );
 }

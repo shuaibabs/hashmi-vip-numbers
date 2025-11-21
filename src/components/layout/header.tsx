@@ -81,7 +81,7 @@ export function AppHeader() {
                             <Bell className="h-5 w-5" />
                             {sortedActivities.length > 0 && (
                                 <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-[10px]">
-                                    {sortedActivities.length}
+                                    {sortedActivities.length > 9 ? '9+' : sortedActivities.length}
                                 </Badge>
                             )}
                             <span className="sr-only">Notifications</span>
@@ -97,7 +97,7 @@ export function AppHeader() {
                         {sortedActivities.length === 0 && (
                             <p className="text-sm text-center text-muted-foreground py-8">No new notifications.</p>
                         )}
-                        {sortedActivities.map((activity, index) => (
+                        {sortedActivities.slice(0, 20).map((activity, index) => (
                             <div key={`${activity.id}-${index}`} className="flex items-start gap-4">
                                 <Avatar className="h-8 w-8 border">
                                     <AvatarFallback>{activity.employeeName?.[0].toUpperCase() || 'A'}</AvatarFallback>
