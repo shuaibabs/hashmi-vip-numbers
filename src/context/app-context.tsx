@@ -76,7 +76,7 @@ type AppContextType = {
   dealerPurchases: DealerPurchaseRecord[];
   isMobileNumberDuplicate: (mobile: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
-  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
+  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
@@ -303,7 +303,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => {
+  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => {
     if (!db || !user) return;
     const saleToUpdate = sales.find(s => s.id === id);
     if (!saleToUpdate) return;
@@ -319,7 +319,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             salePrice: saleToUpdate.salePrice,
             paymentStatus: statuses.paymentStatus,
             saleDate: saleToUpdate.saleDate,
-            upcStatus: saleToUpdate.upcStatus,
+            upcStatus: statuses.upcStatus,
             createdBy: saleToUpdate.createdBy,
             portOutDate: Timestamp.now(),
         };
@@ -344,11 +344,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateDoc(saleDocRef, {
             paymentStatus: statuses.paymentStatus,
             portOutStatus: statuses.portOutStatus,
+            upcStatus: statuses.upcStatus,
         }).then(() => {
             addActivity({
                 employeeName: user.displayName || 'User',
                 action: 'Updated Sale Status',
-                description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}.`,
+                description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}, UPC: ${statuses.upcStatus}.`,
             });
         }).catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
