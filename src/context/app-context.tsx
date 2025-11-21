@@ -41,6 +41,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { calculateDigitalRoot } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import * as XLSX from 'xlsx';
 
 // Helper to get the next serial number for a collection
 const getNextSrNo = (records: { srNo?: number }[]): number => {
@@ -637,6 +638,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sum: calculateDigitalRoot(data.mobile),
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
+      upcStatus: 'Pending',
       createdBy: user.uid,
     };
     const dealerPurchasesCollection = collection(db, 'dealerPurchases');
@@ -775,40 +777,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
     
     const parseDate = (rawDate: string | Date | number): Date | null => {
-      if (rawDate instanceof Date) {
-        return isValid(rawDate) ? rawDate : null;
-      }
-      if (typeof rawDate === 'string') {
-        const parts = rawDate.split(/[-/]/);
-        if (parts.length !== 3) return null;
-        let day, month, year;
-        if (parts[0].length === 4) { // yyyy-MM-dd
-          [year, month, day] = parts.map(p => parseInt(p, 10));
-        } else { // dd-MM-yyyy
-          [day, month, year] = parts.map(p => parseInt(p, 10));
-        }
-        if(isNaN(day) || isNaN(month) || isNaN(year)) return null;
-
-        // Handle 2-digit years
-        if (year < 100) {
-            year += 2000;
+        if (rawDate instanceof Date && isValid(rawDate)) {
+            return rawDate;
         }
 
-        const date = new Date(year, month - 1, day);
-        // Final check to ensure parts construct a valid date
-        if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
-            return date;
+        if (typeof rawDate === 'number') {
+            // Handle Excel serial date
+            return new Date(Date.UTC(0, 0, rawDate - 1));
+        }
+
+        if (typeof rawDate === 'string') {
+            // Handle 'dd-MM-yyyy' and 'yyyy-MM-dd' formats
+            const parts = rawDate.split(/[-/]/);
+            if (parts.length === 3) {
+                let day, month, year;
+                if (parts[0].length === 4) { // yyyy-MM-dd
+                    [year, month, day] = parts.map(p => parseInt(p, 10));
+                } else { // dd-MM-yyyy
+                    [day, month, year] = parts.map(p => parseInt(p, 10));
+                }
+                
+                if (year < 100) year += 2000;
+
+                const date = new Date(year, month - 1, day);
+                if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+                    return date;
+                }
+            }
         }
         return null;
-      }
-      // Handle Excel serial date number
-      if (typeof rawDate === 'number') {
-        // Excel serial date is number of days since 1900-01-01 (with a bug making it think 1900 is a leap year)
-        // JavaScript's epoch is 1970-01-01. The difference is 25569 days.
-        return new Date(Date.UTC(0, 0, rawDate - 1));
-      }
-      return null;
-    }
+    };
 
 
     for (const record of records) {
@@ -829,7 +827,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             continue;
         }
 
-        const rtsDateValue = record.RTSDate || record['RTSDate '] || null;
+        const rtsDateValue = record.RTSDate || record['RTSDate '];
         
         if (status === 'Non-RTS' && !rtsDateValue) {
             failedRecords.push({ record, reason: 'RTSDate is a required field.' });
@@ -855,7 +853,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             name: 'Unassigned',
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
             status: status,
-            rtsDate: status === 'RTS' ? null : rtsDateValue,
+            rtsDate: rtsDateValue,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,

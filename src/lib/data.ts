@@ -94,4 +94,4 @@ export type DealerPurchaseRecord = {
   createdBy: string;
 };
 
-export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'srNo' | 'createdBy' | 'paymentStatus' | 'portOutStatus' | 'sum'>;
+export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'srNo' | 'createdBy' | 'paymentStatus' | 'portOutStatus' | 'sum' | 'upcStatus'>;
