@@ -27,6 +27,8 @@ const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
   name: z.string().min(1, 'Name is required.'),
   numberType: z.enum(['Prepaid', 'Postpaid', 'COCP']),
+  status: z.enum(['RTS', 'Non-RTS']),
+  rtsDate: z.date().optional(),
   purchaseFrom: z.string().min(1, 'Purchase from is required.'),
   purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative.'),
   salePrice: z.coerce.number().min(0, 'Sale price cannot be negative.').optional(),
@@ -35,13 +37,22 @@ const formSchema = z.object({
   locationType: z.enum(['Store', 'Employee', 'Dealer']),
   assignedTo: z.string().min(1, 'Assigned to is required.'),
   notes: z.string().optional(),
+}).refine(data => {
+  if (data.status === 'Non-RTS') {
+    return !!data.rtsDate;
+  }
+  return true;
+}, {
+  message: 'RTS Date is required for Non-RTS status.',
+  path: ['rtsDate'],
 });
 
 export default function NewNumberPage() {
   const { addNumber, employees } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
+  const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,6 +60,7 @@ export default function NewNumberPage() {
       mobile: '',
       name: '',
       numberType: 'Prepaid',
+      status: 'Non-RTS',
       purchaseFrom: '',
       purchasePrice: 0,
       salePrice: 0,
@@ -119,28 +131,102 @@ export default function NewNumberPage() {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="numberType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Number Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select number type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Prepaid">Prepaid</SelectItem>
-                        <SelectItem value="Postpaid">Postpaid</SelectItem>
-                        <SelectItem value="COCP">COCP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                    control={form.control}
+                    name="numberType"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Number Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select number type" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="Prepaid">Prepaid</SelectItem>
+                            <SelectItem value="Postpaid">Postpaid</SelectItem>
+                            <SelectItem value="COCP">COCP</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={(value) => {
+                            field.onChange(value);
+                            if (value === 'RTS') {
+                                form.setValue('rtsDate', undefined);
+                                form.clearErrors('rtsDate');
+                            }
+                        }} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a status" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="RTS">RTS</SelectItem>
+                            <SelectItem value="Non-RTS">Non-RTS</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+
+                {form.watch('status') === 'Non-RTS' && (
+                <FormField
+                    control={form.control}
+                    name="rtsDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Schedule RTS Date</FormLabel>
+                        <Popover open={isRtsDatePickerOpen} onOpenChange={setIsRtsDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                                )}
+                            >
+                                {field.value ? (
+                                format(field.value, "PPP")
+                                ) : (
+                                <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                                field.onChange(date);
+                                setIsRtsDatePickerOpen(false);
+                            }}
+                            disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                            initialFocus
+                            />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                 )}
-              />
             </CardContent>
           </Card>
 
@@ -169,7 +255,7 @@ export default function NewNumberPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Purchase Date</FormLabel>
-                        <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                        <Popover open={isPurchaseDatePickerOpen} onOpenChange={setIsPurchaseDatePickerOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -194,7 +280,7 @@ export default function NewNumberPage() {
                               selected={field.value}
                               onSelect={(date) => {
                                 if (date) field.onChange(date);
-                                setIsDatePickerOpen(false);
+                                setIsPurchaseDatePickerOpen(false);
                               }}
                               initialFocus
                             />

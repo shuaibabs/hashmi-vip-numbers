@@ -594,9 +594,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...data,
       srNo: getNextSrNo(numbers),
       sum: calculateDigitalRoot(data.mobile),
-      status: 'Non-RTS',
+      status: data.status,
       upcStatus: 'Pending',
-      rtsDate: null,
+      rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
       checkInDate: null,
       safeCustodyDate: null,
       createdBy: user.uid,
@@ -794,41 +794,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
             continue;
         }
         
-        let purchaseDate: Date;
-        const rawDate = record.PurchaseDate;
-
-        if (rawDate instanceof Date) {
-            purchaseDate = rawDate;
-        } else if (typeof rawDate === 'number') {
-            purchaseDate = excelSerialToDate(rawDate);
-        } else if (typeof rawDate === 'string') {
-            // Try parsing various string formats
-            purchaseDate = parse(rawDate, 'yyyy-MM-dd', new Date());
-            if (!isValid(purchaseDate)) {
-                purchaseDate = parseISO(rawDate); // For ISO 8601 formats
+        const parseDate = (rawDate: any): Date | null => {
+            if (!rawDate) return null;
+            if (rawDate instanceof Date && isValid(rawDate)) return rawDate;
+            if (typeof rawDate === 'number') {
+                const date = excelSerialToDate(rawDate);
+                return isValid(date) ? date : null;
             }
-        } else {
-             failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate.' });
-             continue;
+            if (typeof rawDate === 'string') {
+                let date = parse(rawDate, 'yyyy-MM-dd', new Date());
+                if (isValid(date)) return date;
+                date = parseISO(rawDate);
+                if (isValid(date)) return date;
+            }
+            return null;
         }
+        
+        const purchaseDate = parseDate(record.PurchaseDate);
 
-        if (!isValid(purchaseDate)) {
-             failedRecords.push({ record, reason: 'Invalid PurchaseDate format. Use YYYY-MM-DD or a valid date.' });
+        if (!purchaseDate) {
+             failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate. Use YYYY-MM-DD or a valid date format.' });
              continue;
         }
         
         const purchasePrice = parseFloat(record.PurchasePrice);
-        const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
-
         if (isNaN(purchasePrice)) {
-            failedRecords.push({ record, reason: 'Invalid PurchasePrice. Must be a number.' });
+            failedRecords.push({ record, reason: 'Invalid or missing PurchasePrice. Must be a number.' });
             continue;
         }
+        
+        const status = ['RTS', 'Non-RTS'].includes(record.Status) ? record.Status : 'Non-RTS';
+        const rtsDate = parseDate(record.RTSDate);
+
+        if (status === 'Non-RTS' && !rtsDate) {
+            failedRecords.push({ record, reason: 'RTSDate is required when Status is "Non-RTS".' });
+            continue;
+        }
+
+        const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
         
         const newRecord: NewNumberData = {
             mobile: mobile,
             name: record.Name || 'N/A',
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
+            status: status,
+            rtsDate: status === 'Non-RTS' ? rtsDate! : undefined,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
@@ -852,13 +862,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
-            status: 'Non-RTS',
             upcStatus: 'Pending',
-            rtsDate: null,
             checkInDate: null,
             safeCustodyDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
+            rtsDate: record.status === 'Non-RTS' && record.rtsDate ? Timestamp.fromDate(record.rtsDate) : null,
         };
         batch.set(newDocRef, newNumber);
       });

@@ -261,7 +261,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from File'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, AssignedTo.</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, AssignedTo. Optional: Status, RTSDate, SalePrice, Notes.</p>
              </CardContent>
            </Card>
            <Card>
