@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -395,7 +396,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name: employeeName,
         locationType: 'Employee',
         currentLocation: `Employee - ${employeeName}`,
-        location: `Employee - ${employeeName}`
     };
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
@@ -492,6 +492,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       srNo: getNextSrNo(numbers),
       sum: calculateDigitalRoot(data.mobile),
       status: 'Non-RTS',
+      upcStatus: 'Pending',
       rtsDate: null,
       checkInDate: null,
       safeCustodyDate: null,
@@ -691,12 +692,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
             purchaseDate: purchaseDate,
-            location: record.Location || 'N/A',
-            currentLocation: record.CurrentLocation || record.Location || 'N/A',
-            locationType: ['Store', 'Employee', 'Customer'].includes(record.LocationType) ? record.LocationType : 'Store',
+            currentLocation: record.CurrentLocation || 'N/A',
+            locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
             assignedTo: record.AssignedTo || 'Unassigned',
-            upcStatus: ['Generated', 'Pending'].includes(record.UPCStatus) ? record.UPCStatus : 'Pending',
-            mobileAlt: record.MobileAlt || '',
             notes: record.Notes || '',
         };
         validRecords.push(newRecord);
@@ -714,6 +712,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
             status: 'Non-RTS',
+            upcStatus: 'Pending',
             rtsDate: null,
             checkInDate: null,
             safeCustodyDate: null,

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from 'react';
@@ -50,7 +51,6 @@ export default function ImportExportPage() {
         "Purchase Price": n.purchasePrice,
         "Sale Price": n.salePrice,
         "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
-        "Location": n.location,
         "UPC Status": n.upcStatus,
         "Assigned To": n.assignedTo,
         "Name": n.name,
@@ -261,7 +261,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from File'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, Location, CurrentLocation, LocationType, AssignedTo, UPCStatus.</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, AssignedTo.</p>
              </CardContent>
            </Card>
            <Card>
@@ -319,13 +319,12 @@ export default function ImportExportPage() {
                 <TableHead>Purchase</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>RTS Date</TableHead>
-                <TableHead>Location</TableHead>
                 <TableHead>UPC Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableSpinner colSpan={9} />
+                <TableSpinner colSpan={8} />
               ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                   <TableRow key={num.id} data-state={selectedRows.includes(num.id) && "selected"}>
@@ -344,13 +343,12 @@ export default function ImportExportPage() {
                     <TableCell>{num.purchaseFrom}</TableCell>
                     <TableCell>₹{num.purchasePrice}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell>{num.location}</TableCell>
                     <TableCell><Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge></TableCell>
                   </TableRow>
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                         No numbers found.
                     </TableCell>
                 </TableRow>

@@ -21,12 +21,12 @@ export type NumberRecord = {
   purchasePrice: number;
   salePrice: number | string;
   rtsDate: Timestamp | null;
-  location: string;
+  location?: string;
   name: string;
-  mobileAlt: string;
+  mobileAlt?: string;
   upcStatus: 'Generated' | 'Pending';
   currentLocation: string;
-  locationType: 'Store' | 'Employee' | 'Customer';
+  locationType: 'Store' | 'Employee' | 'Dealer';
   assignedTo: string; // Can be 'Unassigned', or employee name
   purchaseDate: Timestamp;
   notes?: string;
@@ -38,7 +38,7 @@ export type NumberRecord = {
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'rtsDate' | 'checkInDate' | 'safeCustodyDate' | 'status' | 'purchaseDate' | 'sum'
+  'id' | 'srNo' | 'createdBy' | 'rtsDate' | 'checkInDate' | 'safeCustodyDate' | 'status' | 'purchaseDate' | 'sum' | 'upcStatus' | 'mobileAlt' | 'location'
 > & { purchaseDate: Date };
 
 export type SaleRecord = {

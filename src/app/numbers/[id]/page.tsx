@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -81,7 +82,6 @@ export default function NumberDetailsPage() {
            <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
              <DetailItem label="Assigned To" value={number.assignedTo} />
             <DetailItem label="Assigned Name" value={number.name} />
-            <DetailItem label="Alternate Mobile" value={number.mobileAlt || 'N/A'} />
           </div>
 
           <Separator />
@@ -102,7 +102,6 @@ export default function NumberDetailsPage() {
             <DetailItem label="UPC Status" value={<Badge variant={number.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{number.upcStatus}</Badge>} />
             <DetailItem label="Current Location" value={number.currentLocation} />
             <DetailItem label="Location Type" value={number.locationType} />
-            <DetailItem label="Store Location" value={number.location} />
           </div>
           
           {number.notes && (

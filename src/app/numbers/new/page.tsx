@@ -25,18 +25,15 @@ import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
-  mobileAlt: z.string().optional(),
   name: z.string().min(1, 'Name is required.'),
   numberType: z.enum(['Prepaid', 'Postpaid', 'COCP']),
   purchaseFrom: z.string().min(1, 'Purchase from is required.'),
   purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative.'),
   salePrice: z.coerce.number().min(0, 'Sale price cannot be negative.').optional(),
   purchaseDate: z.date({ required_error: 'Purchase date is required.'}),
-  location: z.string().min(1, 'Store location is required.'),
   currentLocation: z.string().min(1, 'Current location is required.'),
-  locationType: z.enum(['Store', 'Employee', 'Customer']),
+  locationType: z.enum(['Store', 'Employee', 'Dealer']),
   assignedTo: z.string().min(1, 'Assigned to is required.'),
-  upcStatus: z.enum(['Generated', 'Pending']),
   notes: z.string().optional(),
 });
 
@@ -50,18 +47,15 @@ export default function NewNumberPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       mobile: '',
-      mobileAlt: '',
       name: '',
       numberType: 'Prepaid',
       purchaseFrom: '',
       purchasePrice: 0,
       salePrice: 0,
       purchaseDate: new Date(),
-      location: '',
       currentLocation: '',
       locationType: 'Store',
       assignedTo: 'Unassigned',
-      upcStatus: 'Pending',
       notes: '',
     },
   });
@@ -97,7 +91,7 @@ export default function NewNumberPage() {
               <CardTitle>Number Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="mobile"
@@ -106,19 +100,6 @@ export default function NewNumberPage() {
                       <FormLabel>Mobile Number</FormLabel>
                       <FormControl>
                         <Input placeholder="9876543210" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="mobileAlt"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Alternate Mobile</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Optional" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -212,7 +193,7 @@ export default function NewNumberPage() {
                               mode="single"
                               selected={field.value}
                               onSelect={(date) => {
-                                field.onChange(date);
+                                if (date) field.onChange(date);
                                 setIsDatePickerOpen(false);
                               }}
                               initialFocus
@@ -257,23 +238,10 @@ export default function NewNumberPage() {
 
           <Card>
             <CardHeader>
-                <CardTitle>Location &amp; Status</CardTitle>
+                <CardTitle>Location &amp; Assignment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Store Location</FormLabel>
-                            <FormControl>
-                            <Input placeholder="e.g. Mumbai" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
                      <FormField
                         control={form.control}
                         name="currentLocation"
@@ -287,27 +255,7 @@ export default function NewNumberPage() {
                         </FormItem>
                         )}
                     />
-                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                        control={form.control}
-                        name="locationType"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Location Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="Store">Store</SelectItem>
-                                <SelectItem value="Employee">Employee</SelectItem>
-                                <SelectItem value="Customer">Customer</SelectItem>
-                            </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
+                     <FormField
                         control={form.control}
                         name="assignedTo"
                         render={({ field }) => (
@@ -326,22 +274,23 @@ export default function NewNumberPage() {
                     />
                  </div>
                   <FormField
-                    control={form.control}
-                    name="upcStatus"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>UPC Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                            <SelectItem value="Generated">Generated</SelectItem>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                      control={form.control}
+                      name="locationType"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Location Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                              <SelectItem value="Store">Store</SelectItem>
+                              <SelectItem value="Employee">Employee</SelectItem>
+                              <SelectItem value="Dealer">Dealer</SelectItem>
+                          </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
             </CardContent>
           </Card>
           

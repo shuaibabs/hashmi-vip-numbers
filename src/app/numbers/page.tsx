@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -305,14 +306,13 @@ export default function AllNumbersPage() {
                 <SortableHeader column="assignedTo" label="Assigned To" />
                 <SortableHeader column="status" label="Status" />
                 <SortableHeader column="purchaseFrom" label="Purchase From" />
-                <SortableHeader column="location" label="Location" />
                 <SortableHeader column="rtsDate" label="RTS Date" />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                  <TableSpinner colSpan={11} />
+                  <TableSpinner colSpan={10} />
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num) => (
                     <TableRow 
@@ -339,7 +339,6 @@ export default function AllNumbersPage() {
                         <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
                     </TableCell>
                     <TableCell>{num.purchaseFrom}</TableCell>
-                    <TableCell>{num.location}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                     {(role === 'admin' || role === 'employee') && (
@@ -366,7 +365,7 @@ export default function AllNumbersPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                         {searchTerm && `No number found for "${searchTerm}".`}
                         {!searchTerm && "No numbers found for the current filters."}
                         {searchTerm && (

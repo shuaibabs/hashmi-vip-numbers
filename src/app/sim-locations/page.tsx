@@ -41,14 +41,14 @@ export default function SimLocationsPage() {
         description="Track the current location and assignment of all SIMs."
       >
         <Select value={locationFilter} onValueChange={setLocationFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filter by location type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Locations</SelectItem>
             <SelectItem value="Store">Store</SelectItem>
             <SelectItem value="Employee">Employee</SelectItem>
-            <SelectItem value="Customer">Customer</SelectItem>
+            <SelectItem value="Dealer">Dealer</SelectItem>
           </SelectContent>
         </Select>
       </PageHeader>
