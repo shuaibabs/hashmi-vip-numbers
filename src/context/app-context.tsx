@@ -791,13 +791,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const parseDate = (rawDate: any): Date | null => {
             if (!rawDate) return null;
             if (typeof rawDate === 'string') {
-                const parts = rawDate.split('-');
-                if (parts.length === 3) {
-                    const date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                    if (isValid(date)) return date;
-                }
-                const isoDate = parseISO(rawDate);
-                if (isValid(isoDate)) return isoDate;
+              const parts = rawDate.split(/[-/]/);
+              if (parts.length === 3) {
+                // Try dd-MM-yyyy
+                const d1 = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                if (isValid(d1)) return d1;
+                // Try MM-dd-yyyy
+                const d2 = new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
+                if (isValid(d2)) return d2;
+              }
+              const isoDate = parseISO(rawDate);
+              if (isValid(isoDate)) return isoDate;
             }
             return null;
         }
