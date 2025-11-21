@@ -61,25 +61,25 @@ const mapSnapshotToData = <T extends { id: string }>(snapshot: QuerySnapshot<Doc
 
 // Helper function to convert undefined values to null in an object
 const sanitizeObjectForFirestore = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-  const newObj: { [key: string]: any } = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const value = obj[key];
-      if (value === undefined) {
-        newObj[key] = null;
-      } else if (value instanceof Timestamp || value instanceof Date) {
-        newObj[key] = value;
-      } else if (typeof value === 'object' && !Array.isArray(value)) {
-        newObj[key] = sanitizeObjectForFirestore(value);
-      } else {
-        newObj[key] = value;
-      }
+    if (obj === null || obj === undefined) {
+        return null;
     }
-  }
-  return newObj;
+    if (typeof obj !== 'object' || obj instanceof Timestamp || obj instanceof Date) {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => sanitizeObjectForFirestore(item));
+    }
+
+    const newObj: { [key: string]: any } = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const value = obj[key];
+            newObj[key] = value === undefined ? null : sanitizeObjectForFirestore(value);
+        }
+    }
+    return newObj;
 };
 
 type BulkAddResult = {
@@ -98,7 +98,8 @@ type AppContextType = {
   dealerPurchases: DealerPurchaseRecord[];
   isMobileNumberDuplicate: (mobile: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
-  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
+  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
+  markSaleAsPortedOut: (saleId: string) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
@@ -326,68 +327,85 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => {
+  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => {
     if (!db || !user) return;
     const saleToUpdate = sales.find(s => s.id === id);
     if (!saleToUpdate) return;
     
-    if (statuses.portOutStatus === 'Done') {
-        const batch = writeBatch(db);
-        const portOutsCol = collection(db, 'portouts');
-        
-        const sanitizedOriginalData = sanitizeObjectForFirestore(saleToUpdate.originalNumberData);
-
-        const newPortOutData: Omit<PortOutRecord, 'id'> = {
-            srNo: getNextSrNo(portOuts),
-            mobile: saleToUpdate.mobile,
-            sum: calculateDigitalRoot(saleToUpdate.mobile),
-            soldTo: saleToUpdate.soldTo,
-            salePrice: saleToUpdate.salePrice,
-            paymentStatus: statuses.paymentStatus,
-            saleDate: saleToUpdate.saleDate,
-            upcStatus: statuses.upcStatus,
-            createdBy: saleToUpdate.createdBy,
-            originalNumberData: sanitizedOriginalData,
-            portOutDate: Timestamp.now(),
-        };
-        batch.set(doc(portOutsCol), newPortOutData);
-        batch.delete(doc(db, 'sales', id));
-        batch.commit().then(() => {
-            addActivity({
-                employeeName: user.displayName || 'User',
-                action: 'Marked Port Out Done',
-                description: `Number ${saleToUpdate.mobile} has been ported out.`,
-            });
-        }).catch(async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: 'sales/portouts',
-                operation: 'create',
-                requestResourceData: {info: 'Batch write for port out'},
-            });
-            errorEmitter.emit('permission-error', permissionError);
+    const saleDocRef = doc(db, 'sales', id);
+    updateDoc(saleDocRef, statuses).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Updated Sale Status',
+            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, UPC: ${statuses.upcStatus}.`,
         });
-    } else {
-        const saleDocRef = doc(db, 'sales', id);
-        updateDoc(saleDocRef, {
-            paymentStatus: statuses.paymentStatus,
-            portOutStatus: statuses.portOutStatus,
-            upcStatus: statuses.upcStatus,
-        }).then(() => {
-            addActivity({
-                employeeName: user.displayName || 'User',
-                action: 'Updated Sale Status',
-                description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, Port-out: ${statuses.portOutStatus}, UPC: ${statuses.upcStatus}.`,
-            });
-        }).catch(async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: saleDocRef.path,
-                operation: 'update',
-                requestResourceData: statuses,
-            });
-            errorEmitter.emit('permission-error', permissionError);
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: saleDocRef.path,
+            operation: 'update',
+            requestResourceData: statuses,
         });
-    }
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
+
+  const markSaleAsPortedOut = (saleId: string) => {
+    if (!db || !user) return;
+    const saleToMove = sales.find(s => s.id === saleId);
+    if (!saleToMove) {
+        toast({
+            variant: "destructive",
+            title: "Operation Failed",
+            description: "Could not find the sale record to move.",
+        });
+        return;
+    }
+
+    if (!saleToMove.originalNumberData) {
+         toast({
+            variant: "destructive",
+            title: "Operation Failed",
+            description: "Could not find original number data to archive.",
+        });
+        return;
+    }
+
+    const batch = writeBatch(db);
+    
+    const sanitizedOriginalData = sanitizeObjectForFirestore(saleToMove.originalNumberData);
+
+    const newPortOutData: Omit<PortOutRecord, 'id'> = {
+        srNo: getNextSrNo(portOuts),
+        mobile: saleToMove.mobile,
+        sum: saleToMove.sum,
+        soldTo: saleToMove.soldTo,
+        salePrice: saleToMove.salePrice,
+        paymentStatus: saleToMove.paymentStatus,
+        saleDate: saleToMove.saleDate,
+        upcStatus: saleToMove.upcStatus,
+        createdBy: saleToMove.createdBy,
+        originalNumberData: sanitizedOriginalData,
+        portOutDate: Timestamp.now(),
+    };
+
+    batch.set(doc(collection(db, 'portouts')), newPortOutData);
+    batch.delete(doc(db, 'sales', saleId));
+    
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Marked Port Out Done',
+            description: `Number ${saleToMove.mobile} has been ported out and moved to history.`,
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: `portouts and sales/${saleId}`,
+            operation: 'write',
+            requestResourceData: { info: `Batch write for port out of ${saleToMove.mobile}` },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+};
 
   const markReminderDone = (id: string, note?: string) => {
     if (!db || !user) return;
@@ -471,7 +489,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const soldNumber = numbers.find(n => n.id === id);
     if (!soldNumber) return;
 
-    const { id: numberId, ...originalData } = soldNumber;
+    const { id: numberId, ...originalDataWithoutId } = soldNumber;
+
+    const sanitizedOriginalData = sanitizeObjectForFirestore(originalDataWithoutId);
 
     const newSale: Omit<SaleRecord, 'id'> = {
       srNo: getNextSrNo(sales),
@@ -484,7 +504,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       upcStatus: 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
-      originalNumberData: originalData,
+      originalNumberData: sanitizedOriginalData,
     };
 
     const batch = writeBatch(db);
@@ -509,7 +529,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const cancelSale = (saleId: string) => {
     if (!db || !user) return;
     const saleToCancel = sales.find(s => s.id === saleId);
-    if (!saleToCancel || !saleToCancel.originalNumberData) {
+    
+    if (!saleToCancel) {
+         toast({
+            variant: "destructive",
+            title: "Cancellation Failed",
+            description: "Could not find the sale record.",
+        });
+        return;
+    }
+    
+    if (!saleToCancel.originalNumberData) {
         toast({
             variant: "destructive",
             title: "Cancellation Failed",
@@ -518,8 +548,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
     }
 
+    const restoredNumberData = sanitizeObjectForFirestore(saleToCancel.originalNumberData);
+
     const restoredNumber: Omit<NumberRecord, 'id'> = {
-        ...saleToCancel.originalNumberData,
+        ...restoredNumberData,
         assignedTo: 'Unassigned',
         name: 'Unassigned',
         status: 'Non-RTS',
@@ -852,6 +884,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isMobileNumberDuplicate,
     updateNumberStatus,
     updateSaleStatuses,
+    markSaleAsPortedOut,
     markReminderDone,
     addActivity,
     assignNumbersToEmployee,
@@ -877,5 +910,3 @@ export function useApp() {
   }
   return context;
 }
-
-    

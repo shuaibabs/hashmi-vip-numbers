@@ -10,7 +10,7 @@ import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, ArrowUpDown, Trash } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Trash, LogOut } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { EditSaleStatusModal } from '@/components/edit-sale-status-modal';
 import { SaleRecord } from '@/lib/data';
@@ -24,12 +24,13 @@ type SortableColumn = keyof SaleRecord;
 
 
 export default function SalesPage() {
-  const { sales, loading, cancelSale } = useApp();
+  const { sales, loading, cancelSale, markSaleAsPortedOut } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [saleToCancel, setSaleToCancel] = useState<SaleRecord | null>(null);
+  const [saleToPortOut, setSaleToPortOut] = useState<SaleRecord | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
 
   const sortedSales = useMemo(() => {
@@ -84,6 +85,10 @@ export default function SalesPage() {
   const handleCancelClick = (sale: SaleRecord) => {
     setSaleToCancel(sale);
   };
+
+  const handlePortOutClick = (sale: SaleRecord) => {
+    setSaleToPortOut(sale);
+  };
   
   const handleConfirmCancel = () => {
     if (saleToCancel) {
@@ -91,6 +96,13 @@ export default function SalesPage() {
       setSaleToCancel(null);
     }
   };
+
+  const handleConfirmPortOut = () => {
+    if (saleToPortOut) {
+      markSaleAsPortedOut(saleToPortOut.id);
+      setSaleToPortOut(null);
+    }
+  }
 
 
   const requestSort = (key: SortableColumn) => {
@@ -193,6 +205,12 @@ export default function SalesPage() {
                                 <DropdownMenuItem onClick={() => handleEditClick(sale)}>
                                     Edit Status
                                 </DropdownMenuItem>
+                                {sale.portOutStatus !== 'Done' && (
+                                  <DropdownMenuItem onClick={() => handlePortOutClick(sale)}>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Mark as Ported Out
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleCancelClick(sale)}
@@ -242,6 +260,22 @@ export default function SalesPage() {
             <AlertDialogCancel onClick={() => setSaleToCancel(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmCancel} className="bg-destructive hover:bg-destructive/90">
               Yes, cancel sale
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!saleToPortOut} onOpenChange={() => setSaleToPortOut(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as Ported Out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move the sale of <span className="font-semibold">{saleToPortOut?.mobile}</span> to the Port Out history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSaleToPortOut(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPortOut}>
+              Yes, mark as ported out
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -14,7 +14,6 @@ import { SaleRecord } from '@/lib/data';
 
 const formSchema = z.object({
   paymentStatus: z.enum(['Pending', 'Done']),
-  portOutStatus: z.enum(['Pending', 'Done']),
   upcStatus: z.enum(['Pending', 'Generated']),
 });
 
@@ -31,7 +30,6 @@ export function EditSaleStatusModal({ isOpen, onClose, sale }: EditSaleStatusMod
     resolver: zodResolver(formSchema),
     defaultValues: {
       paymentStatus: sale.paymentStatus,
-      portOutStatus: sale.portOutStatus,
       upcStatus: sale.upcStatus,
     },
   });
@@ -40,7 +38,6 @@ export function EditSaleStatusModal({ isOpen, onClose, sale }: EditSaleStatusMod
     if (sale) {
       form.reset({
         paymentStatus: sale.paymentStatus,
-        portOutStatus: sale.portOutStatus,
         upcStatus: sale.upcStatus,
       });
     }
@@ -73,27 +70,6 @@ export function EditSaleStatusModal({ isOpen, onClose, sale }: EditSaleStatusMod
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select payment status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Done">Done</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="portOutStatus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Port Out Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select port out status" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
