@@ -113,7 +113,7 @@ type AppContextType = {
   deletePortOuts: (records: PortOutRecord[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData) => void;
-  deleteDealerPurchases: (ids: string[]) => void;
+  deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
 };
 
@@ -717,27 +717,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  const deleteDealerPurchases = (ids: string[]) => {
+  const deleteDealerPurchases = (recordsToDelete: DealerPurchaseRecord[]) => {
     if (!db || !user) return;
+
+    const recordsThatCanBeDeleted: DealerPurchaseRecord[] = [];
+    const recordsThatCannotBeDeleted: DealerPurchaseRecord[] = [];
+
+    recordsToDelete.forEach(record => {
+      if (record.paymentStatus === 'Done' && record.portOutStatus === 'Done' && record.upcStatus === 'Generated') {
+        recordsThatCanBeDeleted.push(record);
+      } else {
+        recordsThatCannotBeDeleted.push(record);
+      }
+    });
+    
+    if (recordsThatCannotBeDeleted.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Deletion Blocked",
+        description: `${recordsThatCannotBeDeleted.length} record(s) could not be deleted because all statuses are not complete.`,
+        duration: 7000,
+      });
+    }
+
+    if (recordsThatCanBeDeleted.length === 0) {
+      return; // No records to delete
+    }
+
+    const idsToDelete = recordsThatCanBeDeleted.map(r => r.id);
     const batch = writeBatch(db);
-    ids.forEach(id => {
-        batch.delete(doc(db, 'dealerPurchases', id));
+    idsToDelete.forEach(id => {
+      batch.delete(doc(db, 'dealerPurchases', id));
     });
+
     batch.commit().then(() => {
-        addActivity({
-            employeeName: user.displayName || 'User',
-            action: 'Deleted Dealer Purchases',
-            description: `Deleted ${ids.length} record(s) from dealer purchases.`
-        });
+      addActivity({
+        employeeName: user.displayName || 'User',
+        action: 'Deleted Dealer Purchases',
+        description: `Deleted ${idsToDelete.length} completed record(s) from dealer purchases.`
+      });
     }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'dealerPurchases',
-            operation: 'delete',
-            requestResourceData: {info: `Batch delete ${ids.length} records`},
-        });
-        errorEmitter.emit('permission-error', permissionError);
+      const permissionError = new FirestorePermissionError({
+        path: 'dealerPurchases',
+        operation: 'delete',
+        requestResourceData: { info: `Batch delete ${idsToDelete.length} records` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
     });
-  }
+  };
   
   const updatePortOutStatus = (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => {
     if (!db || !user) return;
@@ -776,32 +803,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...dealerPurchases.map(d => d.mobile),
     ]);
     
-    const parseDate = (rawDate: string | Date | number): Date | null => {
+    const parseDate = (rawDate: any): Date | null => {
+        if (!rawDate) return null;
+
         if (rawDate instanceof Date && isValid(rawDate)) {
             return rawDate;
         }
 
+        // Handle Excel serial date (which is read as a number)
         if (typeof rawDate === 'number') {
-            // Handle Excel serial date
-            return new Date(Date.UTC(0, 0, rawDate - 1));
+            const date = XLSX.SSF.parse_date_code(rawDate);
+            if (date) {
+                return new Date(date.y, date.m - 1, date.d, date.H, date.M, date.S);
+            }
         }
 
         if (typeof rawDate === 'string') {
-            // Handle 'dd-MM-yyyy' and 'yyyy-MM-dd' formats
-            const parts = rawDate.split(/[-/]/);
-            if (parts.length === 3) {
-                let day, month, year;
-                if (parts[0].length === 4) { // yyyy-MM-dd
-                    [year, month, day] = parts.map(p => parseInt(p, 10));
-                } else { // dd-MM-yyyy
-                    [day, month, year] = parts.map(p => parseInt(p, 10));
-                }
-                
-                if (year < 100) year += 2000;
-
-                const date = new Date(year, month - 1, day);
-                if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
-                    return date;
+            const dateFormats = [
+                'dd-MM-yyyy',
+                'yyyy-MM-dd',
+                'MM/dd/yyyy',
+                'yyyy/MM/dd'
+            ];
+            for (const formatStr of dateFormats) {
+                const parsed = parse(rawDate, formatStr, new Date());
+                if (isValid(parsed)) {
+                    return parsed;
                 }
             }
         }
@@ -823,7 +850,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         const status = record.Status;
         if (!status || !['RTS', 'Non-RTS'].includes(status)) {
-            failedRecords.push({ record, reason: 'Invalid or missing Status. Must be "RTS" or "Non-RTS".' });
+            failedRecords.push({ record, reason: 'Status is a required field. Must be "RTS" or "Non-RTS".' });
             continue;
         }
 

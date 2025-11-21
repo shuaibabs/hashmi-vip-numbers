@@ -103,7 +103,8 @@ export default function DealerPurchasesPage() {
   };
 
   const handleDeleteSelected = () => {
-    deleteDealerPurchases(selectedRows);
+    const selectedPurchases = dealerPurchases.filter(p => selectedRows.includes(p.id));
+    deleteDealerPurchases(selectedPurchases);
     setSelectedRows([]);
   };
 
@@ -145,7 +146,7 @@ export default function DealerPurchasesPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete {selectedRows.length} record(s) from your dealer purchases.
+                      This action cannot be undone. Only records where Payment Status is 'Done', Port Out Status is 'Done', AND UPC Status is 'Generated' will be permanently deleted.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
