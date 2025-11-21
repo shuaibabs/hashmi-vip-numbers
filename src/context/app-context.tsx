@@ -16,7 +16,7 @@ import {
   NewReminderData,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { isToday, isPast, parse, isValid, parseISO } from 'date-fns';
+import { isToday, isPast, isValid, isFuture } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import {
   collection,
@@ -775,6 +775,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...portOuts.map(p => p.mobile),
         ...dealerPurchases.map(d => d.mobile),
     ]);
+    
+    const parseDate = (rawDate: any): Date | null => {
+      if (!rawDate) return null;
+      
+      if (typeof rawDate === 'string') {
+          const parts = rawDate.match(/(\d+)/g);
+          if (parts && parts.length === 3) {
+              const day = parseInt(parts[0], 10);
+              const month = parseInt(parts[1], 10);
+              const year = parseInt(parts[2], 10);
+              
+              if (day && month && year) {
+                  // Handle dd-MM-yyyy
+                  if (year.toString().length === 4) {
+                      const d = new Date(year, month - 1, day);
+                       if (d && d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
+                          return d;
+                       }
+                  }
+                  // Handle MM-dd-yyyy
+                   if (parts[1].length === 2 && parts[2].length === 4) {
+                      const d = new Date(year, day - 1, month);
+                       if (d && d.getFullYear() === year && d.getMonth() === day - 1 && d.getDate() === month) {
+                          return d;
+                       }
+                  }
+              }
+          }
+           const isoDate = new Date(rawDate);
+           if (!isNaN(isoDate.getTime())) {
+              return isoDate;
+           }
+      }
+      return null;
+    }
+
 
     for (const record of records) {
         const mobile = record.Mobile?.toString().trim();
@@ -788,24 +824,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             continue;
         }
         
-        const parseDate = (rawDate: any): Date | null => {
-            if (!rawDate) return null;
-            if (typeof rawDate === 'string') {
-              const parts = rawDate.split(/[-/]/);
-              if (parts.length === 3) {
-                // Try dd-MM-yyyy
-                const d1 = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                if (isValid(d1)) return d1;
-                // Try MM-dd-yyyy
-                const d2 = new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
-                if (isValid(d2)) return d2;
-              }
-              const isoDate = parseISO(rawDate);
-              if (isValid(isoDate)) return isoDate;
-            }
-            return null;
-        }
-
         const purchaseDate = parseDate(record.PurchaseDate);
         if (!purchaseDate) {
              failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate. Use dd-MM-yyyy format.' });
@@ -831,6 +849,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             rtsDate = parseDate(record.RTSDate);
             if (!rtsDate) {
                 failedRecords.push({ record, reason: 'RTSDate is required when Status is "Non-RTS". Use dd-MM-yyyy format.' });
+                continue;
+            }
+             if (!isFuture(rtsDate) && !isToday(rtsDate)) {
+                failedRecords.push({ record, reason: 'RTSDate must be today or a future date.'});
                 continue;
             }
         }
@@ -868,7 +890,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             safeCustodyDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
-            rtsDate: record.rtsDate ? Timestamp.fromDate(record.rtsDate) : null,
+            rtsDate: record.status === 'Non-RTS' && record.rtsDate ? Timestamp.fromDate(record.rtsDate) : null,
             assignedTo: 'Unassigned',
         };
         batch.set(newDocRef, newNumber);
