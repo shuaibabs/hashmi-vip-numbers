@@ -17,6 +17,7 @@ import { SaleRecord } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Timestamp } from 'firebase/firestore';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -25,6 +26,7 @@ type SortableColumn = keyof SaleRecord;
 
 export default function SalesPage() {
   const { sales, loading, cancelSale, markSaleAsPortedOut } = useApp();
+  const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -87,6 +89,14 @@ export default function SalesPage() {
   };
 
   const handlePortOutClick = (sale: SaleRecord) => {
+    if (sale.upcStatus !== 'Generated') {
+      toast({
+        variant: "destructive",
+        title: "Port Out Blocked",
+        description: "The UPC status must be 'Generated' before you can mark this sale as ported out.",
+      });
+      return;
+    }
     setSaleToPortOut(sale);
   };
   
