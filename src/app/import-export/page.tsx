@@ -137,7 +137,6 @@ export default function ImportExportPage() {
     setImportResult(null);
     setFailedRecords([]);
 
-    const reader = new FileReader();
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
     if (fileExtension !== 'csv') {
@@ -145,7 +144,7 @@ export default function ImportExportPage() {
       toast({
         variant: 'destructive',
         title: 'Unsupported File Type',
-        description: 'Please upload a .csv file.',
+        description: 'Please upload a .csv file only.',
       });
       event.target.value = ''; // Reset file input
       return;
@@ -220,7 +219,7 @@ export default function ImportExportPage() {
   return (
     <>
       <PageHeader
-        title="Manage Numbers via Excel"
+        title="Manage Numbers via CSV"
         description="Bulk import and export your number inventory."
       />
       <div className="space-y-6">
@@ -236,7 +235,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status. RTSDate is required if Status is 'Non-RTS'. Optional: SalePrice, Notes.</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, RTSDate. Optional: SalePrice, Notes.</p>
              </CardContent>
            </Card>
            <Card>
