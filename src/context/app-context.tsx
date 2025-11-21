@@ -116,6 +116,7 @@ type AppContextType = {
   addReminder: (data: NewReminderData) => void;
   deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
+  deleteActivities: (activityIds: string[]) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -143,19 +144,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
 
-    // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
-  const loading =
-    authLoading || 
-    (!!user && (
-      numbersLoading ||
-      salesLoading ||
-      portOutsLoading ||
-      remindersLoading ||
-      activitiesLoading ||
-      dealerPurchasesLoading ||
-      usersLoading
-    ));
-
   const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
     const newActivity = { 
@@ -181,6 +169,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [db, user, activities, toast]);
+
+    // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
+  const loading =
+    authLoading || 
+    (!!user && (
+      numbersLoading ||
+      salesLoading ||
+      portOutsLoading ||
+      remindersLoading ||
+      activitiesLoading ||
+      dealerPurchasesLoading ||
+      usersLoading
+    ));
   
 
   useEffect(() => {
@@ -265,7 +266,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ];
   
     return allNumbers.some(item => 
-      item.mobile === mobile && item.id !== currentId
+      item.mobile === mobile && (!currentId || item.id !== currentId)
     );
   };
 
@@ -577,7 +578,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...restoredNumberData,
         assignedTo: 'Unassigned',
         name: 'Unassigned',
-        // Preserve the original status and rtsDate from the backup
         status: restoredNumberData.status || 'Non-RTS',
         rtsDate: restoredNumberData.rtsDate || null, 
     };
@@ -790,6 +790,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
       errorEmitter.emit('permission-error', permissionError);
     });
   };
+
+  const deleteActivities = (activityIds: string[]) => {
+    if (!db || !user || role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You do not have permission to delete activities.",
+      });
+      return;
+    };
+    
+    const batch = writeBatch(db);
+    activityIds.forEach(id => {
+        batch.delete(doc(db, 'activities', id));
+    });
+
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'Admin',
+            action: 'Deleted Activities',
+            description: `Deleted ${activityIds.length} activity record(s).`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'activities',
+            operation: 'delete',
+            requestResourceData: {info: `Batch delete ${activityIds.length} activities`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  }
   
   const updatePortOutStatus = (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => {
     if (!db || !user) return;
@@ -1008,6 +1039,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addReminder,
     deleteDealerPurchases,
     updatePortOutStatus,
+    deleteActivities,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
