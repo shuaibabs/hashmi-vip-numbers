@@ -36,8 +36,8 @@ export type NumberRecord = {
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'safeCustodyDate' | 'purchaseDate' | 'sum' | 'upcStatus'
-> & { purchaseDate: Date; rtsDate?: Date };
+  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'safeCustodyDate' | 'purchaseDate' | 'sum' | 'upcStatus' | 'status' | 'rtsDate' | 'assignedTo'
+> & { purchaseDate: Date; };
 
 export type SaleRecord = {
   id: string; // Firestore document ID

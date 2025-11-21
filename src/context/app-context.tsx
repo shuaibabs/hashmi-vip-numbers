@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -597,6 +598,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       status: 'Non-RTS',
       upcStatus: 'Pending',
       rtsDate: null,
+      assignedTo: 'Unassigned',
       checkInDate: null,
       safeCustodyDate: null,
       createdBy: user.uid,
@@ -796,14 +798,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         const parseDate = (rawDate: any): Date | null => {
             if (!rawDate) return null;
-            if (rawDate instanceof Date && isValid(rawDate)) return rawDate;
-            if (typeof rawDate === 'number') {
-                const date = excelSerialToDate(rawDate);
-                return isValid(date) ? date : null;
+            
+            // Handle Excel serial number date
+            const numericDate = Number(rawDate);
+            if (!isNaN(numericDate) && numericDate > 1) {
+                 const date = excelSerialToDate(numericDate);
+                 return isValid(date) ? date : null;
             }
+
             if (typeof rawDate === 'string') {
-                let date = parse(rawDate, 'yyyy-MM-dd', new Date());
+                // Try parsing dd-MM-yyyy first
+                let date = parse(rawDate, 'dd-MM-yyyy', new Date());
                 if (isValid(date)) return date;
+
+                // Then try yyyy-MM-dd
+                date = parse(rawDate, 'yyyy-MM-dd', new Date());
+                if (isValid(date)) return date;
+
+                // Finally try ISO format
                 date = parseISO(rawDate);
                 if (isValid(date)) return date;
             }
@@ -813,7 +825,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const purchaseDate = parseDate(record.PurchaseDate);
 
         if (!purchaseDate) {
-             failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate. Use YYYY-MM-DD or a valid date format.' });
+             failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate. Use dd-MM-yyyy format.' });
              continue;
         }
         
@@ -823,19 +835,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             continue;
         }
         
-        const status = record.Status;
-        if (!status || !['RTS', 'Non-RTS'].includes(status)) {
-            failedRecords.push({ record, reason: 'Status is required and must be either "RTS" or "Non-RTS".' });
-            continue;
-        }
-
-        const rtsDate = parseDate(record.RTSDate);
-
-        if (status === 'Non-RTS' && !rtsDate) {
-            failedRecords.push({ record, reason: 'RTSDate is required when Status is "Non-RTS".' });
-            continue;
-        }
-
         const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
         
         const newRecord: NewNumberData = {
@@ -848,7 +847,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             purchaseDate: purchaseDate,
             currentLocation: record.CurrentLocation || 'N/A',
             locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
-            assignedTo: record.AssignedTo || 'Unassigned',
             notes: record.Notes || '',
         };
         validRecords.push(newRecord);
@@ -865,13 +863,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
-            status: 'Non-RTS', // This was the original logic. We need to use the status from the record.
+            status: 'Non-RTS',
             upcStatus: 'Pending',
             checkInDate: null,
             safeCustodyDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
-            rtsDate: null, // This was the original logic. We need to use the status from the record.
+            rtsDate: null,
+            assignedTo: 'Unassigned',
         };
         batch.set(newDocRef, newNumber);
       });
