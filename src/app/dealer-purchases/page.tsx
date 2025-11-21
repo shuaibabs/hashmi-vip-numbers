@@ -192,16 +192,18 @@ export default function DealerPurchasesPage() {
                 </TableHead>
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
+              <SortableHeader column="dealerName" label="Dealer Name" />
               <SortableHeader column="sum" label="Sum" />
               <SortableHeader column="price" label="Price" />
               <SortableHeader column="paymentStatus" label="Payment Status" />
               <SortableHeader column="portOutStatus" label="Port Out Status" />
+              <SortableHeader column="upcStatus" label="UPC Status" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={8} />
+                <TableSpinner colSpan={10} />
             ) : paginatedPurchases.length > 0 ? (
                 paginatedPurchases.map((purchase) => (
                 <TableRow key={purchase.srNo} data-state={selectedRows.includes(purchase.id) && "selected"}>
@@ -216,6 +218,7 @@ export default function DealerPurchasesPage() {
                     </TableCell>
                     <TableCell>{purchase.srNo}</TableCell>
                     <TableCell className="font-medium">{purchase.mobile}</TableCell>
+                    <TableCell>{purchase.dealerName}</TableCell>
                     <TableCell>{purchase.sum}</TableCell>
                     <TableCell>₹{purchase.price.toLocaleString()}</TableCell>
                     <TableCell>
@@ -226,6 +229,11 @@ export default function DealerPurchasesPage() {
                     <TableCell>
                         <Badge variant={purchase.portOutStatus === 'Done' ? 'secondary' : 'outline'}>
                         {purchase.portOutStatus}
+                        </Badge>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={purchase.upcStatus === 'Generated' ? 'secondary' : 'outline'}>
+                        {purchase.upcStatus}
                         </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -247,7 +255,7 @@ export default function DealerPurchasesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                         No dealer purchases found.
                     </TableCell>
                 </TableRow>

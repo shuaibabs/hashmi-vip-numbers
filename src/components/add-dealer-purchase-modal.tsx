@@ -10,10 +10,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/app-context';
 import { NewDealerPurchaseData } from '@/lib/data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
   price: z.coerce.number().min(0, 'Price cannot be negative.'),
+  dealerName: z.string().min(1, 'Dealer name is required.'),
+  upcStatus: z.enum(['Pending', 'Generated']),
 });
 
 type AddDealerPurchaseModalProps = {
@@ -29,6 +32,8 @@ export function AddDealerPurchaseModal({ isOpen, onClose }: AddDealerPurchaseMod
     defaultValues: {
       mobile: '',
       price: 0,
+      dealerName: '',
+      upcStatus: 'Pending',
     },
   });
 
@@ -64,6 +69,19 @@ export function AddDealerPurchaseModal({ isOpen, onClose }: AddDealerPurchaseMod
             />
             <FormField
               control={form.control}
+              name="dealerName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dealer Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter dealer name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="price"
               render={({ field }) => (
                 <FormItem>
@@ -71,6 +89,27 @@ export function AddDealerPurchaseModal({ isOpen, onClose }: AddDealerPurchaseMod
                   <FormControl>
                     <Input type="number" placeholder="Enter purchase price" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="upcStatus"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>UPC Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select UPC status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Generated">Generated</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

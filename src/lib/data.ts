@@ -86,9 +86,11 @@ export type DealerPurchaseRecord = {
   srNo: number;
   mobile: string;
   sum: number;
+  dealerName: string;
   price: number;
   paymentStatus: 'Pending' | 'Done';
   portOutStatus: 'Pending' | 'Done';
+  upcStatus: 'Pending' | 'Generated';
   createdBy: string;
 };
 
