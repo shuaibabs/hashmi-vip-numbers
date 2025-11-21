@@ -109,10 +109,11 @@ type AppContextType = {
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
-  deletePortOuts: (ids: string[]) => void;
+  deletePortOuts: (records: PortOutRecord[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData) => void;
   deleteDealerPurchases: (ids: string[]) => void;
+  updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -677,23 +678,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const deletePortOuts = (ids: string[]) => {
+  const deletePortOuts = (recordsToDelete: PortOutRecord[]) => {
     if (!db || !user) return;
+
+    const pendingPaymentRecords = recordsToDelete.filter(r => r.paymentStatus === 'Pending');
+    if (pendingPaymentRecords.length > 0) {
+        toast({
+            variant: "destructive",
+            title: "Deletion Blocked",
+            description: `Cannot delete ${pendingPaymentRecords.length} record(s) with "Pending" payment status. Please mark payments as "Done" first.`,
+            duration: 5000,
+        });
+        return;
+    }
+    
+    const idsToDelete = recordsToDelete.map(r => r.id);
+
     const batch = writeBatch(db);
-    ids.forEach(id => {
+    idsToDelete.forEach(id => {
         batch.delete(doc(db, 'portouts', id));
     });
+
     batch.commit().then(() => {
         addActivity({
             employeeName: user.displayName || 'User',
             action: 'Deleted Port Out Records',
-            description: `Deleted ${ids.length} record(s) from port out history.`
+            description: `Deleted ${idsToDelete.length} record(s) from port out history.`
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: 'portouts',
             operation: 'delete',
-            requestResourceData: {info: `Batch delete ${ids.length} records`},
+            requestResourceData: {info: `Batch delete ${idsToDelete.length} records`},
         });
         errorEmitter.emit('permission-error', permissionError);
     });
@@ -720,6 +736,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
         errorEmitter.emit('permission-error', permissionError);
     });
   }
+  
+  const updatePortOutStatus = (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => {
+    if (!db || !user) return;
+    const portOut = portOuts.find(p => p.id === id);
+    if (!portOut) return;
+    const docRef = doc(db, 'portouts', id);
+
+    updateDoc(docRef, status).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Updated Port Out Status',
+            description: `Updated payment status for ${portOut.mobile} to ${status.paymentStatus}.`,
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: status,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
 
   // Helper to convert Excel serial date to JS Date
   const excelSerialToDate = (serial: number) => {
@@ -898,6 +937,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     bulkAddNumbers,
     addReminder,
     deleteDealerPurchases,
+    updatePortOutStatus,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

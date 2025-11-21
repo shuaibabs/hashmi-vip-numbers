@@ -11,12 +11,15 @@ import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash, ArrowUpDown } from 'lucide-react';
+import { Trash, ArrowUpDown, MoreHorizontal } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/context/auth-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { PortOutRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { EditPortOutStatusModal } from '@/components/edit-port-out-status-modal';
+
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 type SortableColumn = keyof PortOutRecord;
@@ -28,6 +31,9 @@ export default function PortOutPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'portOutDate', direction: 'descending' });
+  const [selectedPortOut, setSelectedPortOut] = useState<PortOutRecord | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
 
   const sortedPortOuts = useMemo(() => {
     let sortableItems = [...portOuts];
@@ -88,9 +94,16 @@ export default function PortOutPage() {
   };
   
   const handleDeleteSelected = () => {
-    deletePortOuts(selectedRows);
+    const selectedPortOutRecords = portOuts.filter(p => selectedRows.includes(p.id));
+    deletePortOuts(selectedPortOutRecords);
     setSelectedRows([]);
   }
+  
+  const handleEditClick = (portOut: PortOutRecord) => {
+    setSelectedPortOut(portOut);
+    setIsEditModalOpen(true);
+  };
+
 
   const isAllOnPageSelected = paginatedPortOuts.length > 0 && paginatedPortOuts.every(p => selectedRows.includes(p.id));
   const isSomeOnPageSelected = selectedRows.length > 0 && !isAllOnPageSelected;
@@ -139,7 +152,7 @@ export default function PortOutPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete {selectedRows.length} record(s) from the port out history.
+                  This action cannot be undone. This will permanently delete {selectedRows.length} record(s) from the port out history. Only records with a "Done" payment status will be deleted.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -188,11 +201,12 @@ export default function PortOutPage() {
               <SortableHeader column="paymentStatus" label="Payment Status" />
               <SortableHeader column="upcStatus" label="UPC Status" />
               <SortableHeader column="portOutDate" label="Port Out Date" />
+               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={10} />
+                <TableSpinner colSpan={11} />
             ) : paginatedPortOuts.length > 0 ? (
                 paginatedPortOuts.map((record) => (
                 <TableRow key={record.srNo} data-state={selectedRows.includes(record.id) && "selected"}>
@@ -222,11 +236,26 @@ export default function PortOutPage() {
                         </Badge>
                     </TableCell>
                      <TableCell>{format(record.portOutDate.toDate(), 'PPP')}</TableCell>
+                     <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditClick(record)}>
+                                    Edit Status
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
                 </TableRow>
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                         No port out records found.
                     </TableCell>
                 </TableRow>
@@ -241,6 +270,13 @@ export default function PortOutPage() {
         itemsPerPage={itemsPerPage}
         totalItems={portOuts.length}
       />
+      {selectedPortOut && (
+        <EditPortOutStatusModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            portOut={selectedPortOut}
+        />
+      )}
     </>
   );
 }
