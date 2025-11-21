@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -16,7 +15,7 @@ import {
   NewReminderData,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { isToday, isPast, isValid, isFuture } from 'date-fns';
+import { isToday, isPast, isValid, isFuture, parse } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import {
   collection,
@@ -255,7 +254,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     const checkRtsDates = async () => {
-      // Extra guard clause to ensure db is available before any operation.
       if (!db) {
         return;
       }
@@ -776,21 +774,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...dealerPurchases.map(d => d.mobile),
     ]);
     
-    // This parseDate function will handle string dates from CSVs
     const parseDate = (dateString: string): Date | null => {
       if (!dateString || typeof dateString !== 'string') return null;
-      
-      const parts = dateString.match(/(\d+)/g);
-      if (!parts || parts.length < 3) return null;
-  
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-      const year = parseInt(parts[2], 10);
-      
-      const date = new Date(year, month, day);
-      // Basic validation
-      if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
-        return date;
+      // This will handle dd-MM-yyyy and yyyy-MM-dd
+      const parts = dateString.split(/[-/]/);
+      if (parts.length !== 3) return null;
+
+      let day, month, year;
+      // Check if the first part is the year
+      if (parts[0].length === 4) {
+          [year, month, day] = parts.map(p => parseInt(p, 10));
+      } else {
+          [day, month, year] = parts.map(p => parseInt(p, 10));
+      }
+
+      if(isNaN(day) || isNaN(month) || isNaN(year)) return null;
+
+      const date = new Date(year, month - 1, day);
+      if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+          return date;
       }
       return null;
     }
@@ -808,6 +810,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
             continue;
         }
         
+        const status = record.Status;
+        if (!status || !['RTS', 'Non-RTS'].includes(status)) {
+            failedRecords.push({ record, reason: 'Invalid or missing Status. Must be "RTS" or "Non-RTS".' });
+            continue;
+        }
+
+        const rtsDateValue = record.RTSDate || record['RTSDate '] || null;
+        
+        if (status === 'Non-RTS' && !rtsDateValue) {
+            failedRecords.push({ record, reason: 'RTSDate is a required field.' });
+            continue;
+        }
+
         const purchaseDate = parseDate(record.PurchaseDate);
         if (!purchaseDate) {
              failedRecords.push({ record, reason: 'Invalid or missing PurchaseDate. Use dd-MM-yyyy format.' });
@@ -822,25 +837,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
         
-        const status = record.Status;
-        if (!status || !['RTS', 'Non-RTS'].includes(status)) {
-            failedRecords.push({ record, reason: 'Invalid or missing Status. Must be "RTS" or "Non-RTS".' });
-            continue;
-        }
-        
-        // This is the new simplified logic for RTSDate
-        if (!record.RTSDate) {
-            failedRecords.push({ record, reason: 'RTSDate is a required field.' });
-            continue;
-        }
-        
         const newRecord = {
             mobile: mobile,
             name: 'Unassigned',
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
             status: status,
-            // We now save RTSDate as a string or null
-            rtsDate: record.RTSDate || null,
+            rtsDate: status === 'RTS' ? null : rtsDateValue,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
@@ -860,12 +862,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       validRecords.forEach(record => {
         const newDocRef = doc(numbersCollection);
 
-        // Convert string date to Firestore Timestamp for rtsDate if it's not null
-        let rtsDateForDb = null;
+        let rtsDateForDb: Timestamp | null = null;
         if (record.rtsDate) {
-            const parsed = parseDate(record.rtsDate);
-            if (parsed) {
-                rtsDateForDb = Timestamp.fromDate(parsed);
+            const parsedRts = parseDate(record.rtsDate);
+            if (parsedRts) {
+                rtsDateForDb = Timestamp.fromDate(parsedRts);
             }
         }
         
@@ -970,3 +971,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
