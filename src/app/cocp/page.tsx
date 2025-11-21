@@ -10,19 +10,24 @@ import { format } from 'date-fns';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Download } from 'lucide-react';
 import { NumberRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
+import Papa from 'papaparse';
+import { useToast } from '@/hooks/use-toast';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 type SortableColumn = keyof NumberRecord;
 
 export default function CocpPage() {
-  const { numbers, loading } = useApp();
+  const { numbers, loading, addActivity } = useApp();
+  const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>(null);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const cocpNumbers = useMemo(() => {
     return numbers.filter(num => num.numberType === 'COCP');
@@ -80,6 +85,68 @@ export default function CocpPage() {
     setSortConfig({ key, direction });
     setCurrentPage(1);
   };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    const pageIds = paginatedNumbers.map(n => n.id);
+    if (checked) {
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
+    } else {
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+  
+  const isAllOnPageSelected = paginatedNumbers.length > 0 && paginatedNumbers.every(n => selectedRows.includes(n.id));
+
+  const exportToCsv = (dataToExport: NumberRecord[], fileName: string) => {
+     const formattedData = dataToExport.map(n => ({
+        "Sr.No": n.srNo,
+        "Mobile": n.mobile,
+        "Sum": n.sum,
+        "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : 'N/A',
+        "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : 'N/A',
+    }));
+
+    const csv = Papa.unparse(formattedData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  const handleExportSelected = () => {
+    const selectedData = cocpNumbers.filter(n => selectedRows.includes(n.id));
+    if (selectedData.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No COCP numbers selected",
+        description: "Please select at least one number to export.",
+      });
+      return;
+    }
+    exportToCsv(selectedData, 'cocp_numbers_export.csv');
+     addActivity({
+        employeeName: 'Admin',
+        action: 'Exported Data',
+        description: `Exported ${selectedData.length} selected COCP number(s) to CSV.`
+    });
+    toast({
+        title: "Export Successful",
+        description: `${selectedData.length} selected COCP numbers have been exported to CSV.`,
+    });
+    setSelectedRows([]);
+  }
+
   
   const getSortIcon = (columnKey: SortableColumn) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
@@ -115,12 +182,25 @@ export default function CocpPage() {
                 ))}
               </SelectContent>
             </Select>
+             {selectedRows.length > 0 && (
+                <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Selected ({selectedRows.length})
+                </Button>
+            )}
           </div>
         </div>
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                   <Checkbox
+                        checked={isAllOnPageSelected}
+                        onCheckedChange={handleSelectAllOnPage}
+                        aria-label="Select all on this page"
+                    />
+                </TableHead>
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
               <SortableHeader column="sum" label="Sum" />
@@ -130,10 +210,17 @@ export default function CocpPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={5} />
+                <TableSpinner colSpan={6} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
-                <TableRow key={num.srNo}>
+                <TableRow key={num.srNo} data-state={selectedRows.includes(num.id) && "selected"}>
+                   <TableCell>
+                       <Checkbox
+                            checked={selectedRows.includes(num.id)}
+                            onCheckedChange={() => handleSelectRow(num.id)}
+                            aria-label="Select row"
+                        />
+                    </TableCell>
                     <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>{num.sum}</TableCell>
@@ -143,7 +230,7 @@ export default function CocpPage() {
                 ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No COCP numbers found.
                 </TableCell>
               </TableRow>

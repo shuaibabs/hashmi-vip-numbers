@@ -10,7 +10,7 @@ import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, ArrowUpDown, Trash, LogOut } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Trash, LogOut, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { EditSaleStatusModal } from '@/components/edit-sale-status-modal';
 import { SaleRecord } from '@/lib/data';
@@ -18,6 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Timestamp } from 'firebase/firestore';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import Papa from 'papaparse';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -25,7 +27,7 @@ type SortableColumn = keyof SaleRecord;
 
 
 export default function SalesPage() {
-  const { sales, loading, cancelSale, markSaleAsPortedOut } = useApp();
+  const { sales, loading, cancelSale, markSaleAsPortedOut, addActivity } = useApp();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -34,6 +36,7 @@ export default function SalesPage() {
   const [saleToCancel, setSaleToCancel] = useState<SaleRecord | null>(null);
   const [saleToPortOut, setSaleToPortOut] = useState<SaleRecord | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const sortedSales = useMemo(() => {
     let sortableItems = [...sales];
@@ -114,6 +117,71 @@ export default function SalesPage() {
     }
   }
 
+  const handleSelectRow = (id: string) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    const pageIds = paginatedSales.map(s => s.id);
+    if (checked) {
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
+    } else {
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const isAllOnPageSelected = paginatedSales.length > 0 && paginatedSales.every(s => selectedRows.includes(s.id));
+
+  const exportToCsv = (dataToExport: SaleRecord[], fileName: string) => {
+    const formattedData = dataToExport.map(s => ({
+      "Sr.No": s.srNo,
+      "Mobile": s.mobile,
+      "Sum": s.sum,
+      "Sold To": s.soldTo,
+      "Sale Price": s.salePrice,
+      "Sale Date": format(s.saleDate.toDate(), 'yyyy-MM-dd'),
+      "Payment Status": s.paymentStatus,
+      "UPC Status": s.upcStatus,
+      "Portout Status": s.portOutStatus,
+    }));
+
+    const csv = Papa.unparse(formattedData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  const handleExportSelected = () => {
+    const selectedData = sales.filter(s => selectedRows.includes(s.id));
+    if (selectedData.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No sales selected",
+        description: "Please select at least one sale to export.",
+      });
+      return;
+    }
+    exportToCsv(selectedData, 'sales_export.csv');
+    addActivity({
+        employeeName: 'Admin',
+        action: 'Exported Data',
+        description: `Exported ${selectedData.length} selected sale(s) to CSV.`
+    });
+    toast({
+        title: "Export Successful",
+        description: `${selectedData.length} selected sales have been exported to CSV.`,
+    });
+    setSelectedRows([]);
+  }
+
 
   const requestSort = (key: SortableColumn) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -158,12 +226,25 @@ export default function SalesPage() {
                 ))}
               </SelectContent>
             </Select>
+            {selectedRows.length > 0 && (
+                <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Selected ({selectedRows.length})
+                </Button>
+            )}
           </div>
         </div>
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                    checked={isAllOnPageSelected}
+                    onCheckedChange={handleSelectAllOnPage}
+                    aria-label="Select all on this page"
+                />
+              </TableHead>
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Mobile" />
               <SortableHeader column="sum" label="Sum" />
@@ -178,10 +259,17 @@ export default function SalesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={10} />
+                <TableSpinner colSpan={11} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
-                <TableRow key={sale.srNo}>
+                <TableRow key={sale.srNo} data-state={selectedRows.includes(sale.id) && "selected"}>
+                    <TableCell>
+                        <Checkbox
+                            checked={selectedRows.includes(sale.id)}
+                            onCheckedChange={() => handleSelectRow(sale.id)}
+                            aria-label="Select row"
+                        />
+                    </TableCell>
                     <TableCell>{sale.srNo}</TableCell>
                     <TableCell className="font-medium">{sale.mobile}</TableCell>
                     <TableCell>{sale.sum}</TableCell>
@@ -236,7 +324,7 @@ export default function SalesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                         No sales records found.
                     </TableCell>
                 </TableRow>

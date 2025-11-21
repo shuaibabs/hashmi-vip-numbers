@@ -11,7 +11,7 @@ import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash, ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import { Trash, ArrowUpDown, MoreHorizontal, Download } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/context/auth-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,14 +19,17 @@ import type { PortOutRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EditPortOutStatusModal } from '@/components/edit-port-out-status-modal';
+import Papa from 'papaparse';
+import { useToast } from '@/hooks/use-toast';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 type SortableColumn = keyof PortOutRecord;
 
 export default function PortOutPage() {
-  const { portOuts, loading, deletePortOuts } = useApp();
+  const { portOuts, loading, deletePortOuts, addActivity } = useApp();
   const { role } = useAuth();
+  const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -104,6 +107,54 @@ export default function PortOutPage() {
     setIsEditModalOpen(true);
   };
 
+  const exportToCsv = (dataToExport: PortOutRecord[], fileName: string) => {
+    const formattedData = dataToExport.map(p => ({
+        "Sr.No": p.srNo,
+        "Mobile": p.mobile,
+        "Sum": p.sum,
+        "Sold To": p.soldTo,
+        "Sale Price": p.salePrice,
+        "Sale Date": format(p.saleDate.toDate(), 'yyyy-MM-dd'),
+        "Payment Status": p.paymentStatus,
+        "UPC Status": p.upcStatus,
+        "Port Out Date": format(p.portOutDate.toDate(), 'yyyy-MM-dd'),
+    }));
+
+    const csv = Papa.unparse(formattedData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  const handleExportSelected = () => {
+    const selectedData = portOuts.filter(p => selectedRows.includes(p.id));
+    if (selectedData.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No records selected",
+        description: "Please select at least one port out record to export.",
+      });
+      return;
+    }
+    exportToCsv(selectedData, 'port_out_history_export.csv');
+    addActivity({
+        employeeName: 'Admin',
+        action: 'Exported Data',
+        description: `Exported ${selectedData.length} selected port out record(s) to CSV.`
+    });
+    toast({
+        title: "Export Successful",
+        description: `${selectedData.length} selected port out records have been exported to CSV.`,
+    });
+    setSelectedRows([]);
+  }
+
 
   const isAllOnPageSelected = paginatedPortOuts.length > 0 && paginatedPortOuts.every(p => selectedRows.includes(p.id));
   const isSomeOnPageSelected = selectedRows.length > 0 && !isAllOnPageSelected;
@@ -177,6 +228,12 @@ export default function PortOutPage() {
                 ))}
               </SelectContent>
             </Select>
+            {selectedRows.length > 0 && (
+                <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Selected ({selectedRows.length})
+                </Button>
+            )}
           </div>
         </div>
       <div className="border rounded-lg">

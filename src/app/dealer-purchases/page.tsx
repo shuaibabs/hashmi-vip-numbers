@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, ArrowUpDown, Trash } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, ArrowUpDown, Trash, Download } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { AddDealerPurchaseModal } from '@/components/add-dealer-purchase-modal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -18,14 +18,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/context/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import Papa from 'papaparse';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 type SortableColumn = keyof DealerPurchaseRecord;
 
 export default function DealerPurchasesPage() {
-  const { dealerPurchases, loading, deleteDealerPurchases } = useApp();
+  const { dealerPurchases, loading, deleteDealerPurchases, addActivity } = useApp();
   const { role } = useAuth();
+  const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -45,11 +49,15 @@ export default function DealerPurchasesPage() {
         if (bValue === null || bValue === undefined) return -1;
         
         let comparison = 0;
-        if (aValue < bValue) {
-            comparison = -1;
-        }
-        if (aValue > bValue) {
-            comparison = 1;
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          comparison = aValue.localeCompare(bValue);
+        } else {
+             if (aValue < bValue) {
+                comparison = -1;
+            }
+            if (aValue > bValue) {
+                comparison = 1;
+            }
         }
         return sortConfig.direction === 'ascending' ? comparison : -comparison;
       });
@@ -108,6 +116,53 @@ export default function DealerPurchasesPage() {
     setSelectedRows([]);
   };
 
+  const exportToCsv = (dataToExport: DealerPurchaseRecord[], fileName: string) => {
+    const formattedData = dataToExport.map(p => ({
+      "Sr.No": p.srNo,
+      "Mobile": p.mobile,
+      "Dealer Name": p.dealerName,
+      "Sum": p.sum,
+      "Price": p.price,
+      "Payment Status": p.paymentStatus,
+      "Port Out Status": p.portOutStatus,
+      "UPC Status": p.upcStatus,
+    }));
+
+    const csv = Papa.unparse(formattedData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  const handleExportSelected = () => {
+    const selectedData = dealerPurchases.filter(p => selectedRows.includes(p.id));
+    if (selectedData.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No records selected",
+        description: "Please select at least one record to export.",
+      });
+      return;
+    }
+    exportToCsv(selectedData, 'dealer_purchases_export.csv');
+    addActivity({
+        employeeName: 'Admin',
+        action: 'Exported Data',
+        description: `Exported ${selectedData.length} selected dealer purchase(s) to CSV.`
+    });
+    toast({
+        title: "Export Successful",
+        description: `${selectedData.length} selected dealer purchases have been exported to CSV.`,
+    });
+    setSelectedRows([]);
+  }
+
   const isAllOnPageSelected = paginatedPurchases.length > 0 && paginatedPurchases.every(p => selectedRows.includes(p.id));
 
   
@@ -134,30 +189,6 @@ export default function DealerPurchasesPage() {
         description="A list of numbers purchased from other dealers."
       >
         <div className="flex flex-col sm:flex-row items-center gap-2">
-            {selectedRows.length > 0 && role === 'admin' && (
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                    <Trash className="mr-2 h-4 w-4" />
-                    Delete Selected ({selectedRows.length})
-                </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. Only records where Payment Status is 'Done', Port Out Status is 'Done', AND UPC Status is 'Generated' will be permanently deleted.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteSelected}>
-                    Yes, delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-            )}
             <Button onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4"/>
                 Add New Number
@@ -176,6 +207,38 @@ export default function DealerPurchasesPage() {
                 ))}
               </SelectContent>
             </Select>
+            {selectedRows.length > 0 && (
+                <div className="flex items-center gap-2">
+                    {role === 'admin' && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete Selected ({selectedRows.length})
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This action cannot be undone. Only records where Payment Status is 'Done', Port Out Status is 'Done', AND UPC Status is 'Generated' will be permanently deleted.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteSelected}>
+                                Yes, delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                    <Button variant="outline" onClick={handleExportSelected}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export Selected ({selectedRows.length})
+                    </Button>
+                </div>
+            )}
           </div>
         </div>
       <div className="border rounded-lg">
