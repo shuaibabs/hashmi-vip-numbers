@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -58,6 +57,29 @@ const mapSnapshotToData = <T extends { id: string }>(snapshot: QuerySnapshot<Doc
     id: doc.id,
     ...doc.data(),
   } as T));
+};
+
+// Helper function to convert undefined values to null in an object
+const sanitizeObjectForFirestore = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  const newObj: { [key: string]: any } = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = obj[key];
+      if (value === undefined) {
+        newObj[key] = null;
+      } else if (value instanceof Timestamp || value instanceof Date) {
+        newObj[key] = value;
+      } else if (typeof value === 'object' && !Array.isArray(value)) {
+        newObj[key] = sanitizeObjectForFirestore(value);
+      } else {
+        newObj[key] = value;
+      }
+    }
+  }
+  return newObj;
 };
 
 type BulkAddResult = {
@@ -312,6 +334,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (statuses.portOutStatus === 'Done') {
         const batch = writeBatch(db);
         const portOutsCol = collection(db, 'portouts');
+        
+        const sanitizedOriginalData = sanitizeObjectForFirestore(saleToUpdate.originalNumberData);
+
         const newPortOutData: Omit<PortOutRecord, 'id'> = {
             srNo: getNextSrNo(portOuts),
             mobile: saleToUpdate.mobile,
@@ -322,7 +347,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             saleDate: saleToUpdate.saleDate,
             upcStatus: statuses.upcStatus,
             createdBy: saleToUpdate.createdBy,
-            originalNumberData: saleToUpdate.originalNumberData,
+            originalNumberData: sanitizedOriginalData,
             portOutDate: Timestamp.now(),
         };
         batch.set(doc(portOutsCol), newPortOutData);
@@ -852,3 +877,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
