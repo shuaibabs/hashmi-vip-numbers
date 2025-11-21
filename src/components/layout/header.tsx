@@ -38,7 +38,7 @@ function ActivityTime({ timestamp }: { timestamp: Date }) {
 
 
 export function AppHeader() {
-    const { activities, seenActivitiesCount } = useApp();
+    const { activities, seenActivitiesCount, markActivitiesAsSeen } = useApp();
     const { user, role } = useAuth();
     const app = useFirebaseApp();
     const router = useRouter();
@@ -79,7 +79,7 @@ export function AppHeader() {
             <div className="flex items-center gap-4">
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="relative">
+                        <Button variant="ghost" size="icon" className="relative" onClick={markActivitiesAsSeen}>
                             <Bell className="h-5 w-5" />
                             {newActivityCount > 0 && (
                                 <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-[10px]">
