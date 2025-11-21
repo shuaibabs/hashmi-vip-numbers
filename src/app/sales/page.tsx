@@ -10,23 +10,26 @@ import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, ArrowUpDown, Trash } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { EditSaleStatusModal } from '@/components/edit-sale-status-modal';
 import { SaleRecord } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Timestamp } from 'firebase/firestore';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 type SortableColumn = keyof SaleRecord;
 
 
 export default function SalesPage() {
-  const { sales, loading } = useApp();
+  const { sales, loading, cancelSale } = useApp();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
+  const [saleToCancel, setSaleToCancel] = useState<SaleRecord | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
 
   const sortedSales = useMemo(() => {
@@ -77,6 +80,18 @@ export default function SalesPage() {
     setSelectedSale(sale);
     setIsEditModalOpen(true);
   };
+  
+  const handleCancelClick = (sale: SaleRecord) => {
+    setSaleToCancel(sale);
+  };
+  
+  const handleConfirmCancel = () => {
+    if (saleToCancel) {
+      cancelSale(saleToCancel.id);
+      setSaleToCancel(null);
+    }
+  };
+
 
   const requestSort = (key: SortableColumn) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -109,7 +124,7 @@ export default function SalesPage() {
         title="Sales"
         description="View and manage all sales records."
       />
-       <div className="flex items-center justify-between gap-4 mb-4">
+       <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div className="flex items-center gap-4 flex-wrap">
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-[120px]">
@@ -178,6 +193,14 @@ export default function SalesPage() {
                                 <DropdownMenuItem onClick={() => handleEditClick(sale)}>
                                     Edit Status
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleCancelClick(sale)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                    <Trash className="mr-2 h-4 w-4" />
+                                    Cancel Sale
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </TableCell>
@@ -207,6 +230,22 @@ export default function SalesPage() {
             sale={selectedSale}
         />
       )}
+      <AlertDialog open={!!saleToCancel} onOpenChange={() => setSaleToCancel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will cancel the sale of <span className="font-semibold">{saleToCancel?.mobile}</span>. The record will be deleted from Sales and the number will be returned to the master inventory. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSaleToCancel(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCancel} className="bg-destructive hover:bg-destructive/90">
+              Yes, cancel sale
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

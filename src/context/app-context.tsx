@@ -82,6 +82,7 @@ type AppContextType = {
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
   checkInNumber: (id: string) => void;
   sellNumber: (id: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
+  cancelSale: (saleId: string) => void;
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
@@ -321,6 +322,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             saleDate: saleToUpdate.saleDate,
             upcStatus: statuses.upcStatus,
             createdBy: saleToUpdate.createdBy,
+            originalNumberData: saleToUpdate.originalNumberData,
             portOutDate: Timestamp.now(),
         };
         batch.set(doc(portOutsCol), newPortOutData);
@@ -444,6 +446,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const soldNumber = numbers.find(n => n.id === id);
     if (!soldNumber) return;
 
+    const { id: numberId, ...originalData } = soldNumber;
+
     const newSale: Omit<SaleRecord, 'id'> = {
       srNo: getNextSrNo(sales),
       mobile: soldNumber.mobile,
@@ -455,6 +459,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       upcStatus: 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
+      originalNumberData: originalData,
     };
 
     const batch = writeBatch(db);
@@ -471,6 +476,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
             path: 'sales',
             operation: 'create',
             requestResourceData: { info: `Sell number ${soldNumber.mobile}` },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const cancelSale = (saleId: string) => {
+    if (!db || !user) return;
+    const saleToCancel = sales.find(s => s.id === saleId);
+    if (!saleToCancel || !saleToCancel.originalNumberData) {
+        toast({
+            variant: "destructive",
+            title: "Cancellation Failed",
+            description: "Could not find original number data to restore.",
+        });
+        return;
+    }
+
+    const restoredNumber: Omit<NumberRecord, 'id'> = {
+        ...saleToCancel.originalNumberData,
+        assignedTo: 'Unassigned',
+        name: 'Unassigned',
+        status: 'Non-RTS',
+        rtsDate: null,
+    };
+
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, 'numbers')), restoredNumber);
+    batch.delete(doc(db, 'sales', saleId));
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Cancelled Sale',
+            description: `Sale of number ${saleToCancel.mobile} was cancelled.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'sales/numbers',
+            operation: 'write',
+            requestResourceData: { info: `Cancel sale for ${saleToCancel.mobile}` },
         });
         errorEmitter.emit('permission-error', permissionError);
     });
@@ -788,6 +832,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     assignNumbersToEmployee,
     checkInNumber,
     sellNumber,
+    cancelSale,
     addNumber,
     addDealerPurchase,
     updateDealerPurchase,
