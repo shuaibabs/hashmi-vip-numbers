@@ -594,9 +594,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...data,
       srNo: getNextSrNo(numbers),
       sum: calculateDigitalRoot(data.mobile),
-      status: data.status,
+      status: 'Non-RTS',
       upcStatus: 'Pending',
-      rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+      rtsDate: null,
       checkInDate: null,
       safeCustodyDate: null,
       createdBy: user.uid,
@@ -823,7 +823,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             continue;
         }
         
-        const status = ['RTS', 'Non-RTS'].includes(record.Status) ? record.Status : 'Non-RTS';
+        const status = record.Status;
+        if (!status || !['RTS', 'Non-RTS'].includes(status)) {
+            failedRecords.push({ record, reason: 'Status is required and must be either "RTS" or "Non-RTS".' });
+            continue;
+        }
+
         const rtsDate = parseDate(record.RTSDate);
 
         if (status === 'Non-RTS' && !rtsDate) {
@@ -837,8 +842,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             mobile: mobile,
             name: record.Name || 'N/A',
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
-            status: status,
-            rtsDate: status === 'Non-RTS' ? rtsDate! : undefined,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
@@ -862,12 +865,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
+            status: 'Non-RTS', // This was the original logic. We need to use the status from the record.
             upcStatus: 'Pending',
             checkInDate: null,
             safeCustodyDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
-            rtsDate: record.status === 'Non-RTS' && record.rtsDate ? Timestamp.fromDate(record.rtsDate) : null,
+            rtsDate: null, // This was the original logic. We need to use the status from the record.
         };
         batch.set(newDocRef, newNumber);
       });
