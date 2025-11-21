@@ -21,8 +21,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 const formSchema = z.object({
   salePrice: z.coerce.number().min(0, "Sale price can't be negative."),
   soldTo: z.string().min(1, 'Sold to is required.'),
-  website: z.string().min(1, 'Website is required.'),
-  upcStatus: z.enum(['Generated', 'Pending']),
   saleDate: z.date({ required_error: 'Sale date is required.' }),
 });
 
@@ -41,8 +39,6 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
     defaultValues: {
       salePrice: 0,
       soldTo: '',
-      website: '',
-      upcStatus: 'Pending',
       saleDate: new Date(),
     },
   });
@@ -52,8 +48,6 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
       form.reset({
         salePrice: number.salePrice ? Number(number.salePrice) : 0,
         soldTo: '',
-        website: number.purchaseFrom,
-        upcStatus: number.upcStatus,
         saleDate: new Date(),
       })
     }
@@ -102,40 +96,6 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
               )}
             />
             <FormField
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website (Vendor)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter website or vendor name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="upcStatus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>UPC Status</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select UPC Status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Generated">Generated</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
                 control={form.control}
                 name="saleDate"
                 render={({ field }) => (
@@ -165,7 +125,7 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
                           mode="single"
                           selected={field.value}
                           onSelect={(date) => {
-                            field.onChange(date);
+                            if (date) field.onChange(date);
                             setIsDatePickerOpen(false);
                           }}
                           initialFocus

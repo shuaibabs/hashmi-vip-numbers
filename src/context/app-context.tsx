@@ -81,7 +81,7 @@ type AppContextType = {
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
   checkInNumber: (id: string) => void;
-  sellNumber: (id: string, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => void;
+  sellNumber: (id: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending' }) => void;
@@ -438,7 +438,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const sellNumber = (id: string, details: { salePrice: number; soldTo: string; website: string; upcStatus: 'Generated' | 'Pending'; saleDate: Date }) => {
+  const sellNumber = (id: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => {
     if (!db || !user) return;
     const soldNumber = numbers.find(n => n.id === id);
     if (!soldNumber) return;
@@ -451,7 +451,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
-      upcStatus: details.upcStatus,
+      upcStatus: 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
     };
