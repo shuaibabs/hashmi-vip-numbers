@@ -774,25 +774,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...dealerPurchases.map(d => d.mobile),
     ]);
     
-    const parseDate = (dateString: string): Date | null => {
-      if (!dateString || typeof dateString !== 'string') return null;
-      // This will handle dd-MM-yyyy and yyyy-MM-dd
-      const parts = dateString.split(/[-/]/);
-      if (parts.length !== 3) return null;
-
-      let day, month, year;
-      // Check if the first part is the year
-      if (parts[0].length === 4) {
-          [year, month, day] = parts.map(p => parseInt(p, 10));
-      } else {
-          [day, month, year] = parts.map(p => parseInt(p, 10));
+    const parseDate = (rawDate: string | Date | number): Date | null => {
+      if (rawDate instanceof Date) {
+        return isValid(rawDate) ? rawDate : null;
       }
+      if (typeof rawDate === 'string') {
+        const parts = rawDate.split(/[-/]/);
+        if (parts.length !== 3) return null;
+        let day, month, year;
+        if (parts[0].length === 4) { // yyyy-MM-dd
+          [year, month, day] = parts.map(p => parseInt(p, 10));
+        } else { // dd-MM-yyyy
+          [day, month, year] = parts.map(p => parseInt(p, 10));
+        }
+        if(isNaN(day) || isNaN(month) || isNaN(year)) return null;
 
-      if(isNaN(day) || isNaN(month) || isNaN(year)) return null;
+        // Handle 2-digit years
+        if (year < 100) {
+            year += 2000;
+        }
 
-      const date = new Date(year, month - 1, day);
-      if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
-          return date;
+        const date = new Date(year, month - 1, day);
+        // Final check to ensure parts construct a valid date
+        if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+            return date;
+        }
+        return null;
+      }
+      // Handle Excel serial date number
+      if (typeof rawDate === 'number') {
+        // Excel serial date is number of days since 1900-01-01 (with a bug making it think 1900 is a leap year)
+        // JavaScript's epoch is 1970-01-01. The difference is 25569 days.
+        return new Date(Date.UTC(0, 0, rawDate - 1));
       }
       return null;
     }
@@ -971,5 +984,3 @@ export function useApp() {
   }
   return context;
 }
-
-    

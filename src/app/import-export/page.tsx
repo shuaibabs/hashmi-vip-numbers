@@ -139,32 +139,59 @@ export default function ImportExportPage() {
 
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
-    if (fileExtension !== 'csv') {
-      setIsImporting(false);
-      toast({
-        variant: 'destructive',
-        title: 'Unsupported File Type',
-        description: 'Please upload a .csv file only.',
+    if (fileExtension === 'csv') {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          processImportedData(results.data, file.name);
+        },
+        error: (error: any) => {
+          setIsImporting(false);
+          toast({
+            variant: 'destructive',
+            title: 'CSV Parse Error',
+            description: error.message,
+          });
+        },
       });
-      event.target.value = ''; // Reset file input
-      return;
-    }
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        processImportedData(results.data, file.name);
-      },
-      error: (error: any) => {
+    } else if (fileExtension === 'xls' || fileExtension === 'xlsx') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { cellDates: true });
+          processImportedData(json, file.name);
+        } catch (error: any) {
+          setIsImporting(false);
+          toast({
+            variant: 'destructive',
+            title: 'Excel Parse Error',
+            description: error.message || "Could not read the Excel file.",
+          });
+        }
+      };
+      reader.onerror = () => {
         setIsImporting(false);
         toast({
-          variant: 'destructive',
-          title: 'CSV Parse Error',
-          description: error.message,
+            variant: 'destructive',
+            title: 'File Read Error',
+            description: "Could not read the selected file.",
         });
-      },
-    });
+      };
+      reader.readAsBinaryString(file);
+    } else {
+        setIsImporting(false);
+        toast({
+            variant: 'destructive',
+            title: 'Unsupported File Type',
+            description: 'Please upload a .csv, .xls, or .xlsx file.',
+        });
+    }
+
 
     // Reset file input
     event.target.value = '';
@@ -219,7 +246,7 @@ export default function ImportExportPage() {
   return (
     <>
       <PageHeader
-        title="Manage Numbers via CSV"
+        title="Manage Numbers via CSV or Excel"
         description="Bulk import and export your number inventory."
       />
       <div className="space-y-6">
@@ -227,15 +254,15 @@ export default function ImportExportPage() {
            <Card>
              <CardHeader>
                 <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from File</CardTitle>
-                <CardDescription>Upload a CSV file to add multiple numbers to the master inventory.</CardDescription>
+                <CardDescription>Upload a CSV, XLS, or XLSX file to add multiple numbers.</CardDescription>
              </CardHeader>
              <CardContent>
                 <Button onClick={handleImportClick} disabled={isImporting}>
                   {isImporting ? <Spinner className="mr-2 h-4 w-4" /> : <FileInput className="mr-2 h-4 w-4" />}
-                  {isImporting ? 'Importing...' : 'Import from CSV'}
+                  {isImporting ? 'Importing...' : 'Import from File'}
                 </Button>
-                <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, RTSDate. Optional: SalePrice, Notes.</p>
+                <input type="file" id="import-file-input" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileImport} />
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status. Optional: SalePrice, Notes, RTSDate (required if Status is 'Non-RTS').</p>
              </CardContent>
            </Card>
            <Card>
