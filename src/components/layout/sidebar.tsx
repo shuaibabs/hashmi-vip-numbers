@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -51,7 +52,14 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { role, user } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
   
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   return (
@@ -69,7 +77,7 @@ export function AppSidebar() {
             
             return (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref>
+                <Link href={item.href} passHref onClick={handleLinkClick}>
                   <SidebarMenuButton
                     as="a"
                     isActive={pathname === item.href}
