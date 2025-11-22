@@ -120,6 +120,7 @@ type AppContextType = {
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
   deleteActivities: (activityIds: string[]) => void;
   updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
+  deleteNumbers: (numberIds: string[]) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -961,6 +962,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const deleteNumbers = (numberIds: string[]) => {
+    if (!db || !user || role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You do not have permission to delete number records.",
+      });
+      return;
+    }
+
+    const batch = writeBatch(db);
+    numberIds.forEach(id => {
+      batch.delete(doc(db, 'numbers', id));
+    });
+
+    batch.commit().then(() => {
+      addActivity({
+        employeeName: user.displayName || 'Admin',
+        action: 'Deleted Numbers',
+        description: `Permanently deleted ${numberIds.length} number record(s).`
+      });
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'numbers',
+        operation: 'delete',
+        requestResourceData: { info: `Batch delete ${numberIds.length} numbers` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
 
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
     if (!db || !user) return { validRecords: [], failedRecords: [] };
@@ -1173,6 +1205,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updatePortOutStatus,
     deleteActivities,
     updateSafeCustodyDate,
+    deleteNumbers,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -1185,3 +1218,5 @@ export function useApp() {
   }
   return context;
 }
+
+    

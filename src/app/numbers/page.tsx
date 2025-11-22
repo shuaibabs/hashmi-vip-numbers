@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, UploadCloud } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -25,11 +25,12 @@ import { useAuth } from '@/context/auth-context';
 import { Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { EditUploadStatusModal } from '@/components/edit-upload-status-modal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
 export default function AllNumbersPage() {
-  const { numbers, loading, isMobileNumberDuplicate } = useApp();
+  const { numbers, loading, isMobileNumberDuplicate, deleteNumbers } = useApp();
   const { role } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -143,16 +144,16 @@ export default function AllNumbersPage() {
     );
   };
 
-  const handleSelectAll = (checked: boolean | 'indeterminate') => {
-    if (checked === true) {
-      setSelectedRows(paginatedNumbers.map(n => n.id));
+  const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    const pageIds = paginatedNumbers.map(n => n.id);
+    if (checked) {
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
     } else {
-      setSelectedRows([]);
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
     }
   };
 
   const isAllOnPageSelected = paginatedNumbers.length > 0 && paginatedNumbers.every(n => selectedRows.includes(n.id));
-  const isSomeOnPageSelected = selectedRows.length > 0 && !isAllOnPageSelected;
 
   const handleOpenAssignModal = () => {
     setIsAssignModalOpen(true);
@@ -162,6 +163,11 @@ export default function AllNumbersPage() {
     setIsAssignModalOpen(false);
     setSelectedRows([]);
   }
+  
+  const handleDeleteSelected = () => {
+    deleteNumbers(selectedRows);
+    setSelectedRows([]);
+  };
 
   const selectedNumberRecords = numbers.filter(n => selectedRows.includes(n.id));
 
@@ -283,10 +289,34 @@ export default function AllNumbersPage() {
             </Select>
           </div>
            {role === 'admin' && selectedRows.length > 0 && (
-             <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
-               <UserPlus className="mr-2 h-4 w-4" />
-               Assign Selected ({selectedRows.length})
-             </Button>
+            <div className="flex items-center gap-2">
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete Selected ({selectedRows.length})
+                    </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete {selectedRows.length} number record(s).
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSelected}>
+                        Yes, delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                 <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Assign Selected ({selectedRows.length})
+                 </Button>
+            </div>
            )}
         </div>
         <div className="border rounded-lg">
@@ -296,9 +326,9 @@ export default function AllNumbersPage() {
                  <TableHead className="w-12">
                   {role === 'admin' && (
                     <Checkbox
-                      checked={isAllOnPageSelected || isSomeOnPageSelected}
-                      onCheckedChange={(checked) => handleSelectAll(checked)}
-                      aria-label="Select all"
+                      checked={isAllOnPageSelected}
+                      onCheckedChange={handleSelectAllOnPage}
+                      aria-label="Select all on this page"
                     />
                   )}
                 </TableHead>
@@ -426,6 +456,8 @@ export default function AllNumbersPage() {
     </>
   );
 }
+    
+
     
 
     
