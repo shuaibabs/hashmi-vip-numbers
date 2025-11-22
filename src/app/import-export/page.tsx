@@ -12,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { FileInput, FileOutput, Terminal, Download } from 'lucide-react';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Spinner, TableSpinner } from '@/components/ui/spinner';
@@ -157,43 +156,14 @@ export default function ImportExportPage() {
           });
         },
       });
-    } else if (fileExtension === 'xls' || fileExtension === 'xlsx') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const json = XLSX.utils.sheet_to_json(worksheet, { cellDates: true });
-          processImportedData(json, file.name);
-        } catch (error: any) {
-          setIsImporting(false);
-          toast({
-            variant: 'destructive',
-            title: 'Excel Parse Error',
-            description: error.message || "Could not read the Excel file.",
-          });
-        }
-      };
-      reader.onerror = () => {
-        setIsImporting(false);
-        toast({
-            variant: 'destructive',
-            title: 'File Read Error',
-            description: "Could not read the selected file.",
-        });
-      };
-      reader.readAsBinaryString(file);
     } else {
         setIsImporting(false);
         toast({
             variant: 'destructive',
             title: 'Unsupported File Type',
-            description: 'Please upload a .csv, .xls, or .xlsx file.',
+            description: 'Please upload a .csv file.',
         });
     }
-
 
     // Reset file input
     event.target.value = '';
@@ -248,22 +218,22 @@ export default function ImportExportPage() {
   return (
     <>
       <PageHeader
-        title="Manage Numbers via CSV or Excel"
+        title="Manage Numbers via CSV"
         description="Bulk import and export your number inventory."
       />
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <Card>
              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from File</CardTitle>
-                <CardDescription>Upload a CSV, XLS, or XLSX file to add multiple numbers.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from CSV</CardTitle>
+                <CardDescription>Upload a CSV file to add multiple numbers.</CardDescription>
              </CardHeader>
              <CardContent>
                 <Button onClick={handleImportClick} disabled={isImporting}>
                   {isImporting ? <Spinner className="mr-2 h-4 w-4" /> : <FileInput className="mr-2 h-4 w-4" />}
-                  {isImporting ? 'Importing...' : 'Import from File'}
+                  {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
-                <input type="file" id="import-file-input" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileImport} />
+                <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
                  <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, UploadStatus. Optional: SalePrice, Notes. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate (required if NumberType is 'COCP').</p>
              </CardContent>
            </Card>

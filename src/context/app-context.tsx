@@ -42,7 +42,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { calculateDigitalRoot } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import * as XLSX from 'xlsx';
 
 // Helper to get the next serial number for a collection
 const getNextSrNo = (records: { srNo?: number }[]): number => {
@@ -606,11 +605,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const restoredNumberData = sanitizeObjectForFirestore(saleToCancel.originalNumberData);
 
     const restoredNumber: Omit<NumberRecord, 'id'> = {
-        ...(restoredNumberData as Omit<NumberRecord, 'id' | 'rtsDate'>),
+        ...(restoredNumberData as Omit<NumberRecord, 'id'>),
         assignedTo: 'Unassigned',
         name: 'Unassigned',
-        status: restoredNumberData.status || 'Non-RTS',
-        rtsDate: restoredNumberData.rtsDate, // Keep original rtsDate
     };
 
     const batch = writeBatch(db);
@@ -929,11 +926,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 if (isValid(parsed)) return parsed;
             }
         }
-        if (typeof rawDate === 'number') {
-           try {
-             return XLSX.SSF.parse_date_code(rawDate);
-           } catch(e) { /* ignore */}
-        }
+        // Excel date serial number handling removed
         return null;
     };
 
