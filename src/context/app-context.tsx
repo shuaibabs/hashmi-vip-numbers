@@ -120,6 +120,7 @@ type AppContextType = {
   deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
   deleteActivities: (activityIds: string[]) => void;
+  updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -276,7 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    if (!db || !numbers || numbers.length === 0 || numbersLoading) {
+    if (!db || numbersLoading) {
       return;
     }
     const checkRtsDates = async () => {
@@ -605,11 +606,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const restoredNumberData = sanitizeObjectForFirestore(saleToCancel.originalNumberData);
 
     const restoredNumber: Omit<NumberRecord, 'id'> = {
-        ...restoredNumberData,
+        ...(restoredNumberData as Omit<NumberRecord, 'id' | 'rtsDate'>),
         assignedTo: 'Unassigned',
         name: 'Unassigned',
         status: restoredNumberData.status || 'Non-RTS',
-        rtsDate: restoredNumberData.rtsDate || null, 
+        rtsDate: restoredNumberData.rtsDate || null,
     };
 
     const batch = writeBatch(db);
@@ -874,6 +875,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateSafeCustodyDate = (numberId: string, newDate: Date) => {
+    if (!db || !user) return;
+    const num = numbers.find(n => n.id === numberId);
+    if (!num) return;
+
+    const numDocRef = doc(db, 'numbers', numberId);
+    const updateData = { safeCustodyDate: Timestamp.fromDate(newDate) };
+    
+    updateDoc(numDocRef, updateData).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Updated Safe Custody Date',
+            description: `Updated Safe Custody Date for ${num.mobile} to ${newDate.toLocaleDateString()}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: numDocRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
 
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
     if (!db || !user) return { validRecords: [], failedRecords: [] };
@@ -1083,6 +1108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteDealerPurchases,
     updatePortOutStatus,
     deleteActivities,
+    updateSafeCustodyDate,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -10,12 +10,14 @@ import { format } from 'date-fns';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, Download } from 'lucide-react';
+import { ArrowUpDown, Download, MoreHorizontal } from 'lucide-react';
 import { NumberRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { EditCocpDateModal } from '@/components/edit-cocp-date-modal';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -28,6 +30,8 @@ export default function CocpPage() {
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const cocpNumbers = useMemo(() => {
     return numbers.filter(num => num.numberType === 'COCP');
@@ -147,6 +151,10 @@ export default function CocpPage() {
     setSelectedRows([]);
   }
 
+  const handleEditClick = (number: NumberRecord) => {
+    setSelectedNumber(number);
+    setIsEditModalOpen(true);
+  };
   
   const getSortIcon = (columnKey: SortableColumn) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
@@ -206,11 +214,12 @@ export default function CocpPage() {
               <SortableHeader column="sum" label="Sum" />
               <SortableHeader column="rtsDate" label="RTS Date" />
               <SortableHeader column="safeCustodyDate" label="Safe Custody Date" />
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={6} />
+                <TableSpinner colSpan={7} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                 <TableRow key={num.srNo} data-state={selectedRows.includes(num.id) && "selected"}>
@@ -226,11 +235,26 @@ export default function CocpPage() {
                     <TableCell>{num.sum}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                     <TableCell className="text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(num)}>
+                            Edit Date
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
                 </TableRow>
                 ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No COCP numbers found.
                 </TableCell>
               </TableRow>
@@ -245,6 +269,13 @@ export default function CocpPage() {
         itemsPerPage={itemsPerPage}
         totalItems={cocpNumbers.length}
       />
+      {selectedNumber && (
+        <EditCocpDateModal 
+            isOpen={isEditModalOpen} 
+            onClose={() => setIsEditModalOpen(false)} 
+            number={selectedNumber}
+        />
+      )}
     </>
   );
 }
