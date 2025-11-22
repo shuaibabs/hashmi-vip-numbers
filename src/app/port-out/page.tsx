@@ -117,6 +117,7 @@ export default function PortOutPage() {
         "Sale Date": format(p.saleDate.toDate(), 'yyyy-MM-dd'),
         "Payment Status": p.paymentStatus,
         "UPC Status": p.upcStatus,
+        "Upload Status": p.uploadStatus,
         "Port Out Date": format(p.portOutDate.toDate(), 'yyyy-MM-dd'),
     }));
 
@@ -257,13 +258,14 @@ export default function PortOutPage() {
               <SortableHeader column="saleDate" label="Sale Date" />
               <SortableHeader column="paymentStatus" label="Payment Status" />
               <SortableHeader column="upcStatus" label="UPC Status" />
+              <SortableHeader column="uploadStatus" label="Upload Status" />
               <SortableHeader column="portOutDate" label="Port Out Date" />
                <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={11} />
+                <TableSpinner colSpan={12} />
             ) : paginatedPortOuts.length > 0 ? (
                 paginatedPortOuts.map((record) => (
                 <TableRow key={record.srNo} data-state={selectedRows.includes(record.id) && "selected"}>
@@ -292,6 +294,11 @@ export default function PortOutPage() {
                             {record.upcStatus}
                         </Badge>
                     </TableCell>
+                     <TableCell>
+                         <Badge variant={record.uploadStatus === 'Done' ? 'secondary' : 'outline'}>
+                            {record.uploadStatus}
+                        </Badge>
+                    </TableCell>
                      <TableCell>{format(record.portOutDate.toDate(), 'PPP')}</TableCell>
                      <TableCell className="text-right">
                         <DropdownMenu>
@@ -312,7 +319,7 @@ export default function PortOutPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={12} className="h-24 text-center">
                         No port out records found.
                     </TableCell>
                 </TableRow>
@@ -337,3 +344,5 @@ export default function PortOutPage() {
     </>
   );
 }
+
+    

@@ -97,6 +97,8 @@ type AppContextType = {
   activities: Activity[];
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
+  seenActivitiesCount: number;
+  markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
@@ -136,6 +138,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [employees, setEmployees] = useState<string[]>([]);
   
   const [roleFilteredActivities, setRoleFilteredActivities] = useState<Activity[]>([]);
+  const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
 
   const [numbersLoading, setNumbersLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(true);
@@ -157,6 +160,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dealerPurchasesLoading ||
       usersLoading
     ));
+
+  useEffect(() => {
+    const storedCount = localStorage.getItem('seenActivitiesCount');
+    if (storedCount) {
+      setSeenActivitiesCount(Number(storedCount));
+    }
+  }, []);
+
+  useEffect(() => {
+     if (activitiesLoading) return;
+     const currentTotal = activities.length;
+     // Adjust seen count if activities have been deleted
+     if (seenActivitiesCount > currentTotal) {
+         setSeenActivitiesCount(currentTotal);
+         localStorage.setItem('seenActivitiesCount', String(currentTotal));
+     }
+  }, [activities, seenActivitiesCount, activitiesLoading]);
+
+  const markActivitiesAsSeen = useCallback(() => {
+    const total = activities.length;
+    setSeenActivitiesCount(total);
+    localStorage.setItem('seenActivitiesCount', String(total));
+  }, [activities]);
 
   const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
@@ -1082,6 +1108,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activities: roleFilteredActivities,
     employees,
     dealerPurchases,
+    seenActivitiesCount,
+    markActivitiesAsSeen,
     isMobileNumberDuplicate,
     updateNumberStatus,
     updateUploadStatus,
@@ -1115,3 +1143,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
