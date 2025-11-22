@@ -54,6 +54,7 @@ export type SaleRecord = {
   saleDate: Timestamp;
   upcStatus: 'Generated' | 'Pending';
   portOutStatus: 'Pending' | 'Done';
+  uploadStatus: 'Pending' | 'Done';
   createdBy: string;
   originalNumberData: Omit<NumberRecord, 'id'>;
 };
