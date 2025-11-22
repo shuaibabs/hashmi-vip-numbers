@@ -103,7 +103,7 @@ type AppContextType = {
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
-  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
+  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; uploadStatus: 'Pending' | 'Done' }) => void;
   markSaleAsPortedOut: (saleId: string) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
@@ -160,10 +160,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dealerPurchasesLoading ||
       usersLoading
     ));
-
-  const markActivitiesAsSeen = useCallback(() => {
-    setSeenActivitiesCount(activities.length);
-  }, [activities.length]);
 
   const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
@@ -383,7 +379,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => {
+  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; uploadStatus: 'Pending' | 'Done' }) => {
     if (!db || !user) return;
     const saleToUpdate = sales.find(s => s.id === id);
     if (!saleToUpdate) return;
@@ -393,7 +389,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addActivity({
             employeeName: user.displayName || 'User',
             action: 'Updated Sale Status',
-            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, UPC: ${statuses.upcStatus}.`,
+            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, UPC: ${statuses.upcStatus}, Upload: ${statuses.uploadStatus}.`,
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -438,6 +434,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         salePrice: saleToMove.salePrice,
         paymentStatus: saleToMove.paymentStatus,
         saleDate: saleToMove.saleDate,
+        uploadStatus: saleToMove.uploadStatus,
         upcStatus: saleToMove.upcStatus,
         createdBy: saleToMove.createdBy,
         originalNumberData: sanitizedOriginalData,
@@ -556,6 +553,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       salePrice: details.salePrice,
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
+      uploadStatus: 'Pending',
       portOutStatus: 'Pending',
       upcStatus: 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
@@ -1045,6 +1043,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         errorEmitter.emit('permission-error', permissionError);
     });
   };
+
+  const markActivitiesAsSeen = useCallback(() => {
+    setSeenActivitiesCount(activities.length);
+  }, [activities.length]);
 
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);

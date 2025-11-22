@@ -144,6 +144,7 @@ export default function SalesPage() {
       "Sale Date": format(s.saleDate.toDate(), 'yyyy-MM-dd'),
       "Payment Status": s.paymentStatus,
       "UPC Status": s.upcStatus,
+      "Upload Status": s.uploadStatus,
       "Portout Status": s.portOutStatus,
     }));
 
@@ -253,13 +254,14 @@ export default function SalesPage() {
               <SortableHeader column="saleDate" label="Sale Date" />
               <SortableHeader column="paymentStatus" label="Payment Status" />
               <SortableHeader column="upcStatus" label="UPC Status" />
+              <SortableHeader column="uploadStatus" label="Upload Status" />
               <SortableHeader column="portOutStatus" label="Portout Status" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={11} />
+                <TableSpinner colSpan={12} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
                 <TableRow key={sale.srNo} data-state={selectedRows.includes(sale.id) && "selected"}>
@@ -284,6 +286,11 @@ export default function SalesPage() {
                     <TableCell>
                          <Badge variant={sale.upcStatus === 'Generated' ? 'secondary' : 'outline'}>
                             {sale.upcStatus}
+                        </Badge>
+                    </TableCell>
+                     <TableCell>
+                         <Badge variant={sale.uploadStatus === 'Done' ? 'secondary' : 'outline'}>
+                            {sale.uploadStatus}
                         </Badge>
                     </TableCell>
                      <TableCell>
@@ -324,7 +331,7 @@ export default function SalesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={12} className="h-24 text-center">
                         No sales records found.
                     </TableCell>
                 </TableRow>
