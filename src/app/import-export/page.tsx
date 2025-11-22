@@ -47,6 +47,7 @@ export default function ImportExportPage() {
         "Sr.No": n.srNo,
         "Mobile": n.mobile,
         "Status": n.status,
+        "Upload Status": n.uploadStatus,
         "Purchase From": n.purchaseFrom,
         "Purchase Price": n.purchasePrice,
         "Sale Price": n.salePrice,
@@ -262,7 +263,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from File'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status. Optional: SalePrice, Notes, RTSDate (required if Status is 'Non-RTS').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, UploadStatus. Optional: SalePrice, Notes, RTSDate (required if Status is 'Non-RTS').</p>
              </CardContent>
            </Card>
            <Card>
@@ -317,6 +318,7 @@ export default function ImportExportPage() {
                 <TableHead>Sr.No</TableHead>
                 <TableHead>Mobile</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Upload Status</TableHead>
                 <TableHead>Purchase</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>RTS Date</TableHead>
@@ -325,7 +327,7 @@ export default function ImportExportPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableSpinner colSpan={8} />
+                <TableSpinner colSpan={9} />
               ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                   <TableRow key={num.id} data-state={selectedRows.includes(num.id) && "selected"}>
@@ -341,6 +343,9 @@ export default function ImportExportPage() {
                     <TableCell>
                       <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={num.uploadStatus === 'Done' ? 'secondary' : 'outline'}>{num.uploadStatus}</Badge>
+                    </TableCell>
                     <TableCell>{num.purchaseFrom}</TableCell>
                     <TableCell>₹{num.purchasePrice}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
@@ -349,7 +354,7 @@ export default function ImportExportPage() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                         No numbers found.
                     </TableCell>
                 </TableRow>

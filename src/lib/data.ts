@@ -17,6 +17,7 @@ export type NumberRecord = {
   mobile: string;
   sum: number;
   status: 'RTS' | 'Non-RTS';
+  uploadStatus: 'Pending' | 'Done';
   numberType: 'Prepaid' | 'Postpaid' | 'COCP';
   purchaseFrom: string;
   purchasePrice: number;

@@ -21,7 +21,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
@@ -34,6 +34,7 @@ const formSchema = z.object({
   locationType: z.enum(['Store', 'Employee', 'Dealer']),
   notes: z.string().optional(),
   status: z.enum(['RTS', 'Non-RTS']),
+  uploadStatus: z.enum(['Pending', 'Done']),
   rtsDate: z.date().optional(),
 }).refine(data => {
   if (data.status === 'Non-RTS') {
@@ -64,6 +65,7 @@ export default function NewNumberPage() {
       locationType: 'Store',
       notes: '',
       status: 'Non-RTS',
+      uploadStatus: 'Pending',
     },
   });
 
@@ -228,13 +230,13 @@ export default function NewNumberPage() {
               <CardTitle>Status & Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField
                   control={form.control}
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
+                      <FormLabel>RTS Status</FormLabel>
                       <Select onValueChange={(value) => {
                           field.onChange(value);
                           if (value === 'RTS') {
@@ -300,6 +302,27 @@ export default function NewNumberPage() {
                     )}
                   />
                 )}
+                 <FormField
+                  control={form.control}
+                  name="uploadStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Upload Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an upload status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Done">Done</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField

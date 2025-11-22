@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, UploadCloud } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -24,6 +24,7 @@ import { TableSpinner } from '@/components/ui/spinner';
 import { useAuth } from '@/context/auth-context';
 import { Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { EditUploadStatusModal } from '@/components/edit-upload-status-modal';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
@@ -38,6 +39,7 @@ export default function AllNumbersPage() {
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isRtsModalOpen, setIsRtsModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -114,6 +116,11 @@ export default function AllNumbersPage() {
   const handleMarkRTS = (number: NumberRecord) => {
     setSelectedNumber(number);
     setIsRtsModalOpen(true);
+  };
+  
+  const handleEditUpload = (number: NumberRecord) => {
+    setSelectedNumber(number);
+    setIsUploadModalOpen(true);
   };
 
   const handleSellNumber = (number: NumberRecord) => {
@@ -299,6 +306,7 @@ export default function AllNumbersPage() {
                 <SortableHeader column="mobile" label="Mobile" />
                 <SortableHeader column="sum" label="Sum" />
                 <SortableHeader column="numberType" label="Number Type" />
+                <SortableHeader column="uploadStatus" label="Upload Status" />
                 <SortableHeader column="assignedTo" label="Assigned To" />
                 <SortableHeader column="status" label="Status" />
                 <SortableHeader column="purchaseFrom" label="Purchase From" />
@@ -308,7 +316,7 @@ export default function AllNumbersPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                  <TableSpinner colSpan={10} />
+                  <TableSpinner colSpan={11} />
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num) => (
                     <TableRow 
@@ -330,6 +338,11 @@ export default function AllNumbersPage() {
                     <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                     <TableCell>{num.sum}</TableCell>
                     <TableCell>{num.numberType}</TableCell>
+                    <TableCell>
+                        <Badge variant={num.uploadStatus === 'Done' ? 'secondary' : 'outline'}>
+                            {num.uploadStatus}
+                        </Badge>
+                    </TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
                     <TableCell>
                         <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
@@ -348,6 +361,7 @@ export default function AllNumbersPage() {
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => router.push(`/numbers/${num.id}`)}>View Details</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Update RTS Status</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditUpload(num)}>Edit Upload Status</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={() => handleSellNumber(num)}>
                             <DollarSign className="mr-2 h-4 w-4" />
@@ -361,7 +375,7 @@ export default function AllNumbersPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                         {searchTerm && `No number found for "${searchTerm}".`}
                         {!searchTerm && "No numbers found for the current filters."}
                         {searchTerm && (
@@ -385,6 +399,13 @@ export default function AllNumbersPage() {
         <RtsStatusModal
           isOpen={isRtsModalOpen}
           onClose={() => setIsRtsModalOpen(false)}
+          number={selectedNumber}
+        />
+      )}
+      {selectedNumber && (
+        <EditUploadStatusModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
           number={selectedNumber}
         />
       )}

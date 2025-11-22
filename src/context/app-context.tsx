@@ -102,6 +102,7 @@ type AppContextType = {
   markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
+  updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
   markSaleAsPortedOut: (saleId: string) => void;
   markReminderDone: (id: string, note?: string) => void;
@@ -147,6 +148,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [usersLoading, setUsersLoading] = useState(true);
   const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
 
+    // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
+  const loading =
+    authLoading || 
+    (!!user && (
+      numbersLoading ||
+      salesLoading ||
+      portOutsLoading ||
+      remindersLoading ||
+      activitiesLoading ||
+      dealerPurchasesLoading ||
+      usersLoading
+    ));
+
   const markActivitiesAsSeen = useCallback(() => {
     setSeenActivitiesCount(activities.length);
   }, [activities.length]);
@@ -176,19 +190,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [db, user, activities, toast]);
-
-    // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
-  const loading =
-    authLoading || 
-    (!!user && (
-      numbersLoading ||
-      salesLoading ||
-      portOutsLoading ||
-      remindersLoading ||
-      activitiesLoading ||
-      dealerPurchasesLoading ||
-      usersLoading
-    ));
   
 
   useEffect(() => {
@@ -347,6 +348,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
             employeeName: user.displayName || 'User',
             action: 'Updated RTS Status',
             description: `Marked ${num.mobile} as ${status}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: numDocRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const updateUploadStatus = (id: string, uploadStatus: 'Pending' | 'Done') => {
+    if (!db || !user) return;
+    const numDocRef = doc(db, 'numbers', id);
+    const num = numbers.find(n => n.id === id);
+    if (!num) return;
+
+    const updateData = { uploadStatus };
+    
+    updateDoc(numDocRef, updateData).then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Updated Upload Status',
+            description: `Set upload status for ${num.mobile} to ${uploadStatus}`
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -907,6 +932,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
             failedRecords.push({ record, reason: 'Status is a required field. Must be "RTS" or "Non-RTS".' });
             continue;
         }
+        
+        const uploadStatus = record.UploadStatus;
+        if (!uploadStatus || !['Pending', 'Done'].includes(uploadStatus)) {
+            record.UploadStatus = 'Pending';
+        }
 
         const rtsDateValue = record.RTSDate || record['RTSDate '];
         
@@ -929,6 +959,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             name: assignedToUser,
             numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
             status: status,
+            uploadStatus: uploadStatus,
             rtsDate: rtsDateValue || null,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
@@ -1032,6 +1063,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     markActivitiesAsSeen,
     isMobileNumberDuplicate,
     updateNumberStatus,
+    updateUploadStatus,
     updateSaleStatuses,
     markSaleAsPortedOut,
     markReminderDone,
