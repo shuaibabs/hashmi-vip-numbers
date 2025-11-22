@@ -18,6 +18,7 @@ import { Spinner, TableSpinner } from '@/components/ui/spinner';
 import { NumberRecord } from '@/lib/data';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination } from '@/components/pagination';
+import { useAuth } from '@/context/auth-context';
 
 type FailedRecord = {
   record: any;
@@ -28,6 +29,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function ImportExportPage() {
   const { numbers, addActivity, bulkAddNumbers, loading } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number, failed: number} | null>(null);
@@ -53,7 +55,6 @@ export default function ImportExportPage() {
         "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
         "UPC Status": n.upcStatus,
         "Assigned To": n.assignedTo,
-        "Name": n.name,
         "Number Type": n.numberType,
         "Purchase Date": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
         "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
@@ -74,7 +75,7 @@ export default function ImportExportPage() {
   const handleExportAll = () => {
     exportToCsv(numbers, 'numberflow_all_export.csv');
     addActivity({
-        employeeName: 'Admin', // Or current user
+        employeeName: user?.displayName || 'User',
         action: 'Exported Data',
         description: 'Exported All Numbers list to CSV.'
     });
@@ -96,7 +97,7 @@ export default function ImportExportPage() {
     }
     exportToCsv(selectedData, 'numberflow_selected_export.csv');
      addActivity({
-        employeeName: 'Admin',
+        employeeName: user?.displayName || 'User',
         action: 'Exported Data',
         description: `Exported ${selectedData.length} selected number(s) to CSV.`
     });
@@ -124,7 +125,7 @@ export default function ImportExportPage() {
     });
 
     addActivity({
-        employeeName: 'Admin',
+        employeeName: user?.displayName || 'User',
         action: 'Imported Data',
         description: `Attempted to import ${data.length} records from ${fileName}.`
     });
