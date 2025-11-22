@@ -32,13 +32,14 @@ export type NumberRecord = {
   notes?: string;
   checkInDate: Timestamp | null;
   safeCustodyDate: Timestamp | null;
+  safeCustodyNotificationSent?: boolean;
   createdBy: string; // UID of user who created it
 };
 
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'upcStatus' | 'safeCustodyDate'
+  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'upcStatus' | 'safeCustodyDate' | 'safeCustodyNotificationSent'
 > & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date };
 
 
@@ -51,7 +52,6 @@ export type SaleRecord = {
   salePrice: number;
   paymentStatus: 'Pending' | 'Done';
   saleDate: Timestamp;
-  uploadStatus: 'Pending' | 'Done';
   upcStatus: 'Generated' | 'Pending';
   portOutStatus: 'Pending' | 'Done';
   createdBy: string;

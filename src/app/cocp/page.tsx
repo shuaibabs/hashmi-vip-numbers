@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/pagination';
-import { format } from 'date-fns';
+import { format, isPast, isToday } from 'date-fns';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EditCocpDateModal } from '@/components/edit-cocp-date-modal';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -224,40 +225,48 @@ export default function CocpPage() {
             {loading ? (
                 <TableSpinner colSpan={8} />
             ) : paginatedNumbers.length > 0 ? (
-                paginatedNumbers.map((num) => (
-                <TableRow key={num.srNo} data-state={selectedRows.includes(num.id) && "selected"}>
-                   <TableCell>
-                       <Checkbox
-                            checked={selectedRows.includes(num.id)}
-                            onCheckedChange={() => handleSelectRow(num.id)}
-                            aria-label="Select row"
-                        />
-                    </TableCell>
-                    <TableCell>{num.srNo}</TableCell>
-                    <TableCell className="font-medium">{num.mobile}</TableCell>
-                    <TableCell>{num.sum}</TableCell>
-                    <TableCell>
-                      <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
-                    </TableCell>
-                    <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                     <TableCell className="text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditClick(num)}>
-                            Edit Date
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                </TableRow>
-                ))
+                paginatedNumbers.map((num) => {
+                    const hasSafeCustodyDateArrived = num.safeCustodyDate && (isToday(num.safeCustodyDate.toDate()) || isPast(num.safeCustodyDate.toDate()));
+
+                    return (
+                        <TableRow 
+                            key={num.srNo} 
+                            data-state={selectedRows.includes(num.id) && "selected"}
+                            className={cn(hasSafeCustodyDateArrived && "bg-red-100 dark:bg-red-900/30 hover:bg-red-100/80 dark:hover:bg-red-900/40 data-[state=selected]:bg-red-200 dark:data-[state=selected]:bg-red-900/50")}
+                        >
+                        <TableCell>
+                            <Checkbox
+                                    checked={selectedRows.includes(num.id)}
+                                    onCheckedChange={() => handleSelectRow(num.id)}
+                                    aria-label="Select row"
+                                />
+                            </TableCell>
+                            <TableCell>{num.srNo}</TableCell>
+                            <TableCell className="font-medium">{num.mobile}</TableCell>
+                            <TableCell>{num.sum}</TableCell>
+                            <TableCell>
+                            <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
+                            </TableCell>
+                            <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                            <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditClick(num)}>
+                                    Edit Date
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    )
+                })
             ) : (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center">

@@ -347,6 +347,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     return () => clearInterval(interval);
   }, [db, numbers, numbersLoading, addActivity]);
+  
+  useEffect(() => {
+    if (!db || numbersLoading) {
+      return;
+    }
+    const checkSafeCustodyDates = async () => {
+        if (!db) return;
+
+        const batch = writeBatch(db);
+        let updated = false;
+
+        numbers.forEach(num => {
+            if (num.numberType === 'COCP' && num.safeCustodyDate && !num.safeCustodyNotificationSent) {
+                const custodyDate = num.safeCustodyDate.toDate();
+                if (isValid(custodyDate) && (isToday(custodyDate) || isPast(custodyDate))) {
+                    const docRef = doc(db, 'numbers', num.id);
+                    batch.update(docRef, { safeCustodyNotificationSent: true });
+                    addActivity({
+                        employeeName: 'System',
+                        action: 'Safe Custody Date Arrived',
+                        description: `Safe Custody Date for COCP number ${num.mobile} has arrived.`,
+                    }, false);
+                    updated = true;
+                }
+            }
+        });
+
+        if (updated) {
+            await batch.commit().catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: 'numbers',
+                    operation: 'update',
+                    requestResourceData: { info: 'Batch update for safe custody notifications' },
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
+        }
+    };
+    
+    checkSafeCustodyDates();
+    const interval = setInterval(checkSafeCustodyDates, 60 * 60 * 1000); // Check every hour
+    return () => clearInterval(interval);
+
+  }, [db, numbers, numbersLoading, addActivity]);
 
 
   const updateNumberStatus = (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
@@ -457,7 +501,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         salePrice: saleToMove.salePrice,
         paymentStatus: saleToMove.paymentStatus,
         saleDate: saleToMove.saleDate,
-        uploadStatus: saleToMove.uploadStatus,
         upcStatus: saleToMove.upcStatus,
         createdBy: saleToMove.createdBy,
         originalNumberData: sanitizedOriginalData,
@@ -576,7 +619,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       salePrice: details.salePrice,
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
-      uploadStatus: soldNumber.uploadStatus,
       portOutStatus: 'Pending',
       upcStatus: 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
