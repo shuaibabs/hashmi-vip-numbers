@@ -28,7 +28,10 @@ export default function ActivitiesPage() {
     markActivitiesAsSeen();
   }, [markActivitiesAsSeen]);
 
-  const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+  const sortedActivities = [...activities].sort((a, b) => {
+    if (!a.timestamp || !b.timestamp) return 0;
+    return b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime()
+  });
 
   const totalPages = Math.ceil(sortedActivities.length / itemsPerPage);
   const paginatedActivities = sortedActivities.slice(
@@ -155,7 +158,7 @@ export default function ActivitiesPage() {
                     <TableCell className="font-medium">{activity.employeeName}</TableCell>
                     <TableCell>{activity.action}</TableCell>
                     <TableCell>{activity.description}</TableCell>
-                    <TableCell>{format(activity.timestamp.toDate(), 'PPpp')}</TableCell>
+                    <TableCell>{activity.timestamp ? format(activity.timestamp.toDate(), 'PPpp') : 'Syncing...'}</TableCell>
                 </TableRow>
                 ))
             ) : (
