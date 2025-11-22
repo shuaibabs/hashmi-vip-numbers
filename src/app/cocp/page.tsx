@@ -27,7 +27,7 @@ export default function CocpPage() {
   const { numbers, loading, addActivity } = useApp();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
