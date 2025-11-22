@@ -1005,6 +1005,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newRecord = {
             mobile: mobile,
             name: assignedToUser,
+            assignedTo: assignedToUser,
             numberType: numberType,
             status: status,
             uploadStatus: uploadStatus,
@@ -1047,7 +1048,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
             rtsDate: rtsDateForDb,
             safeCustodyDate: record.safeCustodyDate ? Timestamp.fromDate(record.safeCustodyDate) : null,
-            assignedTo: assignedToUser,
         };
         batch.set(newDocRef, newNumber);
       });
@@ -1143,5 +1143,3 @@ export function useApp() {
   }
   return context;
 }
-
-    

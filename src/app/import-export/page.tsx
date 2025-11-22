@@ -234,7 +234,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, UploadStatus. Optional: SalePrice, Notes. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate (required if NumberType is 'COCP').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, UploadStatus. Optional: SalePrice, Notes. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate (required if NumberType is 'COCP').</p>
              </CardContent>
            </Card>
            <Card>
