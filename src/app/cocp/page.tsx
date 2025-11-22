@@ -18,6 +18,7 @@ import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EditCocpDateModal } from '@/components/edit-cocp-date-modal';
+import { Badge } from '@/components/ui/badge';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -112,6 +113,7 @@ export default function CocpPage() {
         "Sr.No": n.srNo,
         "Mobile": n.mobile,
         "Sum": n.sum,
+        "Status": n.status,
         "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : 'N/A',
         "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : 'N/A',
     }));
@@ -212,6 +214,7 @@ export default function CocpPage() {
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
               <SortableHeader column="sum" label="Sum" />
+              <SortableHeader column="status" label="Status" />
               <SortableHeader column="rtsDate" label="RTS Date" />
               <SortableHeader column="safeCustodyDate" label="Safe Custody Date" />
               <TableHead className="text-right">Actions</TableHead>
@@ -219,7 +222,7 @@ export default function CocpPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={7} />
+                <TableSpinner colSpan={8} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                 <TableRow key={num.srNo} data-state={selectedRows.includes(num.id) && "selected"}>
@@ -233,6 +236,9 @@ export default function CocpPage() {
                     <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>{num.sum}</TableCell>
+                    <TableCell>
+                      <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
+                    </TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                      <TableCell className="text-right">
@@ -254,7 +260,7 @@ export default function CocpPage() {
                 ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No COCP numbers found.
                 </TableCell>
               </TableRow>
