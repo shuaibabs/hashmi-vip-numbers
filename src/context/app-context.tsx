@@ -554,7 +554,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       salePrice: details.salePrice,
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
-      uploadStatus: 'Pending',
+      uploadStatus: soldNumber.uploadStatus,
       portOutStatus: 'Pending',
       upcStatus: 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
@@ -610,7 +610,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         assignedTo: 'Unassigned',
         name: 'Unassigned',
         status: restoredNumberData.status || 'Non-RTS',
-        rtsDate: restoredNumberData.rtsDate || null,
+        rtsDate: restoredNumberData.rtsDate, // Keep original rtsDate
     };
 
     const batch = writeBatch(db);
@@ -652,10 +652,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sum: calculateDigitalRoot(data.mobile),
       upcStatus: 'Pending',
       rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+      safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
       assignedTo: assignedToUser,
       name: assignedToUser,
       checkInDate: null,
-      safeCustodyDate: null,
       createdBy: user.uid,
       purchaseDate: Timestamp.fromDate(data.purchaseDate),
     };
@@ -960,6 +960,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!uploadStatus || !['Pending', 'Done'].includes(uploadStatus)) {
             record.UploadStatus = 'Pending';
         }
+        
+        const numberType = ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid';
+
+        const safeCustodyDate = parseDate(record.SafeCustodyDate);
+        if (numberType === 'COCP' && !safeCustodyDate) {
+            failedRecords.push({ record, reason: 'Invalid or missing SafeCustodyDate (required for COCP).' });
+            continue;
+        }
+
 
         const rtsDateValue = record.RTSDate || record['RTSDate '];
         
@@ -980,7 +989,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newRecord = {
             mobile: mobile,
             name: assignedToUser,
-            numberType: ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid',
+            numberType: numberType,
             status: status,
             uploadStatus: uploadStatus,
             rtsDate: rtsDateValue || null,
@@ -988,6 +997,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
             purchaseDate: purchaseDate,
+            safeCustodyDate: safeCustodyDate,
             currentLocation: record.CurrentLocation || 'N/A',
             locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
             notes: record.Notes || '',
@@ -1017,10 +1027,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             sum: calculateDigitalRoot(record.mobile),
             upcStatus: 'Pending',
             checkInDate: null,
-            safeCustodyDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
             rtsDate: rtsDateForDb,
+            safeCustodyDate: record.safeCustodyDate ? Timestamp.fromDate(record.safeCustodyDate) : null,
             assignedTo: assignedToUser,
         };
         batch.set(newDocRef, newNumber);

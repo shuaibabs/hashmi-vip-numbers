@@ -57,6 +57,7 @@ export default function ImportExportPage() {
         "Name": n.name,
         "Number Type": n.numberType,
         "Purchase Date": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
+        "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
     }));
 
     const csv = Papa.unparse(formattedData);
@@ -263,7 +264,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from File'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv, .xls, .xlsx" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, UploadStatus. Optional: SalePrice, Notes, RTSDate (required if Status is 'Non-RTS').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, Name, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, UploadStatus. Optional: SalePrice, Notes. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate (required if NumberType is 'COCP').</p>
              </CardContent>
            </Card>
            <Card>

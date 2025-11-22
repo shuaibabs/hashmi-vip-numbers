@@ -36,6 +36,7 @@ const formSchema = z.object({
   status: z.enum(['RTS', 'Non-RTS']),
   uploadStatus: z.enum(['Pending', 'Done']),
   rtsDate: z.date().optional(),
+  safeCustodyDate: z.date().optional(),
 }).refine(data => {
   if (data.status === 'Non-RTS') {
     return !!data.rtsDate;
@@ -44,6 +45,14 @@ const formSchema = z.object({
 }, {
   message: 'RTS Date is required for Non-RTS status.',
   path: ['rtsDate'],
+}).refine(data => {
+    if (data.numberType === 'COCP') {
+        return !!data.safeCustodyDate;
+    }
+    return true;
+}, {
+    message: 'Safe Custody Date is required for COCP numbers.',
+    path: ['safeCustodyDate'],
 });
 
 export default function NewNumberPage() {
@@ -51,6 +60,7 @@ export default function NewNumberPage() {
   const router = useRouter();
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
+  const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,6 +83,8 @@ export default function NewNumberPage() {
     addNumber(values as NewNumberData);
     router.push('/numbers');
   }
+  
+  const numberType = form.watch('numberType');
 
   return (
     <>
@@ -324,6 +336,49 @@ export default function NewNumberPage() {
                   )}
                 />
               </div>
+               {numberType === 'COCP' && (
+                <FormField
+                    control={form.control}
+                    name="safeCustodyDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Safe Custody Date</FormLabel>
+                        <Popover open={isSafeCustodyDatePickerOpen} onOpenChange={setIsSafeCustodyDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                                )}
+                            >
+                                {field.value ? (
+                                format(field.value, "PPP")
+                                ) : (
+                                <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                                if(date) field.onChange(date);
+                                setIsSafeCustodyDatePickerOpen(false);
+                            }}
+                            initialFocus
+                            />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
