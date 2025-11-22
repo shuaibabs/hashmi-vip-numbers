@@ -15,7 +15,6 @@ import { SaleRecord } from '@/lib/data';
 const formSchema = z.object({
   paymentStatus: z.enum(['Pending', 'Done']),
   upcStatus: z.enum(['Pending', 'Generated']),
-  uploadStatus: z.enum(['Pending', 'Done']),
 });
 
 type EditSaleStatusModalProps = {
@@ -32,7 +31,6 @@ export function EditSaleStatusModal({ isOpen, onClose, sale }: EditSaleStatusMod
     defaultValues: {
       paymentStatus: sale.paymentStatus,
       upcStatus: sale.upcStatus,
-      uploadStatus: sale.uploadStatus,
     },
   });
 
@@ -41,7 +39,6 @@ export function EditSaleStatusModal({ isOpen, onClose, sale }: EditSaleStatusMod
       form.reset({
         paymentStatus: sale.paymentStatus,
         upcStatus: sale.upcStatus,
-        uploadStatus: sale.uploadStatus,
       });
     }
   }, [sale, form]);
@@ -99,27 +96,6 @@ export function EditSaleStatusModal({ isOpen, onClose, sale }: EditSaleStatusMod
                     <SelectContent>
                       <SelectItem value="Pending">Pending</SelectItem>
                       <SelectItem value="Generated">Generated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="uploadStatus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Upload Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select upload status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Done">Done</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

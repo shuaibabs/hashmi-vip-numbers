@@ -97,12 +97,10 @@ type AppContextType = {
   activities: Activity[];
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
-  seenActivitiesCount: number;
-  markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
-  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; uploadStatus: 'Pending' | 'Done' }) => void;
+  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; }) => void;
   markSaleAsPortedOut: (saleId: string) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
@@ -146,7 +144,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
-  const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
 
     // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
   const loading =
@@ -379,7 +376,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; uploadStatus: 'Pending' | 'Done' }) => {
+  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; }) => {
     if (!db || !user) return;
     const saleToUpdate = sales.find(s => s.id === id);
     if (!saleToUpdate) return;
@@ -389,7 +386,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addActivity({
             employeeName: user.displayName || 'User',
             action: 'Updated Sale Status',
-            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, UPC: ${statuses.upcStatus}, Upload: ${statuses.uploadStatus}.`,
+            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, UPC: ${statuses.upcStatus}.`,
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -1072,10 +1069,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const markActivitiesAsSeen = useCallback(() => {
-    setSeenActivitiesCount(activities.length);
-  }, [activities.length]);
-
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
   const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => r.assignedTo === user?.displayName);
@@ -1089,8 +1082,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activities: roleFilteredActivities,
     employees,
     dealerPurchases,
-    seenActivitiesCount,
-    markActivitiesAsSeen,
     isMobileNumberDuplicate,
     updateNumberStatus,
     updateUploadStatus,
