@@ -109,6 +109,7 @@ type AppContextType = {
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
   checkInNumber: (id: string) => void;
   sellNumber: (id: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
+  bulkSellNumbers: (numbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => void;
   cancelSale: (saleId: string) => void;
   addNumber: (data: NewNumberData) => void;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
@@ -641,6 +642,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
             path: 'sales',
             operation: 'create',
             requestResourceData: { info: `Sell number ${soldNumber.mobile}` },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const bulkSellNumbers = (numbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => {
+    if (!db || !user) return;
+    if (numbersToSell.length === 0) return;
+
+    let currentSaleSrNo = getNextSrNo(sales);
+    const batch = writeBatch(db);
+
+    numbersToSell.forEach(soldNumber => {
+      const { id: numberId, ...originalDataWithoutId } = soldNumber;
+      const sanitizedOriginalData = sanitizeObjectForFirestore(originalDataWithoutId);
+
+      const newSale: Omit<SaleRecord, 'id'> = {
+        srNo: currentSaleSrNo++,
+        mobile: soldNumber.mobile,
+        sum: calculateDigitalRoot(soldNumber.mobile),
+        salePrice: details.salePrice,
+        soldTo: details.soldTo,
+        paymentStatus: 'Pending',
+        portOutStatus: 'Pending',
+        upcStatus: 'Pending',
+        saleDate: Timestamp.fromDate(details.saleDate),
+        createdBy: user.uid,
+        originalNumberData: sanitizedOriginalData,
+      };
+      
+      batch.set(doc(collection(db, 'sales')), newSale);
+      batch.delete(doc(db, 'numbers', soldNumber.id));
+    });
+
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Bulk Sold Numbers',
+            description: `Sold ${numbersToSell.length} number(s) to ${details.soldTo}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'sales/numbers',
+            operation: 'write',
+            requestResourceData: { info: `Bulk sell of ${numbersToSell.length} numbers.` },
         });
         errorEmitter.emit('permission-error', permissionError);
     });
@@ -1194,6 +1240,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     assignNumbersToEmployee,
     checkInNumber,
     sellNumber,
+    bulkSellNumbers,
     cancelSale,
     addNumber,
     addDealerPurchase,

@@ -26,6 +26,7 @@ import { Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { EditUploadStatusModal } from '@/components/edit-upload-status-modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { BulkSellNumberModal } from '@/components/bulk-sell-modal';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
@@ -40,6 +41,7 @@ export default function AllNumbersPage() {
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isRtsModalOpen, setIsRtsModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [isBulkSellModalOpen, setIsBulkSellModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -163,6 +165,15 @@ export default function AllNumbersPage() {
     setIsAssignModalOpen(false);
     setSelectedRows([]);
   }
+
+  const handleOpenBulkSellModal = () => {
+    setIsBulkSellModalOpen(true);
+  };
+
+  const closeBulkSellModal = () => {
+    setIsBulkSellModalOpen(false);
+    setSelectedRows([]);
+  };
   
   const handleDeleteSelected = () => {
     deleteNumbers(selectedRows);
@@ -288,33 +299,41 @@ export default function AllNumbersPage() {
               </SelectContent>
             </Select>
           </div>
-           {role === 'admin' && selectedRows.length > 0 && (
+           {selectedRows.length > 0 && (
             <div className="flex items-center gap-2">
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete Selected ({selectedRows.length})
+                 {role === 'admin' && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                        <Button variant="destructive">
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete ({selectedRows.length})
+                        </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete {selectedRows.length} number record(s).
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSelected}>
+                            Yes, delete
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                 )}
+                 {role === 'admin' && (
+                    <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Assign ({selectedRows.length})
                     </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete {selectedRows.length} number record(s).
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteSelected}>
-                        Yes, delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-                 <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Assign Selected ({selectedRows.length})
+                 )}
+                 <Button onClick={handleOpenBulkSellModal} className="w-full md:w-auto" variant="secondary">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Sell ({selectedRows.length})
                  </Button>
             </div>
            )}
@@ -324,13 +343,11 @@ export default function AllNumbersPage() {
             <TableHeader>
               <TableRow>
                  <TableHead className="w-12">
-                  {role === 'admin' && (
-                    <Checkbox
-                      checked={isAllOnPageSelected}
-                      onCheckedChange={handleSelectAllOnPage}
-                      aria-label="Select all on this page"
-                    />
-                  )}
+                  <Checkbox
+                    checked={isAllOnPageSelected}
+                    onCheckedChange={handleSelectAllOnPage}
+                    aria-label="Select all on this page"
+                  />
                 </TableHead>
                 <SortableHeader column="srNo" label="Sr.No" />
                 <SortableHeader column="mobile" label="Mobile" />
@@ -354,7 +371,7 @@ export default function AllNumbersPage() {
                         data-state={selectedRows.includes(num.id) && "selected"}
                     >
                     <TableCell>
-                        {role === 'admin' && num.id && (
+                        {num.id && (
                         <Checkbox
                             checked={selectedRows.includes(num.id)}
                             onCheckedChange={() => handleSelectRow(num.id)}
@@ -446,6 +463,11 @@ export default function AllNumbersPage() {
           number={selectedNumber}
         />
       )}
+      <BulkSellNumberModal
+        isOpen={isBulkSellModalOpen}
+        onClose={closeBulkSellModal}
+        selectedNumbers={selectedNumberRecords}
+      />
       {role === 'admin' && (
         <AssignNumbersModal
             isOpen={isAssignModalOpen}
