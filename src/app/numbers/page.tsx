@@ -331,7 +331,7 @@ export default function AllNumbersPage() {
                         Assign ({selectedRows.length})
                     </Button>
                  )}
-                 <Button onClick={handleOpenBulkSellModal} className="w-full md:w-auto" variant="secondary">
+                 <Button onClick={handleOpenBulkSellModal} className="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white">
                     <DollarSign className="mr-2 h-4 w-4" />
                     Sell ({selectedRows.length})
                  </Button>
@@ -483,3 +483,4 @@ export default function AllNumbersPage() {
     
 
     
+
