@@ -26,6 +26,8 @@ type FailedRecord = {
 };
 
 const ITEMS_PER_PAGE = 10;
+const REQUIRED_HEADERS = ['Mobile', 'NumberType', 'PurchaseFrom', 'PurchasePrice', 'PurchaseDate', 'CurrentLocation', 'LocationType', 'Status'];
+
 
 export default function ImportExportPage() {
   const { numbers, addActivity, bulkAddNumbers, loading } = useApp();
@@ -146,6 +148,20 @@ export default function ImportExportPage() {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
+           const headers = results.meta.fields || [];
+           const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+
+            if (missingHeaders.length > 0) {
+                setIsImporting(false);
+                toast({
+                    variant: 'destructive',
+                    title: 'Missing Required Headers',
+                    description: `Your CSV file is missing the following columns: ${missingHeaders.join(', ')}`,
+                    duration: 8000,
+                });
+                return;
+            }
+
           processImportedData(results.data, file.name);
         },
         error: (error: any) => {
@@ -235,7 +251,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, UploadStatus. Optional: SalePrice, Notes. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate (required if NumberType is 'COCP').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status. Optional: SalePrice, Notes. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate (required if NumberType is 'COCP').</p>
              </CardContent>
            </Card>
            <Card>
