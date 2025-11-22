@@ -232,7 +232,7 @@ export default function CocpPage() {
                         <TableRow 
                             key={num.srNo} 
                             data-state={selectedRows.includes(num.id) && "selected"}
-                            className={cn(hasSafeCustodyDateArrived && "bg-red-100 dark:bg-red-900/30 hover:bg-red-100/80 dark:hover:bg-red-900/40 data-[state=selected]:bg-red-200 dark:data-[state=selected]:bg-red-900/50")}
+                            className={cn(hasSafeCustodyDateArrived && "bg-red-200 dark:bg-red-800/30 hover:bg-red-200/80 dark:hover:bg-red-800/40 data-[state=selected]:bg-red-300 dark:data-[state=selected]:bg-red-800/50")}
                         >
                         <TableCell>
                             <Checkbox
