@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { usePathname } from 'next/navigation';
@@ -12,7 +13,15 @@ import { useNavigationSpinner } from '@/hooks/use-navigation-spinner';
 
 export function ProtectedLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  const isNavigating = useNavigationSpinner();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigationEnded = useNavigationSpinner();
+
+  useEffect(() => {
+    if (navigationEnded) {
+      setIsNavigating(false);
+    }
+  }, [navigationEnded]);
+
 
   if (loading || !user) {
     return (
@@ -30,7 +39,7 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
             </div>
         )}
         <div className="flex min-h-screen w-full">
-            <AppSidebar />
+            <AppSidebar setIsNavigating={setIsNavigating} />
             <div className="flex flex-col flex-1 min-w-0">
                 <AppHeader />
                 <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
