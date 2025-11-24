@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter as useNextRouter } from 'next/navigation';
+import { default as NextRouter } from 'next/router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { AppHeader } from '@/components/layout/header';
@@ -11,7 +12,7 @@ import { Spinner } from '../ui/spinner';
 
 export function ProtectedLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  const router = useRouter();
+  const router = useNextRouter();
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -21,35 +22,23 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const handleStart = (url: string) => url !== pathname && setIsNavigating(true);
-    const handleComplete = () => setIsNavigating(false);
-
-    // We can't use the router events from next/navigation, so we'll use the window events
-    // This is a bit of a hack, but it's the only way to get this to work with the app router
-    // See: https://github.com/vercel/next.js/discussions/41745
-    const originalPushState = history.pushState;
-    history.pushState = function() {
-        handleStart(arguments[2]);
-        return originalPushState.apply(history, arguments as any);
+    const handleStart = (url: string) => {
+        if (url !== pathname) {
+            setIsNavigating(true);
+        }
+    };
+    const handleComplete = () => {
+        setIsNavigating(false);
     };
 
-    window.addEventListener('popstate', handleComplete);
-    
-    // Fallback for when the router is ready
-    // This is not ideal, but it's the best we can do for now
-    const checkRouterReady = () => {
-        if (document.readyState === 'complete') {
-            handleComplete();
-        } else {
-            setTimeout(checkRouterReady, 100);
-        }
-    }
-    checkRouterReady();
-
+    NextRouter.events.on('routeChangeStart', handleStart);
+    NextRouter.events.on('routeChangeComplete', handleComplete);
+    NextRouter.events.on('routeChangeError', handleComplete);
 
     return () => {
-      window.removeEventListener('popstate', handleComplete);
-      history.pushState = originalPushState;
+        NextRouter.events.off('routeChangeStart', handleStart);
+        NextRouter.events.off('routeChangeComplete', handleComplete);
+        NextRouter.events.off('routeChangeError', handleComplete);
     };
   }, [pathname]);
 
