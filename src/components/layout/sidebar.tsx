@@ -85,19 +85,17 @@ export function AppSidebar() {
             
             return (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref legacyBehavior>
-                  <SidebarMenuButton
+                <SidebarMenuButton
                     asChild
                     isActive={pathname === item.href}
                     tooltip={item.label}
                     onClick={() => handleLinkClick(item.href)}
                   >
-                    <a>
+                    <Link href={item.href}>
                       <item.icon />
                       <span>{item.label}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
+                    </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             )
           })}
