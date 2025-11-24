@@ -58,6 +58,7 @@ export default function ImportExportPage() {
         "UPC Status": n.upcStatus,
         "Assigned To": n.assignedTo,
         "Number Type": n.numberType,
+        "Account Name": n.accountName,
         "Purchase Date": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
         "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
     }));
@@ -251,7 +252,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status. Optional: SalePrice, Notes. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate (required if NumberType is 'COCP').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status. Optional: SalePrice, Notes, UploadStatus. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP').</p>
              </CardContent>
            </Card>
            <Card>

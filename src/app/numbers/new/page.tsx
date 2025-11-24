@@ -37,6 +37,7 @@ const formSchema = z.object({
   uploadStatus: z.enum(['Pending', 'Done']),
   rtsDate: z.date().optional(),
   safeCustodyDate: z.date().optional(),
+  accountName: z.string().optional(),
 }).refine(data => {
   if (data.status === 'Non-RTS') {
     return !!data.rtsDate;
@@ -53,6 +54,14 @@ const formSchema = z.object({
 }, {
     message: 'Safe Custody Date is required for COCP numbers.',
     path: ['safeCustodyDate'],
+}).refine(data => {
+    if (data.numberType === 'COCP') {
+        return !!data.accountName && data.accountName.length > 0;
+    }
+    return true;
+}, {
+    message: 'Account Name is required for COCP numbers.',
+    path: ['accountName'],
 });
 
 export default function NewNumberPage() {
@@ -76,6 +85,7 @@ export default function NewNumberPage() {
       notes: '',
       status: 'Non-RTS',
       uploadStatus: 'Pending',
+      accountName: '',
     },
   });
 
@@ -142,6 +152,21 @@ export default function NewNumberPage() {
                   )}
                   />
               </div>
+                {numberType === 'COCP' && (
+                    <FormField
+                        control={form.control}
+                        name="accountName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Account Name</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Enter account name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
             </CardContent>
           </Card>
 

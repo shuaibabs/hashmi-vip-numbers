@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -14,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 
 function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
+  if (!value) return null;
   return (
     <div className="grid grid-cols-2 gap-2">
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
@@ -81,7 +83,8 @@ export default function NumberDetailsPage() {
         <CardContent className="space-y-6">
            <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
              <DetailItem label="Assigned To" value={number.assignedTo} />
-            <DetailItem label="Assigned Name" value={number.name} />
+             <DetailItem label="Assigned Name" value={number.name} />
+             {number.numberType === 'COCP' && <DetailItem label="Account Name" value={number.accountName} />}
           </div>
 
           <Separator />
@@ -99,6 +102,7 @@ export default function NumberDetailsPage() {
           <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
             <h4 className="text-lg font-semibold col-span-full">Status & Location</h4>
              <DetailItem label="Scheduled RTS Date" value={number.rtsDate ? format(number.rtsDate.toDate(), 'PPP') : 'N/A'} />
+             {number.numberType === 'COCP' && <DetailItem label="Safe Custody Date" value={number.safeCustodyDate ? format(number.safeCustodyDate.toDate(), 'PPP') : 'N/A'} />}
             <DetailItem label="UPC Status" value={<Badge variant={number.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{number.upcStatus}</Badge>} />
             <DetailItem label="Current Location" value={number.currentLocation} />
             <DetailItem label="Location Type" value={number.locationType} />

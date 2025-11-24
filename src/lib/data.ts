@@ -34,6 +34,7 @@ export type NumberRecord = {
   safeCustodyDate: Timestamp | null;
   safeCustodyNotificationSent?: boolean;
   createdBy: string; // UID of user who created it
+  accountName?: string;
 };
 
 // Type for creating a new number, omitting Firestore-generated fields

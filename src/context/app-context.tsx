@@ -727,7 +727,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
       upcStatus: 'Pending',
-      uploadStatus: soldNumber.uploadStatus,
+      uploadStatus: soldNumber.uploadStatus || 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
       originalNumberData: sanitizedOriginalData,
@@ -772,7 +772,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         paymentStatus: 'Pending',
         portOutStatus: 'Pending',
         upcStatus: 'Pending',
-        uploadStatus: soldNumber.uploadStatus,
+        uploadStatus: soldNumber.uploadStatus || 'Pending',
         saleDate: Timestamp.fromDate(details.saleDate),
         createdBy: user.uid,
         originalNumberData: sanitizedOriginalData,
@@ -1225,16 +1225,19 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             continue;
         }
         
-        const uploadStatus = record.UploadStatus;
-        if (!uploadStatus || !['Pending', 'Done'].includes(uploadStatus)) {
-            record.UploadStatus = 'Pending';
-        }
+        const uploadStatus = ['Pending', 'Done'].includes(record.UploadStatus) ? record.UploadStatus : 'Pending';
         
         const numberType = ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid';
 
         const safeCustodyDate = parseDate(record.SafeCustodyDate);
         if (numberType === 'COCP' && !safeCustodyDate) {
             failedRecords.push({ record, reason: 'Invalid or missing SafeCustodyDate (required for COCP).' });
+            continue;
+        }
+
+        const accountName = record.AccountName;
+        if (numberType === 'COCP' && !accountName) {
+            failedRecords.push({ record, reason: 'Missing AccountName (required for COCP).' });
             continue;
         }
 
@@ -1268,6 +1271,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             salePrice: isNaN(salePrice) ? 0 : salePrice,
             purchaseDate: purchaseDate,
             safeCustodyDate: safeCustodyDate,
+            accountName: numberType === 'COCP' ? accountName : undefined,
             currentLocation: record.CurrentLocation || 'N/A',
             locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
             notes: record.Notes || '',

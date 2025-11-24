@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -115,6 +116,7 @@ export default function CocpPage() {
         "Mobile": n.mobile,
         "Sum": n.sum,
         "Status": n.status,
+        "Account Name": n.accountName,
         "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : 'N/A',
         "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : 'N/A',
     }));
@@ -214,6 +216,7 @@ export default function CocpPage() {
                 </TableHead>
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
+              <SortableHeader column="accountName" label="Account Name" />
               <SortableHeader column="sum" label="Sum" />
               <SortableHeader column="status" label="Status" />
               <SortableHeader column="rtsDate" label="RTS Date" />
@@ -223,7 +226,7 @@ export default function CocpPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={8} />
+                <TableSpinner colSpan={9} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => {
                     const hasSafeCustodyDateArrived = num.safeCustodyDate && (isToday(num.safeCustodyDate.toDate()) || isPast(num.safeCustodyDate.toDate()));
@@ -243,6 +246,7 @@ export default function CocpPage() {
                             </TableCell>
                             <TableCell>{num.srNo}</TableCell>
                             <TableCell className="font-medium">{num.mobile}</TableCell>
+                            <TableCell>{num.accountName}</TableCell>
                             <TableCell>{num.sum}</TableCell>
                             <TableCell>
                             <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
@@ -269,7 +273,7 @@ export default function CocpPage() {
                 })
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={9} className="h-24 text-center">
                   No COCP numbers found.
                 </TableCell>
               </TableRow>
