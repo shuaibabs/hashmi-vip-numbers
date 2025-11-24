@@ -2,7 +2,7 @@
 
 "use client";
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Sidebar,
   SidebarHeader,
@@ -31,11 +31,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
-import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Button } from '../ui/button';
-import { getAuth, signOut } from 'firebase/auth';
-import { useFirebaseApp } from '@/firebase';
 import { useAuth } from '@/context/auth-context';
+import { useNavigation } from '@/context/navigation-context';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
@@ -52,13 +49,14 @@ const navItems = [
   { href: '/import-export', label: 'Import / Export', icon: FileOutput, adminOnly: false },
 ];
 
-export function AppSidebar({ setIsNavigating }: { setIsNavigating: (isNavigating: boolean) => void }) {
+export function AppSidebar() {
   const pathname = usePathname();
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { navigate } = useNavigation();
   
-  const handleLinkClick = () => {
-    setIsNavigating(true);
+  const handleLinkClick = (href: string) => {
+    navigate(href);
     if (isMobile) {
       setOpenMobile(false);
     }
@@ -81,7 +79,7 @@ export function AppSidebar({ setIsNavigating }: { setIsNavigating: (isNavigating
             
             return (!item.adminOnly || role === 'admin') && (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref onClick={handleLinkClick}>
+                <Link href={item.href} passHref onClick={(e) => { e.preventDefault(); handleLinkClick(item.href); }}>
                   <SidebarMenuButton
                     as="a"
                     isActive={pathname === item.href}
@@ -123,4 +121,3 @@ export function AppSidebar({ setIsNavigating }: { setIsNavigating: (isNavigating
     </Sidebar>
   );
 }
-

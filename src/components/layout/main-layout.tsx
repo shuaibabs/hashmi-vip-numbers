@@ -6,14 +6,15 @@ import type { ReactNode } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Spinner } from '@/components/ui/spinner';
 import { ProtectedLayout } from '@/components/layout/protected-layout';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
+import { useNavigation } from '@/context/navigation-context';
 
 const PUBLIC_PATHS = ['/login'];
 
 export function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  const router = useRouter();
+  const { navigate } = useNavigation();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -25,11 +26,11 @@ export function MainLayout({ children }: { children: ReactNode }) {
     const isUserLoggedIn = !!user;
 
     if (isUserLoggedIn && pathIsPublic) {
-      router.replace('/dashboard');
+      navigate('/dashboard', { replace: true });
     } else if (!isUserLoggedIn && !pathIsPublic) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
     }
-  }, [user, loading, pathname, router]);
+  }, [user, loading, pathname, navigate]);
 
   // While loading, show a full-screen spinner
   if (loading) {

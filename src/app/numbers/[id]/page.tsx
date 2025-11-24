@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { NumberRecord } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
+import { useNavigation } from '@/context/navigation-context';
 
 function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
@@ -27,7 +28,7 @@ function DetailItem({ label, value }: { label: string; value: React.ReactNode })
 export default function NumberDetailsPage() {
   const { id } = useParams();
   const { numbers, loading } = useApp();
-  const router = useRouter();
+  const { back } = useNavigation();
 
   const numberId = Array.isArray(id) ? id[0] : id;
 
@@ -45,7 +46,7 @@ export default function NumberDetailsPage() {
     return (
       <>
         <PageHeader title="Number Not Found" description="The requested number record could not be found." />
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="outline" onClick={() => back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Go Back
         </Button>
@@ -59,7 +60,7 @@ export default function NumberDetailsPage() {
         title="Number Details"
         description={`Viewing full details for ${number.mobile}`}
       >
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="outline" onClick={() => back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to List
         </Button>

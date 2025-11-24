@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useAuth } from "@/context/auth-context";
 import { getAuth, signOut } from "firebase/auth";
 import { useFirebaseApp } from "@/firebase";
-import { useRouter } from "next/navigation";
+import { useNavigation } from "@/context/navigation-context";
 
 function ActivityTime({ timestamp }: { timestamp: Date }) {
     const [timeAgo, setTimeAgo] = useState('');
@@ -41,7 +41,7 @@ export function AppHeader() {
     const { activities, seenActivitiesCount, markActivitiesAsSeen } = useApp();
     const { user, role } = useAuth();
     const app = useFirebaseApp();
-    const router = useRouter();
+    const { navigate } = useNavigation();
     
     const sortedActivities = [...activities]
         .filter(activity => activity.timestamp) // Ensure timestamp is not null
@@ -53,7 +53,7 @@ export function AppHeader() {
         if (!app) return;
         const auth = getAuth(app);
         await signOut(auth);
-        router.push('/login');
+        navigate('/login');
     };
 
     return (
@@ -120,7 +120,7 @@ export function AppHeader() {
                        <Separator />
                        <div className="p-2">
                            <Button variant="link" size="sm" className="w-full" asChild>
-                               <Link href="/activities">View all activities</Link>
+                               <Link href="/activities" onClick={() => navigate('/activities')}>View all activities</Link>
                            </Button>
                        </div>
                     </PopoverContent>
@@ -147,7 +147,7 @@ export function AppHeader() {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                              {role === 'admin' && (
-                                <DropdownMenuItem onClick={() => router.push('/signup')}>
+                                <DropdownMenuItem onClick={() => navigate('/signup')}>
                                     <UserPlus className="mr-2 h-4 w-4" />
                                     <span>Create User</span>
                                 </DropdownMenuItem>

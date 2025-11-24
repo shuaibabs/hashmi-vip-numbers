@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { AuthProvider } from '@/context/auth-context';
 import { FirebaseProvider } from '@/firebase';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { NavigationProvider } from '@/context/navigation-context';
 
 export const metadata: Metadata = {
   title: 'Hashmi VIP Numbers',
@@ -30,10 +31,12 @@ export default function RootLayout({
           <Toaster />
           <FirebaseProvider>
             <AuthProvider>
-              <AppProvider>
-                <MainLayout>{children}</MainLayout>
-                <FirebaseErrorListener />
-              </AppProvider>
+              <NavigationProvider>
+                <AppProvider>
+                  <MainLayout>{children}</MainLayout>
+                  <FirebaseErrorListener />
+                </AppProvider>
+              </NavigationProvider>
             </AuthProvider>
           </FirebaseProvider>
         </ThemeProvider>

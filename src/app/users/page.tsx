@@ -13,11 +13,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useNavigation } from '@/context/navigation-context';
 
 export default function ManageUsersPage() {
   const { users: allUsers, deleteUser, loading } = useApp();
   const { user: currentUser, role: adminRole } = useAuth();
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const { navigate } = useNavigation();
 
   if (adminRole !== 'admin') {
     return (
@@ -27,7 +29,7 @@ export default function ManageUsersPage() {
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>You do not have permission to manage users.</AlertDescription>
         </Alert>
-        <Button variant="link" asChild className="mt-4">
+        <Button variant="link" asChild className="mt-4" onClick={() => navigate('/dashboard')}>
           <Link href="/dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard

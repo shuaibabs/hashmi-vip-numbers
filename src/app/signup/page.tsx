@@ -5,8 +5,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -21,7 +19,8 @@ import { PageHeader } from '@/components/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
-import { Auth } from 'firebase/auth';
+import { Auth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { useNavigation } from '@/context/navigation-context';
 
 const formSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -45,10 +44,10 @@ export default function SignupPage() {
   const firebaseAuth = useFirebaseAuth();
   const db = useFirestore();
   const { user: adminUser, role: adminRole } = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { navigate } = useNavigation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,7 +68,7 @@ export default function SignupPage() {
                 <AlertTitle>Access Denied</AlertTitle>
                 <AlertDescription>You do not have permission to create new users.</AlertDescription>
             </Alert>
-            <Button variant="link" asChild className="mt-4">
+            <Button variant="link" asChild className="mt-4" onClick={() => navigate('/dashboard')}>
                 <Link href="/dashboard">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Dashboard

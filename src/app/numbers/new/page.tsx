@@ -5,7 +5,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import { NewNumberData } from '@/lib/data';
 import { PageHeader } from '@/components/page-header';
@@ -22,6 +21,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import { useNavigation } from '@/context/navigation-context';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
@@ -66,7 +66,7 @@ const formSchema = z.object({
 
 export default function NewNumberPage() {
   const { addNumber } = useApp();
-  const router = useRouter();
+  const { navigate, back } = useNavigation();
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
   const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
@@ -91,7 +91,7 @@ export default function NewNumberPage() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     addNumber(values as NewNumberData);
-    router.push('/numbers');
+    navigate('/numbers');
   }
   
   const numberType = form.watch('numberType');
@@ -102,7 +102,7 @@ export default function NewNumberPage() {
         title="Add New Number"
         description="Manually add a new number to the master inventory."
       >
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="outline" onClick={() => back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Cancel
         </Button>
@@ -466,7 +466,7 @@ export default function NewNumberPage() {
           </Card>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.push('/numbers')}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => navigate('/numbers')}>Cancel</Button>
             <Button type="submit">
                 <Save className="mr-2 h-4 w-4" />
                 Save Number
