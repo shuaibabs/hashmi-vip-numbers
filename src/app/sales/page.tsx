@@ -28,7 +28,7 @@ type SortableColumn = keyof SaleRecord;
 
 
 export default function SalesPage() {
-  const { sales, loading, cancelSale, markSaleAsPortedOut, addActivity } = useApp();
+  const { sales, loading, cancelSale, markSaleAsPortedOut, addActivity, bulkMarkAsPortedOut } = useApp();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -37,6 +37,7 @@ export default function SalesPage() {
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [saleToCancel, setSaleToCancel] = useState<SaleRecord | null>(null);
   const [saleToPortOut, setSaleToPortOut] = useState<SaleRecord | null>(null);
+  const [isBulkPortOutDialogOpen, setIsBulkPortOutDialogOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
@@ -190,7 +191,15 @@ export default function SalesPage() {
     setSelectedRows([]);
   };
 
+  const handleConfirmBulkPortOut = () => {
+    const eligibleSales = sales.filter(s => selectedRows.includes(s.id) && s.upcStatus === 'Generated');
+    bulkMarkAsPortedOut(eligibleSales);
+    setIsBulkPortOutDialogOpen(false);
+    setSelectedRows([]);
+  };
+
   const selectedSaleRecords = sales.filter(s => selectedRows.includes(s.id));
+  const eligibleForPortOutCount = selectedSaleRecords.filter(s => s.upcStatus === 'Generated').length;
 
 
   const requestSort = (key: SortableColumn) => {
@@ -237,14 +246,18 @@ export default function SalesPage() {
               </SelectContent>
             </Select>
             {selectedRows.length > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
                         <Download className="mr-2 h-4 w-4" />
-                        Export Selected ({selectedRows.length})
+                        Export ({selectedRows.length})
                     </Button>
                      <Button variant="outline" onClick={() => setIsBulkUpcModalOpen(true)}>
                         <Edit className="mr-2 h-4 w-4" />
-                        Edit UPC Status ({selectedRows.length})
+                        Edit UPC ({selectedRows.length})
+                    </Button>
+                     <Button variant="outline" onClick={() => setIsBulkPortOutDialogOpen(true)}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Port Out ({selectedRows.length})
                     </Button>
                 </div>
             )}
@@ -405,6 +418,26 @@ export default function SalesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog open={isBulkPortOutDialogOpen} onOpenChange={setIsBulkPortOutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bulk Mark as Ported Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have selected {selectedRows.length} record(s). Out of these, {eligibleForPortOutCount} have a 'Generated' UPC status and can be ported out.
+              <br/><br/>
+              This action will move all eligible records to the Port Out history. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsBulkPortOutDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmBulkPortOut} disabled={eligibleForPortOutCount === 0}>
+              Port Out {eligibleForPortOutCount} Record(s)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
+
+    

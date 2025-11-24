@@ -105,6 +105,7 @@ type AppContextType = {
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; }) => void;
   bulkUpdateUpcStatus: (saleIds: string[], upcStatus: 'Pending' | 'Generated') => void;
   markSaleAsPortedOut: (saleId: string) => void;
+  bulkMarkAsPortedOut: (sales: SaleRecord[]) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
@@ -553,6 +554,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
         errorEmitter.emit('permission-error', permissionError);
     });
 };
+
+const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
+    if (!db || !user || salesToMove.length === 0) return;
+
+    const eligibleSales = salesToMove.filter(s => s.upcStatus === 'Generated');
+    const skippedCount = salesToMove.length - eligibleSales.length;
+
+    if (eligibleSales.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Eligible Records",
+        description: "None of the selected records have a 'Generated' UPC status.",
+      });
+      return;
+    }
+
+    let currentPortOutSrNo = getNextSrNo(portOuts);
+    const batch = writeBatch(db);
+
+    eligibleSales.forEach(sale => {
+      const sanitizedOriginalData = sanitizeObjectForFirestore(sale.originalNumberData);
+      const newPortOutData: Omit<PortOutRecord, 'id'> = {
+        srNo: currentPortOutSrNo++,
+        mobile: sale.mobile,
+        sum: sale.sum,
+        soldTo: sale.soldTo,
+        salePrice: sale.salePrice,
+        paymentStatus: sale.paymentStatus,
+        uploadStatus: sale.uploadStatus,
+        saleDate: sale.saleDate,
+        upcStatus: sale.upcStatus,
+        createdBy: sale.createdBy,
+        originalNumberData: sanitizedOriginalData,
+        portOutDate: Timestamp.now(),
+      };
+      batch.set(doc(collection(db, 'portouts')), newPortOutData);
+      batch.delete(doc(db, 'sales', sale.id));
+    });
+
+    batch.commit().then(() => {
+      let description = `${eligibleSales.length} record(s) marked as ported out.`;
+      if (skippedCount > 0) {
+        description += ` ${skippedCount} record(s) were skipped because their UPC was not generated.`;
+      }
+      addActivity({
+        employeeName: user.displayName || 'User',
+        action: 'Bulk Port Out',
+        description: `Bulk ported out ${eligibleSales.length} record(s).`
+      });
+       toast({
+        title: "Bulk Port Out Successful",
+        description: description,
+      });
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'sales/portouts',
+        operation: 'write',
+        requestResourceData: { info: `Bulk port out of ${eligibleSales.length} sales.` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+  };
 
   const markReminderDone = (id: string, note?: string) => {
     if (!db || !user) return;
@@ -1264,6 +1327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateSaleStatuses,
     bulkUpdateUpcStatus,
     markSaleAsPortedOut,
+    bulkMarkAsPortedOut,
     markReminderDone,
     addActivity,
     assignNumbersToEmployee,
