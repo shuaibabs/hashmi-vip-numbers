@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { useAuth } from '@/context/auth-context';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, ArrowLeft, Trash, User } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Trash, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useNavigation } from '@/context/navigation-context';
+import type { User } from '@/lib/data';
 
 export default function ManageUsersPage() {
   const { users: allUsers, deleteUser, loading } = useApp();
