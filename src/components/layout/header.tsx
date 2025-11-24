@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell, LogOut, Moon, Sun, UserPlus } from "lucide-react";
+import { Bell, LogOut, Moon, Sun, UserPlus, Users } from "lucide-react";
 import { Button } from "../ui/button";
 import { SidebarTrigger } from "../ui/sidebar";
 import { ThemeToggle } from "../theme-toggle";
@@ -147,10 +147,16 @@ export function AppHeader() {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                              {role === 'admin' && (
-                                <DropdownMenuItem onClick={() => navigate('/signup')}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    <span>Create User</span>
-                                </DropdownMenuItem>
+                                <>
+                                    <DropdownMenuItem onClick={() => navigate('/signup')}>
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        <span>Create User</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => navigate('/users')}>
+                                        <Users className="mr-2 h-4 w-4" />
+                                        <span>Manage Users</span>
+                                    </DropdownMenuItem>
+                                </>
                              )}
                             <DropdownMenuItem onClick={handleLogout}>
                                 <LogOut className="mr-2 h-4 w-4" />
