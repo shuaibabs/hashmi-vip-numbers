@@ -1,8 +1,8 @@
 
 "use client";
 
-import { usePathname, useRouter as useNextRouter } from 'next/navigation';
-import { default as NextRouter } from 'next/router';
+import { usePathname } from 'next/navigation';
+import NextRouter from 'next/router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { AppHeader } from '@/components/layout/header';
@@ -12,8 +12,6 @@ import { Spinner } from '../ui/spinner';
 
 export function ProtectedLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  const router = useNextRouter();
-  const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isClient, setIsClient] = useState(false);
   
@@ -23,7 +21,8 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleStart = (url: string) => {
-        if (url !== pathname) {
+        // Check if the new URL is different from the current one
+        if (url !== window.location.pathname) {
             setIsNavigating(true);
         }
     };
@@ -40,17 +39,8 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
         NextRouter.events.off('routeChangeComplete', handleComplete);
         NextRouter.events.off('routeChangeError', handleComplete);
     };
-  }, [pathname]);
+  }, []);
 
-  useEffect(() => {
-    // If auth is done loading and there's no user, they should be on the login page.
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-
-  // While loading, or if no user (and the redirect is in progress), show a spinner.
   if (loading || !user) {
     return (
         <div className="flex h-screen w-screen items-center justify-center">
@@ -59,7 +49,6 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // If we get here, user is authenticated and not on a public page. Render the app.
   return (
     <SidebarProvider>
         {isClient && isNavigating && (
