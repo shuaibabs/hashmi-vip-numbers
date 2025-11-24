@@ -95,7 +95,6 @@ export function AppSidebar() {
       <SidebarFooter>
         <Separator className="my-2 bg-sidebar-border" />
          <div className="p-4 text-center text-xs text-sidebar-foreground/70 space-y-2 group-data-[collapsible=icon]:hidden">
-            <p>&copy; {new Date().getFullYear()} Hashmi VIP Numbers. <br/> All rights reserved.</p>
             <div className="flex items-center justify-center gap-2">
                 <span>Powered by</span>
                  <a href="https://trionex.digital" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 font-semibold text-sidebar-foreground/90 hover:text-sidebar-foreground transition-colors">
