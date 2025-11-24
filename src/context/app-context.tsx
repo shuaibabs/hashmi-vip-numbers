@@ -103,6 +103,7 @@ type AppContextType = {
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; }) => void;
+  bulkUpdateUpcStatus: (saleIds: string[], upcStatus: 'Pending' | 'Generated') => void;
   markSaleAsPortedOut: (saleId: string) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
@@ -465,6 +466,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
             path: saleDocRef.path,
             operation: 'update',
             requestResourceData: statuses,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const bulkUpdateUpcStatus = (saleIds: string[], upcStatus: 'Pending' | 'Generated') => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    const updateData = { upcStatus };
+    saleIds.forEach(id => {
+      const docRef = doc(db, 'sales', id);
+      batch.update(docRef, updateData);
+    });
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Bulk Updated UPC Status',
+            description: `Updated UPC status for ${saleIds.length} sale(s) to ${upcStatus}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'sales',
+            operation: 'update',
+            requestResourceData: {info: `Bulk UPC status update for ${saleIds.length} sales`},
         });
         errorEmitter.emit('permission-error', permissionError);
     });
@@ -1237,6 +1262,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateNumberStatus,
     updateUploadStatus,
     updateSaleStatuses,
+    bulkUpdateUpcStatus,
     markSaleAsPortedOut,
     markReminderDone,
     addActivity,

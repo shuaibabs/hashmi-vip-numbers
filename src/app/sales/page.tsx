@@ -10,7 +10,7 @@ import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, ArrowUpDown, Trash, LogOut, Download } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Trash, LogOut, Download, Edit } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { EditSaleStatusModal } from '@/components/edit-sale-status-modal';
 import { SaleRecord } from '@/lib/data';
@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import Papa from 'papaparse';
+import { BulkEditUpcModal } from '@/components/bulk-edit-upc-modal';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -32,6 +33,7 @@ export default function SalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isBulkUpcModalOpen, setIsBulkUpcModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [saleToCancel, setSaleToCancel] = useState<SaleRecord | null>(null);
   const [saleToPortOut, setSaleToPortOut] = useState<SaleRecord | null>(null);
@@ -183,6 +185,13 @@ export default function SalesPage() {
     setSelectedRows([]);
   }
 
+  const closeBulkUpcModal = () => {
+    setIsBulkUpcModalOpen(false);
+    setSelectedRows([]);
+  };
+
+  const selectedSaleRecords = sales.filter(s => selectedRows.includes(s.id));
+
 
   const requestSort = (key: SortableColumn) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -228,10 +237,16 @@ export default function SalesPage() {
               </SelectContent>
             </Select>
             {selectedRows.length > 0 && (
-                <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Selected ({selectedRows.length})
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export Selected ({selectedRows.length})
+                    </Button>
+                     <Button variant="outline" onClick={() => setIsBulkUpcModalOpen(true)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit UPC Status ({selectedRows.length})
+                    </Button>
+                </div>
             )}
           </div>
         </div>
@@ -353,6 +368,11 @@ export default function SalesPage() {
             sale={selectedSale}
         />
       )}
+      <BulkEditUpcModal
+        isOpen={isBulkUpcModalOpen}
+        onClose={closeBulkUpcModal}
+        selectedSales={selectedSaleRecords}
+      />
       <AlertDialog open={!!saleToCancel} onOpenChange={() => setSaleToCancel(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
