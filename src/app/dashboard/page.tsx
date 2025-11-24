@@ -5,7 +5,6 @@ import { useApp } from "@/context/app-context";
 import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { StatusChart } from "@/components/dashboard/status-chart";
-import { LatestActivities } from "@/components/dashboard/latest-activities";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/context/auth-context";
 
@@ -15,7 +14,7 @@ export default function DashboardPage() {
 
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
-  const pendingUploads = reminders.filter(r => r.status === 'Upload Pending').length;
+  const pendingUploads = reminders.filter(r => r.status === 'Pending').length;
   const salesCount = sales.length;
   const portOutsCount = portOuts.length;
 
