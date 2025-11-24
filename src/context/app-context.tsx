@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -870,20 +871,25 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     
     const assignedToUser = user.displayName || 'User';
 
-    const newNumber: Omit<NumberRecord, 'id'> = {
-      ...data,
-      srNo: getNextSrNo(numbers),
-      sum: calculateDigitalRoot(data.mobile),
-      upcStatus: 'Pending',
-      rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
-      safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
-      accountName: data.numberType === 'COCP' ? data.accountName : undefined,
-      assignedTo: assignedToUser,
-      name: assignedToUser,
-      checkInDate: null,
-      createdBy: user.uid,
-      purchaseDate: Timestamp.fromDate(data.purchaseDate),
+    const newNumber: Omit<NumberRecord, 'id' | 'accountName'> & { accountName?: string } = {
+        ...data,
+        srNo: getNextSrNo(numbers),
+        sum: calculateDigitalRoot(data.mobile),
+        upcStatus: 'Pending',
+        rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+        safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
+        assignedTo: assignedToUser,
+        name: assignedToUser,
+        checkInDate: null,
+        createdBy: user.uid,
+        purchaseDate: Timestamp.fromDate(data.purchaseDate),
     };
+    
+    if (data.numberType === 'COCP') {
+        newNumber.accountName = data.accountName;
+    }
+
+
     const numbersCollection = collection(db, 'numbers');
     addDoc(numbersCollection, newNumber).then(() => {
         addActivity({
@@ -1302,7 +1308,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         
         const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
         
-        const newRecord = {
+        const newRecord: any = {
             mobile: mobile,
             name: assignedToUser,
             assignedTo: assignedToUser,
@@ -1315,11 +1321,15 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             salePrice: isNaN(salePrice) ? 0 : salePrice,
             purchaseDate: purchaseDate,
             safeCustodyDate: safeCustodyDate,
-            accountName: numberType === 'COCP' ? accountName : undefined,
             currentLocation: record.CurrentLocation || 'N/A',
             locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
             notes: record.Notes || '',
         };
+
+        if (numberType === 'COCP') {
+            newRecord.accountName = accountName;
+        }
+
         validRecords.push(newRecord);
         existingMobiles.add(mobile);
     }
@@ -1339,7 +1349,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             }
         }
         
-        const newNumber: Omit<NumberRecord, 'id'> = {
+        const newNumber: Omit<NumberRecord, 'id' | 'accountName'> & { accountName?: string } = {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
@@ -1350,6 +1360,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             rtsDate: rtsDateForDb,
             safeCustodyDate: record.safeCustodyDate ? Timestamp.fromDate(record.safeCustodyDate) : null,
         };
+
+        if (record.numberType === 'COCP') {
+          newNumber.accountName = record.accountName;
+        }
+        
         batch.set(newDocRef, newNumber);
       });
 
@@ -1453,3 +1468,4 @@ export function useApp() {
 }
 
     
+
