@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -14,6 +13,7 @@ import {
   NewDealerPurchaseData,
   type PortOutRecord,
   NewReminderData,
+  type User,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast, isValid, parse } from 'date-fns';
@@ -95,6 +95,7 @@ type AppContextType = {
   portOuts: PortOutRecord[];
   reminders: Reminder[];
   activities: Activity[];
+  users: User[];
   employees: string[];
   dealerPurchases: DealerPurchaseRecord[];
   seenActivitiesCount: number;
@@ -125,6 +126,7 @@ type AppContextType = {
   deleteActivities: (activityIds: string[]) => void;
   updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
   deleteNumbers: (numberIds: string[]) => void;
+  deleteUser: (uid: string) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -140,6 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
   
   const [roleFilteredActivities, setRoleFilteredActivities] = useState<Activity[]>([]);
@@ -239,6 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReminders([]);
       setActivities([]);
       setDealerPurchases([]);
+      setUsers([]);
       setEmployees([]);
       setNumbersLoading(false);
       setSalesLoading(false);
@@ -267,7 +271,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { name: 'reminders', setter: setReminders, loader: setRemindersLoading },
       { name: 'activities', setter: setActivities, loader: setActivitiesLoading },
       { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
-      { name: 'users', setter: (data: any[]) => setEmployees(data.map(u => u.displayName)), loader: setUsersLoading },
+      { name: 'users', setter: (data: User[]) => {
+          setUsers(data);
+          setEmployees(data.map(u => u.displayName))
+        }, 
+        loader: setUsersLoading 
+      },
     ];
 
     collectionMappings.forEach(({ name, setter, loader }) => {
@@ -868,6 +877,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       upcStatus: 'Pending',
       rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
       safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
+      accountName: data.numberType === 'COCP' ? data.accountName : null,
       assignedTo: assignedToUser,
       name: assignedToUser,
       checkInDate: null,
@@ -1172,6 +1182,40 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       errorEmitter.emit('permission-error', permissionError);
     });
   };
+  
+  const deleteUser = (uid: string) => {
+    if (!db || !user || role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You do not have permission to delete users.",
+      });
+      return;
+    }
+    if (uid === user.uid) {
+        toast({
+            variant: "destructive",
+            title: "Action Forbidden",
+            description: "You cannot delete your own account.",
+        });
+        return;
+    }
+    const docRef = doc(db, 'users', uid);
+    deleteDoc(docRef).then(() => {
+        const deletedUser = users.find(u => u.uid === uid);
+        addActivity({
+            employeeName: user.displayName || 'Admin',
+            action: 'Deleted User',
+            description: `Deleted the user account for ${deletedUser?.displayName || 'Unknown'}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
 
 
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
@@ -1363,6 +1407,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     portOuts,
     reminders: roleFilteredReminders,
     activities: roleFilteredActivities,
+    users,
     employees,
     dealerPurchases,
     seenActivitiesCount,
@@ -1393,6 +1438,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     deleteActivities,
     updateSafeCustodyDate,
     deleteNumbers,
+    deleteUser,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

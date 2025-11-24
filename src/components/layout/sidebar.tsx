@@ -25,6 +25,7 @@ import {
   ShoppingCart,
   LogOut,
   UserPlus,
+  Users,
   Database,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -39,6 +40,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
   { href: '/signup', label: 'Create User', icon: UserPlus, adminOnly: true },
+  { href: '/users', label: 'Manage Users', icon: Users, adminOnly: true },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/sales', label: 'Sales', icon: DollarSign, adminOnly: false },
   { href: '/port-out', label: 'Port Out', icon: LogOut, adminOnly: false },
@@ -119,3 +121,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+

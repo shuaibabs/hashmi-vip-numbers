@@ -8,6 +8,7 @@ export type User = {
   email: string;
   displayName: string;
   role: 'admin' | 'employee';
+  id: string; // Firestore document ID is the same as uid
 };
 
 // Raw record from Firestore
