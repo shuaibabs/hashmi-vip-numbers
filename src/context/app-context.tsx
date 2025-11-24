@@ -121,6 +121,7 @@ type AppContextType = {
   addReminder: (data: NewReminderData) => void;
   deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
+  bulkUpdatePortOutPaymentStatus: (portOutIds: string[], paymentStatus: 'Pending' | 'Done') => void;
   deleteActivities: (activityIds: string[]) => void;
   updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
   deleteNumbers: (numberIds: string[]) => void;
@@ -1075,6 +1076,34 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
+  const bulkUpdatePortOutPaymentStatus = (portOutIds: string[], paymentStatus: 'Pending' | 'Done') => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    const updateData = { paymentStatus };
+    portOutIds.forEach(id => {
+      const docRef = doc(db, 'portouts', id);
+      batch.update(docRef, updateData);
+    });
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || 'User',
+            action: 'Bulk Updated Port Out Payment Status',
+            description: `Updated payment status for ${portOutIds.length} port out record(s) to ${paymentStatus}.`
+        });
+        toast({
+            title: "Update Successful",
+            description: `Updated payment status for ${portOutIds.length} record(s).`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'portouts',
+            operation: 'update',
+            requestResourceData: {info: `Bulk payment status update for ${portOutIds.length} records`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
   const updateSafeCustodyDate = (numberId: string, newDate: Date) => {
     if (!db || !user) return;
     const num = numbers.find(n => n.id === numberId);
@@ -1160,7 +1189,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
                 if (isValid(parsed)) return parsed;
             }
         }
-        // Excel date serial number handling removed
         return null;
     };
 
@@ -1343,6 +1371,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     addReminder,
     deleteDealerPurchases,
     updatePortOutStatus,
+    bulkUpdatePortOutPaymentStatus,
     deleteActivities,
     updateSafeCustodyDate,
     deleteNumbers,
@@ -1358,5 +1387,3 @@ export function useApp() {
   }
   return context;
 }
-
-    

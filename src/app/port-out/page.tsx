@@ -11,7 +11,7 @@ import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash, ArrowUpDown, MoreHorizontal, Download } from 'lucide-react';
+import { Trash, ArrowUpDown, MoreHorizontal, Download, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/context/auth-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EditPortOutStatusModal } from '@/components/edit-port-out-status-modal';
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
+import { BulkEditPortOutPaymentModal } from '@/components/bulk-edit-port-out-payment-modal';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -36,6 +37,7 @@ export default function PortOutPage() {
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'portOutDate', direction: 'descending' });
   const [selectedPortOut, setSelectedPortOut] = useState<PortOutRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
 
   const sortedPortOuts = useMemo(() => {
@@ -89,10 +91,11 @@ export default function PortOutPage() {
   };
 
   const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
-    if (checked === true) {
-      setSelectedRows(paginatedPortOuts.map(p => p.id));
+    const pageIds = paginatedPortOuts.map(p => p.id);
+    if (checked) {
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
     } else {
-       setSelectedRows(prev => prev.filter(id => !paginatedPortOuts.some(p => p.id === id)));
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
     }
   };
   
@@ -158,7 +161,6 @@ export default function PortOutPage() {
 
 
   const isAllOnPageSelected = paginatedPortOuts.length > 0 && paginatedPortOuts.every(p => selectedRows.includes(p.id));
-  const isSomeOnPageSelected = selectedRows.length > 0 && !isAllOnPageSelected;
 
   const requestSort = (key: SortableColumn) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -185,6 +187,12 @@ export default function PortOutPage() {
     </TableHead>
   );
 
+  const selectedPortOutRecords = portOuts.filter(p => selectedRows.includes(p.id));
+  
+  const closeBulkEditModal = () => {
+    setIsBulkEditModalOpen(false);
+    setSelectedRows([]);
+  }
 
   return (
     <>
@@ -230,10 +238,16 @@ export default function PortOutPage() {
               </SelectContent>
             </Select>
             {selectedRows.length > 0 && (
-                <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Selected ({selectedRows.length})
-                </Button>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export ({selectedRows.length})
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsBulkEditModalOpen(true)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Payment Status ({selectedRows.length})
+                    </Button>
+                </div>
             )}
           </div>
         </div>
@@ -244,8 +258,8 @@ export default function PortOutPage() {
               <TableHead className="w-12">
                 {role === 'admin' && (
                   <Checkbox
-                    checked={isAllOnPageSelected || (isSomeOnPageSelected && 'indeterminate')}
-                    onCheckedChange={(checked) => handleSelectAllOnPage(checked)}
+                    checked={isAllOnPageSelected}
+                    onCheckedChange={(checked) => handleSelectAllOnPage(checked === 'indeterminate' ? false : checked)}
                     aria-label="Select all on page"
                   />
                 )}
@@ -341,8 +355,11 @@ export default function PortOutPage() {
             portOut={selectedPortOut}
         />
       )}
+       <BulkEditPortOutPaymentModal
+        isOpen={isBulkEditModalOpen}
+        onClose={closeBulkEditModal}
+        selectedPortOuts={selectedPortOutRecords}
+      />
     </>
   );
 }
-
-    
