@@ -165,29 +165,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dealerPurchasesLoading ||
       usersLoading
     ));
+    
+  const getSeenCountKey = useCallback(() => {
+    return user ? `seenActivitiesCount_${user.uid}` : null;
+  }, [user]);
+
 
   useEffect(() => {
-    const storedCount = localStorage.getItem('seenActivitiesCount');
-    if (storedCount) {
-      setSeenActivitiesCount(Number(storedCount));
+    const seenCountKey = getSeenCountKey();
+    if (seenCountKey) {
+        const storedCount = localStorage.getItem(seenCountKey);
+        setSeenActivitiesCount(storedCount ? Number(storedCount) : 0);
+    } else {
+        setSeenActivitiesCount(0);
     }
-  }, []);
+  }, [getSeenCountKey]);
 
   useEffect(() => {
      if (activitiesLoading) return;
      const currentTotal = activities.length;
      // Adjust seen count if activities have been deleted
      if (seenActivitiesCount > currentTotal) {
-         setSeenActivitiesCount(currentTotal);
-         localStorage.setItem('seenActivitiesCount', String(currentTotal));
+         const seenCountKey = getSeenCountKey();
+         if (seenCountKey) {
+            setSeenActivitiesCount(currentTotal);
+            localStorage.setItem(seenCountKey, String(currentTotal));
+         }
      }
-  }, [activities, seenActivitiesCount, activitiesLoading]);
+  }, [activities, seenActivitiesCount, activitiesLoading, getSeenCountKey]);
 
   const markActivitiesAsSeen = useCallback(() => {
     const total = activities.length;
-    setSeenActivitiesCount(total);
-    localStorage.setItem('seenActivitiesCount', String(total));
-  }, [activities]);
+    const seenCountKey = getSeenCountKey();
+    if (seenCountKey) {
+        setSeenActivitiesCount(total);
+        localStorage.setItem(seenCountKey, String(total));
+    }
+  }, [activities, getSeenCountKey]);
 
   const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
@@ -1387,3 +1401,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
