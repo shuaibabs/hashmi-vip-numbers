@@ -7,6 +7,7 @@ import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { StatusChart } from "@/components/dashboard/status-chart";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/context/auth-context";
+import { LatestActivities } from "@/components/dashboard/latest-activities";
 
 export default function DashboardPage() {
   const { role } = useAuth();
