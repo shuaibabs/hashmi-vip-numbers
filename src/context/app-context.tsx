@@ -201,7 +201,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSeenActivitiesCount(total);
         localStorage.setItem(seenCountKey, String(total));
     }
-  }, [activities, getSeenCountKey]);
+  }, [activities.length, getSeenCountKey]);
 
   const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
@@ -1271,7 +1271,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             salePrice: isNaN(salePrice) ? 0 : salePrice,
             purchaseDate: purchaseDate,
             safeCustodyDate: safeCustodyDate,
-            accountName: numberType === 'COCP' ? accountName : undefined,
+            accountName: numberType === 'COCP' ? accountName : null,
             currentLocation: record.CurrentLocation || 'N/A',
             locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
             notes: record.Notes || '',
