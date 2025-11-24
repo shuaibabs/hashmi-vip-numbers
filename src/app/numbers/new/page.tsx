@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { useNavigation } from '@/context/navigation-context';
+import { usePathname } from 'next/navigation';
 
 const formSchema = z.object({
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
@@ -67,6 +68,7 @@ const formSchema = z.object({
 export default function NewNumberPage() {
   const { addNumber } = useApp();
   const { navigate, back } = useNavigation();
+  const pathname = usePathname();
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
   const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
@@ -91,7 +93,7 @@ export default function NewNumberPage() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     addNumber(values as NewNumberData);
-    navigate('/numbers');
+    navigate('/numbers', pathname);
   }
   
   const numberType = form.watch('numberType');
@@ -466,7 +468,7 @@ export default function NewNumberPage() {
           </Card>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => navigate('/numbers')}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => navigate('/numbers', pathname)}>Cancel</Button>
             <Button type="submit">
                 <Save className="mr-2 h-4 w-4" />
                 Save Number

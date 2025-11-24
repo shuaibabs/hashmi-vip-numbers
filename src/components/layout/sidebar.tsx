@@ -62,7 +62,7 @@ export function AppSidebar() {
   const { navigate } = useNavigation();
   
   const handleLinkClick = (href: string) => {
-    navigate(href);
+    navigate(href, pathname);
     if (isMobile) {
       setOpenMobile(false);
     }

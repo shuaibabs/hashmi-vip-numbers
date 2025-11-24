@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -29,6 +29,7 @@ export default function NumberDetailsPage() {
   const { id } = useParams();
   const { numbers, loading } = useApp();
   const { back } = useNavigation();
+  const pathname = usePathname();
 
   const numberId = Array.isArray(id) ? id[0] : id;
 

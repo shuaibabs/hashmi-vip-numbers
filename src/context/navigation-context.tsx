@@ -7,7 +7,7 @@ import { createContext, useContext, useState, type ReactNode, useCallback, useEf
 type NavigationContextType = {
   isNavigating: boolean;
   setIsNavigating: (isNavigating: boolean) => void;
-  navigate: (href: string, options?: { replace?: boolean }) => void;
+  navigate: (href: string, currentPathname: string, options?: { replace?: boolean }) => void;
   back: () => void;
 };
 
@@ -23,13 +23,15 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setIsNavigating(false);
   }, [pathname]);
 
-  const navigate = useCallback((href: string, options?: { replace?: boolean }) => {
-    // Show spinner immediately
-    setIsNavigating(true);
-    if (options?.replace) {
-        router.replace(href);
-    } else {
-        router.push(href);
+  const navigate = useCallback((href: string, currentPathname: string, options?: { replace?: boolean }) => {
+    // Only show spinner and navigate if the path is different
+    if (href !== currentPathname) {
+      setIsNavigating(true);
+      if (options?.replace) {
+          router.replace(href);
+      } else {
+          router.push(href);
+      }
     }
   }, [router]);
 

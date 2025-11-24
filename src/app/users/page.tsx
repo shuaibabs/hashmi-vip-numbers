@@ -15,12 +15,14 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useNavigation } from '@/context/navigation-context';
 import type { User } from '@/lib/data';
+import { usePathname } from 'next/navigation';
 
 export default function ManageUsersPage() {
   const { users: allUsers, deleteUser, loading } = useApp();
   const { user: currentUser, role: adminRole } = useAuth();
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { navigate } = useNavigation();
+  const pathname = usePathname();
 
   if (adminRole !== 'admin') {
     return (
@@ -30,7 +32,7 @@ export default function ManageUsersPage() {
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>You do not have permission to manage users.</AlertDescription>
         </Alert>
-        <Button variant="link" asChild className="mt-4" onClick={() => navigate('/dashboard')}>
+        <Button variant="link" asChild className="mt-4" onClick={() => navigate('/dashboard', pathname)}>
           <Link href="/dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard

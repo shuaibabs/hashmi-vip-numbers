@@ -26,9 +26,9 @@ export function MainLayout({ children }: { children: ReactNode }) {
     const isUserLoggedIn = !!user;
 
     if (isUserLoggedIn && pathIsPublic) {
-      navigate('/dashboard', { replace: true });
+      navigate('/dashboard', pathname, { replace: true });
     } else if (!isUserLoggedIn && !pathIsPublic) {
-      navigate('/login', { replace: true });
+      navigate('/login', pathname, { replace: true });
     }
   }, [user, loading, pathname, navigate]);
 

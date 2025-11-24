@@ -27,6 +27,7 @@ import { EditUploadStatusModal } from '@/components/edit-upload-status-modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { BulkSellNumberModal } from '@/components/bulk-sell-modal';
 import { useNavigation } from '@/context/navigation-context';
+import { usePathname } from 'next/navigation';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
@@ -34,6 +35,7 @@ export default function AllNumbersPage() {
   const { numbers, loading, isMobileNumberDuplicate, deleteNumbers } = useApp();
   const { role } = useAuth();
   const { navigate } = useNavigation();
+  const pathname = usePathname();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -229,7 +231,7 @@ export default function AllNumbersPage() {
       });
       return;
     }
-    navigate(`/numbers/new?mobile=${trimmedSearch}`);
+    navigate(`/numbers/new?mobile=${trimmedSearch}`, pathname);
   };
 
   return (
@@ -239,11 +241,11 @@ export default function AllNumbersPage() {
         description="Search, filter, and manage all numbers in the system."
       >
         <div className="flex flex-col sm:flex-row items-center gap-2">
-            <Button onClick={() => navigate('/numbers/new')} className="w-full sm:w-auto">
+            <Button onClick={() => navigate('/numbers/new', pathname)} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4"/>
                 New Number
             </Button>
-             <Button variant="outline" onClick={() => navigate('/import-export')} className="w-full sm:w-auto">
+             <Button variant="outline" onClick={() => navigate('/import-export', pathname)} className="w-full sm:w-auto">
                 <FileInput className="mr-2 h-4 w-4"/>
                 Import / Export
             </Button>
@@ -406,7 +408,7 @@ export default function AllNumbersPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/numbers/${num.id}`)}>View Details</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/numbers/${num.id}`, pathname)}>View Details</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Update RTS Status</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEditUpload(num)}>Edit Upload Status</DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -483,3 +485,4 @@ export default function AllNumbersPage() {
     
 
     
+

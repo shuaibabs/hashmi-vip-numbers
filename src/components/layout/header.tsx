@@ -19,6 +19,7 @@ import { useAuth } from "@/context/auth-context";
 import { getAuth, signOut } from "firebase/auth";
 import { useFirebaseApp } from "@/firebase";
 import { useNavigation } from "@/context/navigation-context";
+import { usePathname } from "next/navigation";
 
 function ActivityTime({ timestamp }: { timestamp: Date }) {
     const [timeAgo, setTimeAgo] = useState('');
@@ -42,6 +43,7 @@ export function AppHeader() {
     const { user, role } = useAuth();
     const app = useFirebaseApp();
     const { navigate } = useNavigation();
+    const pathname = usePathname();
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     
     const sortedActivities = [...activities]
@@ -54,12 +56,16 @@ export function AppHeader() {
         if (!app) return;
         const auth = getAuth(app);
         await signOut(auth);
-        navigate('/login');
+        navigate('/login', pathname);
     };
 
     const handleViewAllActivities = () => {
-        navigate('/activities');
+        navigate('/activities', pathname);
         setIsNotificationsOpen(false);
+    }
+
+    const handleAdminNavigation = (path: string) => {
+        navigate(path, pathname);
     }
 
     return (
@@ -125,8 +131,8 @@ export function AppHeader() {
                        </ScrollArea>
                        <Separator />
                        <div className="p-2">
-                           <Button variant="link" size="sm" className="w-full" asChild>
-                               <Link href="/activities" onClick={handleViewAllActivities}>View all activities</Link>
+                           <Button variant="link" size="sm" className="w-full" onClick={handleViewAllActivities}>
+                               View all activities
                            </Button>
                        </div>
                     </PopoverContent>
@@ -154,11 +160,11 @@ export function AppHeader() {
                             <DropdownMenuSeparator />
                              {role === 'admin' && (
                                 <>
-                                    <DropdownMenuItem onClick={() => navigate('/signup')}>
+                                    <DropdownMenuItem onClick={() => handleAdminNavigation('/signup')}>
                                         <UserPlus className="mr-2 h-4 w-4" />
                                         <span>Create User</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => navigate('/users')}>
+                                    <DropdownMenuItem onClick={() => handleAdminNavigation('/users')}>
                                         <Users className="mr-2 h-4 w-4" />
                                         <span>Manage Users</span>
                                     </DropdownMenuItem>

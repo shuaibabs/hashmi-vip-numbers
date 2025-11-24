@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { Auth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { useNavigation } from '@/context/navigation-context';
+import { usePathname } from 'next/navigation';
 
 const formSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -48,6 +49,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { navigate } = useNavigation();
+  const pathname = usePathname();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -68,7 +70,7 @@ export default function SignupPage() {
                 <AlertTitle>Access Denied</AlertTitle>
                 <AlertDescription>You do not have permission to create new users.</AlertDescription>
             </Alert>
-            <Button variant="link" asChild className="mt-4" onClick={() => navigate('/dashboard')}>
+            <Button variant="link" asChild className="mt-4" onClick={() => navigate('/dashboard', pathname)}>
                 <Link href="/dashboard">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Dashboard
