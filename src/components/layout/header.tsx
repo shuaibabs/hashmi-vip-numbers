@@ -42,6 +42,7 @@ export function AppHeader() {
     const { user, role } = useAuth();
     const app = useFirebaseApp();
     const { navigate } = useNavigation();
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     
     const sortedActivities = [...activities]
         .filter(activity => activity.timestamp) // Ensure timestamp is not null
@@ -55,6 +56,11 @@ export function AppHeader() {
         await signOut(auth);
         navigate('/login');
     };
+
+    const handleViewAllActivities = () => {
+        navigate('/activities');
+        setIsNotificationsOpen(false);
+    }
 
     return (
         <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -77,7 +83,7 @@ export function AppHeader() {
             </div>
 
             <div className="flex items-center gap-4">
-                <Popover>
+                <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="relative" onClick={markActivitiesAsSeen}>
                             <Bell className="h-5 w-5" />
@@ -120,7 +126,7 @@ export function AppHeader() {
                        <Separator />
                        <div className="p-2">
                            <Button variant="link" size="sm" className="w-full" asChild>
-                               <Link href="/activities" onClick={() => navigate('/activities')}>View all activities</Link>
+                               <Link href="/activities" onClick={handleViewAllActivities}>View all activities</Link>
                            </Button>
                        </div>
                     </PopoverContent>
