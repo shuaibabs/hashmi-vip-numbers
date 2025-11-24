@@ -34,7 +34,13 @@ import { Separator } from '../ui/separator';
 import { useAuth } from '@/context/auth-context';
 import { useNavigation } from '@/context/navigation-context';
 
-const navItems = [
+const navItems: {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  adminOnly: boolean;
+  devOnly?: boolean;
+}[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
   { href: '/signup', label: 'Create User', icon: UserPlus, adminOnly: true },
