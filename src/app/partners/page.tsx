@@ -129,7 +129,7 @@ export default function PartnersPage() {
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
               <SortableHeader column="partnerName" label="Partner Name" />
-              <SortableHeader column="purchaseFrom" label="Purchase From" />
+              <SortableHeader column="purchasePrice" label="Purchase Price" />
               <SortableHeader column="purchaseDate" label="Purchase Date" />
               <SortableHeader column="rtsDate" label="RTS Date" />
               <SortableHeader column="status" label="Status" />
@@ -147,7 +147,7 @@ export default function PartnersPage() {
                         <TableCell>{num.srNo}</TableCell>
                         <TableCell className="font-medium">{num.mobile}</TableCell>
                         <TableCell>{num.partnerName}</TableCell>
-                        <TableCell>{num.purchaseFrom}</TableCell>
+                        <TableCell>₹{num.purchasePrice.toLocaleString()}</TableCell>
                         <TableCell>{num.purchaseDate ? format(num.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                         <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                         <TableCell>
