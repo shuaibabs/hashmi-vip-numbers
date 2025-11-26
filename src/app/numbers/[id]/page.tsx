@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useNavigation } from '@/context/navigation-context';
 
 function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
-  if (!value) return null;
+  if (value === null || value === undefined || value === '') return null;
   return (
     <div className="grid grid-cols-2 gap-2">
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
@@ -87,6 +87,14 @@ export default function NumberDetailsPage() {
              <DetailItem label="Assigned To" value={number.assignedTo} />
              <DetailItem label="Assigned Name" value={number.name} />
              {number.numberType === 'COCP' && <DetailItem label="Account Name" value={number.accountName} />}
+          </div>
+
+          <Separator />
+
+          <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+            <h4 className="text-lg font-semibold col-span-full">Ownership Information</h4>
+            <DetailItem label="Ownership Type" value={number.ownershipType} />
+            {number.ownershipType === 'Partnership' && <DetailItem label="Partner Name" value={number.partnerName} />}
           </div>
 
           <Separator />

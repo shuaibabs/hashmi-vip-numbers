@@ -1,5 +1,4 @@
 
-
 import { Timestamp } from 'firebase/firestore';
 
 // Base User profile stored in Firestore
@@ -36,6 +35,8 @@ export type NumberRecord = {
   safeCustodyNotificationSent?: boolean;
   createdBy: string; // UID of user who created it
   accountName?: string;
+  ownershipType: 'Individual' | 'Partnership';
+  partnerName?: string;
 };
 
 // Type for creating a new number, omitting Firestore-generated fields

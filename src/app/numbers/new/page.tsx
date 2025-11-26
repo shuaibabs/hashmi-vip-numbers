@@ -39,6 +39,8 @@ const formSchema = z.object({
   rtsDate: z.date().optional(),
   safeCustodyDate: z.date().optional(),
   accountName: z.string().optional(),
+  ownershipType: z.enum(['Individual', 'Partnership']),
+  partnerName: z.string().optional(),
 }).refine(data => {
   if (data.status === 'Non-RTS') {
     return !!data.rtsDate;
@@ -63,6 +65,14 @@ const formSchema = z.object({
 }, {
     message: 'Account Name is required for COCP numbers.',
     path: ['accountName'],
+}).refine(data => {
+    if (data.ownershipType === 'Partnership') {
+        return !!data.partnerName && data.partnerName.length > 0;
+    }
+    return true;
+}, {
+    message: 'Partner Name is required for Partnership ownership.',
+    path: ['partnerName'],
 });
 
 export default function NewNumberPage() {
@@ -88,6 +98,8 @@ export default function NewNumberPage() {
       status: 'Non-RTS',
       uploadStatus: 'Pending',
       accountName: '',
+      ownershipType: 'Individual',
+      partnerName: '',
     },
   });
 
@@ -97,6 +109,7 @@ export default function NewNumberPage() {
   }
   
   const numberType = form.watch('numberType');
+  const ownershipType = form.watch('ownershipType');
 
   return (
     <>
@@ -263,6 +276,53 @@ export default function NewNumberPage() {
                 </div>
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardHeader>
+                <CardTitle>Ownership Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="ownershipType"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Ownership Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select ownership type" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Individual">Individual</SelectItem>
+                                        <SelectItem value="Partnership">Partnership</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    {ownershipType === 'Partnership' && (
+                        <FormField
+                            control={form.control}
+                            name="partnerName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Partner Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Enter partner's name" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+                </div>
+            </CardContent>
+          </Card>
+
 
           <Card>
             <CardHeader>
@@ -328,7 +388,7 @@ export default function NewNumberPage() {
                               mode="single"
                               selected={field.value}
                               onSelect={(date) => {
-                                field.onChange(date);
+                                if(date) field.onChange(date);
                                 setIsRtsDatePickerOpen(false);
                               }}
                               disabled={(date) => date < new Date() || date < new Date("1900-01-01")}

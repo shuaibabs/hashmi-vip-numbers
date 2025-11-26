@@ -871,7 +871,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     
     const assignedToUser = user.displayName || 'User';
 
-    const newNumber: Omit<NumberRecord, 'id' | 'accountName'> & { accountName?: string } = {
+    const newNumber: Partial<NumberRecord> = {
         ...data,
         srNo: getNextSrNo(numbers),
         sum: calculateDigitalRoot(data.mobile),
@@ -884,11 +884,14 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         createdBy: user.uid,
         purchaseDate: Timestamp.fromDate(data.purchaseDate),
     };
-    
-    if (data.numberType === 'COCP') {
-        newNumber.accountName = data.accountName;
-    }
 
+    if (data.ownershipType !== 'Partnership') {
+        delete newNumber.partnerName;
+    }
+    
+    if (data.numberType !== 'COCP') {
+        delete newNumber.accountName;
+    }
 
     const numbersCollection = collection(db, 'numbers');
     addDoc(numbersCollection, newNumber).then(() => {
@@ -1279,6 +1282,14 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         
         const numberType = ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid';
 
+        const ownershipType = ['Individual', 'Partnership'].includes(record['Ownership Type']) ? record['Ownership Type'] : 'Individual';
+        const partnerName = record['Partner Name']?.trim();
+
+        if (ownershipType === 'Partnership' && !partnerName) {
+            failedRecords.push({ record, reason: 'Partner Name is required for Partnership ownership.' });
+            continue;
+        }
+
         const safeCustodyDate = parseDate(record.SafeCustodyDate);
         if (numberType === 'COCP' && !safeCustodyDate) {
             failedRecords.push({ record, reason: 'Invalid or missing SafeCustodyDate (required for COCP).' });
@@ -1324,6 +1335,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             currentLocation: record.CurrentLocation || 'N/A',
             locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
             notes: record.Notes || '',
+            ownershipType: ownershipType,
+            partnerName: partnerName || '',
         };
 
         if (numberType === 'COCP') {
@@ -1349,7 +1362,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             }
         }
         
-        const newNumber: Omit<NumberRecord, 'id'> = {
+        const newNumber: Partial<NumberRecord> = {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
@@ -1362,10 +1375,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         };
 
         // Conditionally add accountName to avoid sending undefined to Firestore
-        if (newNumber.numberType === 'COCP') {
-          (newNumber as any).accountName = newNumber.accountName || undefined;
-        } else {
-            delete (newNumber as any).accountName;
+        if (newNumber.numberType !== 'COCP') {
+          delete newNumber.accountName;
+        }
+        if (newNumber.ownershipType !== 'Partnership') {
+          delete newNumber.partnerName;
         }
         
         batch.set(newDocRef, newNumber);
@@ -1471,5 +1485,3 @@ export function useApp() {
 }
 
     
-
-

@@ -26,7 +26,7 @@ type FailedRecord = {
 };
 
 const ITEMS_PER_PAGE = 10;
-const REQUIRED_HEADERS = ['Mobile', 'NumberType', 'PurchaseFrom', 'PurchasePrice', 'PurchaseDate', 'CurrentLocation', 'LocationType', 'Status'];
+const REQUIRED_HEADERS = ['Mobile', 'NumberType', 'PurchaseFrom', 'PurchasePrice', 'PurchaseDate', 'CurrentLocation', 'LocationType', 'Status', 'Ownership Type'];
 
 
 export default function ImportExportPage() {
@@ -61,6 +61,8 @@ export default function ImportExportPage() {
         "Account Name": n.accountName,
         "Purchase Date": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
         "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
+        "Ownership Type": n.ownershipType,
+        "Partner Name": n.partnerName,
     }));
 
     const csv = Papa.unparse(formattedData);
@@ -252,7 +254,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status. Optional: SalePrice, Notes, UploadStatus. Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, Ownership Type. Optional: SalePrice, Notes, UploadStatus, Partner Name (required if Ownership Type is Partnership). Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP').</p>
              </CardContent>
            </Card>
            <Card>
