@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -28,7 +29,7 @@ type SortableColumn = keyof DealerPurchaseRecord;
 
 export default function DealerPurchasesPage() {
   const { dealerPurchases, loading, deleteDealerPurchases, addActivity } = useApp();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -152,7 +153,7 @@ export default function DealerPurchasesPage() {
     }
     exportToCsv(selectedData, 'dealer_purchases_export.csv');
     addActivity({
-        employeeName: 'Admin',
+        employeeName: user?.displayName || 'User',
         action: 'Exported Data',
         description: `Exported ${selectedData.length} selected dealer purchase(s) to CSV.`
     });

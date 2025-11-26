@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -29,7 +30,7 @@ type SortableColumn = keyof PortOutRecord;
 
 export default function PortOutPage() {
   const { portOuts, loading, deletePortOuts, addActivity } = useApp();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -148,7 +149,7 @@ export default function PortOutPage() {
     }
     exportToCsv(selectedData, 'port_out_history_export.csv');
     addActivity({
-        employeeName: 'Admin',
+        employeeName: user?.displayName || 'User',
         action: 'Exported Data',
         description: `Exported ${selectedData.length} selected port out record(s) to CSV.`
     });

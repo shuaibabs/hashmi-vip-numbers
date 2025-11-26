@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EditCocpDateModal } from '@/components/edit-cocp-date-modal';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -28,6 +29,7 @@ type SortableColumn = keyof NumberRecord;
 
 export default function CocpPage() {
   const { numbers, loading, addActivity } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -145,7 +147,7 @@ export default function CocpPage() {
     }
     exportToCsv(selectedData, 'cocp_numbers_export.csv');
      addActivity({
-        employeeName: 'Admin',
+        employeeName: user?.displayName || 'User',
         action: 'Exported Data',
         description: `Exported ${selectedData.length} selected COCP number(s) to CSV.`
     });

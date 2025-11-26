@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -21,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import Papa from 'papaparse';
 import { BulkEditUpcModal } from '@/components/bulk-edit-upc-modal';
+import { useAuth } from '@/context/auth-context';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -29,6 +31,7 @@ type SortableColumn = keyof SaleRecord;
 
 export default function SalesPage() {
   const { sales, loading, cancelSale, markSaleAsPortedOut, addActivity, bulkMarkAsPortedOut } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -175,7 +178,7 @@ export default function SalesPage() {
     }
     exportToCsv(selectedData, 'sales_export.csv');
     addActivity({
-        employeeName: 'Admin',
+        employeeName: user?.displayName || 'User',
         action: 'Exported Data',
         description: `Exported ${selectedData.length} selected sale(s) to CSV.`
     });
