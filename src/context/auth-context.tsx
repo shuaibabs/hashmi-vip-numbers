@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const newRole = isFirstUser ? 'admin' : 'employee';
             const newUser: User = {
               uid: firebaseUser.uid,
+              id: firebaseUser.uid,
               email: firebaseUser.email || '',
               displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'New User',
               role: newRole,
