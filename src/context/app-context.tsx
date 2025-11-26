@@ -1349,7 +1349,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             }
         }
         
-        const newNumber: Omit<NumberRecord, 'id' | 'accountName'> & { accountName?: string } = {
+        const newNumber: Omit<NumberRecord, 'id'> = {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
@@ -1361,8 +1361,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             safeCustodyDate: record.safeCustodyDate ? Timestamp.fromDate(record.safeCustodyDate) : null,
         };
 
-        if (record.numberType === 'COCP') {
-          newNumber.accountName = record.accountName;
+        // Conditionally add accountName to avoid sending undefined to Firestore
+        if (newNumber.numberType === 'COCP') {
+          (newNumber as any).accountName = newNumber.accountName || undefined;
+        } else {
+            delete (newNumber as any).accountName;
         }
         
         batch.set(newDocRef, newNumber);
@@ -1468,4 +1471,5 @@ export function useApp() {
 }
 
     
+
 
