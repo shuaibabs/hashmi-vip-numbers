@@ -128,11 +128,11 @@ export default function PartnersPage() {
             <TableRow>
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
+              <SortableHeader column="sum" label="Sum" />
               <SortableHeader column="partnerName" label="Partner Name" />
               <SortableHeader column="purchasePrice" label="Purchase Price" />
               <SortableHeader column="purchaseDate" label="Purchase Date" />
-              <SortableHeader column="rtsDate" label="RTS Date" />
-              <SortableHeader column="status" label="Status" />
+              <SortableHeader column="salePrice" label="Sale Price" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -146,13 +146,11 @@ export default function PartnersPage() {
                     >
                         <TableCell>{num.srNo}</TableCell>
                         <TableCell className="font-medium">{num.mobile}</TableCell>
+                        <TableCell>{num.sum}</TableCell>
                         <TableCell>{num.partnerName}</TableCell>
                         <TableCell>₹{num.purchasePrice.toLocaleString()}</TableCell>
                         <TableCell>{num.purchaseDate ? format(num.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                        <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                        <TableCell>
-                            <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
-                        </TableCell>
+                        <TableCell>₹{Number(num.salePrice).toLocaleString()}</TableCell>
                         <TableCell className="text-right">
                            <Button variant="outline" size="sm" onClick={() => navigate(`/numbers/${num.id}`, pathname)}>
                                 View Details
