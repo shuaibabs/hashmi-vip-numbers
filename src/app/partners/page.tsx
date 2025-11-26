@@ -130,8 +130,8 @@ export default function PartnersPage() {
               <SortableHeader column="mobile" label="Number" />
               <SortableHeader column="partnerName" label="Partner Name" />
               <SortableHeader column="sum" label="Sum" />
+              <SortableHeader column="salePrice" label="Sale Price" />
               <SortableHeader column="status" label="Status" />
-              <SortableHeader column="purchaseDate" label="Purchase Date" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -147,10 +147,10 @@ export default function PartnersPage() {
                         <TableCell className="font-medium">{num.mobile}</TableCell>
                         <TableCell>{num.partnerName}</TableCell>
                         <TableCell>{num.sum}</TableCell>
+                        <TableCell>₹{Number(num.salePrice).toLocaleString()}</TableCell>
                         <TableCell>
                             <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
                         </TableCell>
-                        <TableCell>{num.purchaseDate ? format(num.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                         <TableCell className="text-right">
                            <Button variant="outline" size="sm" onClick={() => navigate(`/numbers/${num.id}`, pathname)}>
                                 View Details
