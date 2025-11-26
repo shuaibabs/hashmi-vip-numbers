@@ -28,6 +28,7 @@ import {
   UserPlus,
   Users,
   Database,
+  Handshake,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
@@ -43,6 +44,7 @@ const navItems: {
 }[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
+  { href: '/partners', label: 'Partners', icon: Handshake, adminOnly: false },
   { href: '/signup', label: 'Create User', icon: UserPlus, adminOnly: true },
   { href: '/users', label: 'Manage Users', icon: Users, adminOnly: true },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
