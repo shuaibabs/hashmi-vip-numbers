@@ -355,6 +355,8 @@ export default function AllNumbersPage() {
                 <SortableHeader column="mobile" label="Mobile" />
                 <SortableHeader column="sum" label="Sum" />
                 <SortableHeader column="numberType" label="Number Type" />
+                <SortableHeader column="ownershipType" label="Ownership Type" />
+                <SortableHeader column="partnerName" label="Partner Name" />
                 <SortableHeader column="uploadStatus" label="Upload Status" />
                 <SortableHeader column="assignedTo" label="Assigned To" />
                 <SortableHeader column="status" label="Status" />
@@ -365,7 +367,7 @@ export default function AllNumbersPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                  <TableSpinner colSpan={11} />
+                  <TableSpinner colSpan={13} />
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num) => (
                     <TableRow 
@@ -387,6 +389,8 @@ export default function AllNumbersPage() {
                     <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                     <TableCell>{num.sum}</TableCell>
                     <TableCell>{num.numberType}</TableCell>
+                    <TableCell>{num.ownershipType}</TableCell>
+                    <TableCell>{num.partnerName || 'N/A'}</TableCell>
                     <TableCell>
                         <Badge variant={num.uploadStatus === 'Done' ? 'secondary' : 'outline'}>
                             {num.uploadStatus}
@@ -424,7 +428,7 @@ export default function AllNumbersPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={13} className="h-24 text-center">
                         {searchTerm && `No number found for "${searchTerm}".`}
                         {!searchTerm && "No numbers found for the current filters."}
                         {searchTerm && (
@@ -486,3 +490,4 @@ export default function AllNumbersPage() {
 
     
 
+    
