@@ -11,34 +11,77 @@ import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown } from 'lucide-react';
-import { NumberRecord } from '@/lib/data';
+import type { NumberRecord, SaleRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
-import { Badge } from '@/components/ui/badge';
 import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
-
+import { Badge } from '@/components/ui/badge';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
-type SortableColumn = keyof NumberRecord;
+
+type CombinedPartnershipRecord = {
+  id: string;
+  srNo?: number;
+  mobile: string;
+  sum: number;
+  partnerName?: string;
+  purchasePrice: number;
+  purchaseDate: Timestamp;
+  salePrice: number | string;
+  saleDate: Timestamp | null;
+  status: 'Active' | 'Sold';
+};
+
+type SortableColumn = keyof CombinedPartnershipRecord;
 
 export default function PartnersPage() {
-  const { numbers, loading } = useApp();
+  const { numbers, sales, loading } = useApp();
   const { navigate } = useNavigation();
   const pathname = usePathname();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>(null);
 
-  const partnershipNumbers = useMemo(() => {
-    return numbers.filter(num => num.ownershipType === 'Partnership');
-  }, [numbers]);
+  const combinedPartnershipNumbers: CombinedPartnershipRecord[] = useMemo(() => {
+    const activePartnershipNumbers: CombinedPartnershipRecord[] = numbers
+      .filter(num => num.ownershipType === 'Partnership')
+      .map(num => ({
+        id: num.id,
+        srNo: num.srNo,
+        mobile: num.mobile,
+        sum: num.sum,
+        partnerName: num.partnerName,
+        purchasePrice: num.purchasePrice,
+        purchaseDate: num.purchaseDate,
+        salePrice: num.salePrice,
+        saleDate: null,
+        status: 'Active',
+      }));
+      
+    const soldPartnershipNumbers: CombinedPartnershipRecord[] = sales
+      .filter(sale => sale.originalNumberData?.ownershipType === 'Partnership')
+      .map(sale => ({
+        id: sale.id,
+        srNo: sale.srNo,
+        mobile: sale.mobile,
+        sum: sale.sum,
+        partnerName: sale.originalNumberData.partnerName,
+        purchasePrice: sale.originalNumberData.purchasePrice,
+        purchaseDate: sale.originalNumberData.purchaseDate,
+        salePrice: sale.salePrice,
+        saleDate: sale.saleDate,
+        status: 'Sold',
+      }));
+
+    return [...activePartnershipNumbers, ...soldPartnershipNumbers];
+  }, [numbers, sales]);
 
   const sortedNumbers = useMemo(() => {
-    let sortableItems = [...partnershipNumbers];
+    let sortableItems = [...combinedPartnershipNumbers];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof NumberRecord];
-        const bValue = b[sortConfig.key as keyof NumberRecord];
+        const aValue = a[sortConfig.key as keyof CombinedPartnershipRecord];
+        const bValue = b[sortConfig.key as keyof CombinedPartnershipRecord];
 
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
@@ -60,7 +103,7 @@ export default function PartnersPage() {
       });
     }
     return sortableItems;
-  }, [partnershipNumbers, sortConfig]);
+  }, [combinedPartnershipNumbers, sortConfig]);
 
   const totalPages = Math.ceil(sortedNumbers.length / itemsPerPage);
   const paginatedNumbers = sortedNumbers.slice(
@@ -106,7 +149,7 @@ export default function PartnersPage() {
     <>
       <PageHeader
         title="Partnership Numbers"
-        description="List of all numbers under a partnership agreement."
+        description="List of all numbers under a partnership agreement, including active and sold inventory."
       />
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
@@ -133,34 +176,44 @@ export default function PartnersPage() {
               <SortableHeader column="purchasePrice" label="Purchase Price" />
               <SortableHeader column="purchaseDate" label="Purchase Date" />
               <SortableHeader column="salePrice" label="Sale Price" />
+              <SortableHeader column="saleDate" label="Sale Date" />
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={8} />
+                <TableSpinner colSpan={10} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                     <TableRow 
-                        key={num.srNo} 
+                        key={num.id} 
                     >
-                        <TableCell>{num.srNo}</TableCell>
+                        <TableCell>{num.srNo ?? 'N/A'}</TableCell>
                         <TableCell className="font-medium">{num.mobile}</TableCell>
                         <TableCell>{num.sum}</TableCell>
-                        <TableCell>{num.partnerName}</TableCell>
+                        <TableCell>{num.partnerName ?? 'N/A'}</TableCell>
                         <TableCell>₹{num.purchasePrice.toLocaleString()}</TableCell>
                         <TableCell>{num.purchaseDate ? format(num.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                         <TableCell>₹{Number(num.salePrice).toLocaleString()}</TableCell>
+                        <TableCell>{num.saleDate ? format(num.saleDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant={num.status === 'Active' ? 'default' : 'secondary'} className={num.status === 'Active' ? 'bg-green-500/20 text-green-700' : ''}>
+                            {num.status}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
-                           <Button variant="outline" size="sm" onClick={() => navigate(`/numbers/${num.id}`, pathname)}>
-                                View Details
-                           </Button>
+                           {num.status === 'Active' && (
+                             <Button variant="outline" size="sm" onClick={() => navigate(`/numbers/${num.id}`, pathname)}>
+                                  View Details
+                             </Button>
+                           )}
                         </TableCell>
                     </TableRow>
                 ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={10} className="h-24 text-center">
                   No partnership numbers found.
                 </TableCell>
               </TableRow>
@@ -173,7 +226,7 @@ export default function PartnersPage() {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
-        totalItems={partnershipNumbers.length}
+        totalItems={combinedPartnershipNumbers.length}
       />
     </>
   );
