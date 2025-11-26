@@ -129,15 +129,16 @@ export default function PartnersPage() {
               <SortableHeader column="srNo" label="Sr.No" />
               <SortableHeader column="mobile" label="Number" />
               <SortableHeader column="partnerName" label="Partner Name" />
-              <SortableHeader column="sum" label="Sum" />
-              <SortableHeader column="salePrice" label="Sale Price" />
+              <SortableHeader column="purchaseFrom" label="Purchase From" />
+              <SortableHeader column="purchaseDate" label="Purchase Date" />
+              <SortableHeader column="rtsDate" label="RTS Date" />
               <SortableHeader column="status" label="Status" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={7} />
+                <TableSpinner colSpan={8} />
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                     <TableRow 
@@ -146,8 +147,9 @@ export default function PartnersPage() {
                         <TableCell>{num.srNo}</TableCell>
                         <TableCell className="font-medium">{num.mobile}</TableCell>
                         <TableCell>{num.partnerName}</TableCell>
-                        <TableCell>{num.sum}</TableCell>
-                        <TableCell>₹{Number(num.salePrice).toLocaleString()}</TableCell>
+                        <TableCell>{num.purchaseFrom}</TableCell>
+                        <TableCell>{num.purchaseDate ? format(num.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                        <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                         <TableCell>
                             <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
                         </TableCell>
@@ -160,7 +162,7 @@ export default function PartnersPage() {
                 ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No partnership numbers found.
                 </TableCell>
               </TableRow>
