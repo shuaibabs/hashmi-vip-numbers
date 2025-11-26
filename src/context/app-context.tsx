@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -1286,10 +1287,10 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         
         const numberType = ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid';
 
-        const ownershipTypeRaw = record.OwnershipType || record['OwnershipType'];
+        const ownershipTypeRaw = record.OwnershipType;
         const ownershipType = ['Individual', 'Partnership'].includes(ownershipTypeRaw) ? ownershipTypeRaw : 'Individual';
         
-        const partnerNameRaw = record.PartnerName || record['PartnerName'];
+        const partnerNameRaw = record.PartnerName;
         const partnerName = partnerNameRaw?.trim();
 
         if (ownershipType === 'Partnership' && !partnerName) {
@@ -1309,7 +1310,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             continue;
         }
 
-        const rtsDateValue = record.RTSDate || record['RTSDate '];
+        const rtsDateValue = record.RTSDate;
         let rtsDate: Date | null = null;
         if (status === 'Non-RTS') {
             rtsDate = parseDate(rtsDateValue);

@@ -150,6 +150,7 @@ export default function ImportExportPage() {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
+        transformHeader: header => header.trim(),
         complete: (results) => {
            const headers = results.meta.fields || [];
            const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
