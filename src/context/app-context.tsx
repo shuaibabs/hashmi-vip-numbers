@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -887,10 +886,15 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     if (data.ownershipType !== 'Partnership') {
         newNumber.partnerName = '';
+    } else {
+        newNumber.partnerName = data.partnerName;
     }
     
     if (data.numberType === 'COCP') {
         newNumber.accountName = data.accountName;
+    } else {
+        delete (newNumber as any).accountName;
+        delete (newNumber as any).safeCustodyDate;
     }
 
     const numbersCollection = collection(db, 'numbers');
@@ -1282,8 +1286,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         
         const numberType = ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid';
 
-        const ownershipType = ['Individual', 'Partnership'].includes(record.OwnershipType) ? record.OwnershipType : 'Individual';
-        const partnerName = record.PartnerName?.trim();
+        const ownershipTypeRaw = record.OwnershipType || record['OwnershipType'];
+        const ownershipType = ['Individual', 'Partnership'].includes(ownershipTypeRaw) ? ownershipTypeRaw : 'Individual';
+        
+        const partnerNameRaw = record.PartnerName || record['PartnerName'];
+        const partnerName = partnerNameRaw?.trim();
 
         if (ownershipType === 'Partnership' && !partnerName) {
             failedRecords.push({ record, reason: 'PartnerName is required for Partnership ownership.' });
@@ -1375,6 +1382,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
         if (newNumber.numberType !== 'COCP') {
           delete (newNumber as any).accountName;
+          delete (newNumber as any).safeCustodyDate;
         }
         if (newNumber.ownershipType !== 'Partnership') {
           delete (newNumber as any).partnerName;
@@ -1481,5 +1489,3 @@ export function useApp() {
   }
   return context;
 }
-
-    
