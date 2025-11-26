@@ -9,12 +9,12 @@ import { useTheme } from "next-themes";
 
 
 export function StatusChart() {
-  const { numbers, reminders, sales, portOuts } = useApp();
+  const { numbers, sales, portOuts } = useApp();
   const { theme } = useTheme();
   
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
-  const pendingUploads = reminders.filter(r => r.status === 'Upload Pending').length;
+  const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const salesCount = sales.length;
   const portOutsCount = portOuts.length;
 

@@ -15,7 +15,7 @@ export default function DashboardPage() {
 
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
-  const pendingUploads = reminders.filter(r => r.status === 'Pending').length;
+  const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const salesCount = sales.length;
   const portOutsCount = portOuts.length;
 
