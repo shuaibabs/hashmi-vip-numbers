@@ -889,8 +889,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         newNumber.partnerName = '';
     }
     
-    if (data.numberType !== 'COCP') {
-        newNumber.accountName = '';
+    if (data.numberType === 'COCP') {
+        newNumber.accountName = data.accountName;
     }
 
     const numbersCollection = collection(db, 'numbers');
@@ -1282,11 +1282,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         
         const numberType = ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid';
 
-        const ownershipType = ['Individual', 'Partnership'].includes(record['Ownership Type']) ? record['Ownership Type'] : 'Individual';
-        const partnerName = record['Partner Name']?.trim();
+        const ownershipType = ['Individual', 'Partnership'].includes(record.OwnershipType) ? record.OwnershipType : 'Individual';
+        const partnerName = record.PartnerName?.trim();
 
         if (ownershipType === 'Partnership' && !partnerName) {
-            failedRecords.push({ record, reason: 'Partner Name is required for Partnership ownership.' });
+            failedRecords.push({ record, reason: 'PartnerName is required for Partnership ownership.' });
             continue;
         }
 
@@ -1301,7 +1301,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             failedRecords.push({ record, reason: 'Missing AccountName (required for COCP).' });
             continue;
         }
-
 
         const rtsDateValue = record.RTSDate || record['RTSDate '];
         let rtsDate: Date | null = null;
