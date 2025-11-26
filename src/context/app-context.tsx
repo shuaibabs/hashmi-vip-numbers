@@ -886,15 +886,15 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     };
 
     if (data.ownershipType !== 'Partnership') {
-        delete newNumber.partnerName;
+        newNumber.partnerName = '';
     }
     
     if (data.numberType !== 'COCP') {
-        delete newNumber.accountName;
+        newNumber.accountName = '';
     }
 
     const numbersCollection = collection(db, 'numbers');
-    addDoc(numbersCollection, newNumber).then(() => {
+    addDoc(numbersCollection, sanitizeObjectForFirestore(newNumber)).then(() => {
         addActivity({
             employeeName: user.displayName || 'User',
             action: 'Added Number',
@@ -1304,6 +1304,14 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
 
         const rtsDateValue = record.RTSDate || record['RTSDate '];
+        let rtsDate: Date | null = null;
+        if (status === 'Non-RTS') {
+            rtsDate = parseDate(rtsDateValue);
+             if (!rtsDate) {
+                failedRecords.push({ record, reason: 'Invalid or missing RTSDate (required for Non-RTS status).' });
+                continue;
+            }
+        }
         
         const purchaseDate = parseDate(record.PurchaseDate);
         if (!purchaseDate) {
@@ -1326,7 +1334,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             numberType: numberType,
             status: status,
             uploadStatus: uploadStatus,
-            rtsDate: rtsDateValue || null,
+            rtsDate: rtsDate,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
@@ -1354,14 +1362,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       validRecords.forEach(record => {
         const newDocRef = doc(numbersCollection);
 
-        let rtsDateForDb: Timestamp | null = null;
-        if (record.status === 'Non-RTS' && record.rtsDate) {
-            const parsedRts = parseDate(record.rtsDate);
-            if (parsedRts) {
-                rtsDateForDb = Timestamp.fromDate(parsedRts);
-            }
-        }
-        
         const newNumber: Partial<NumberRecord> = {
             ...record,
             srNo: currentSrNo++,
@@ -1370,19 +1370,18 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             checkInDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
-            rtsDate: rtsDateForDb,
+            rtsDate: record.rtsDate ? Timestamp.fromDate(record.rtsDate) : null,
             safeCustodyDate: record.safeCustodyDate ? Timestamp.fromDate(record.safeCustodyDate) : null,
         };
 
-        // Conditionally add accountName to avoid sending undefined to Firestore
         if (newNumber.numberType !== 'COCP') {
-          delete newNumber.accountName;
+          delete (newNumber as any).accountName;
         }
         if (newNumber.ownershipType !== 'Partnership') {
-          delete newNumber.partnerName;
+          delete (newNumber as any).partnerName;
         }
         
-        batch.set(newDocRef, newNumber);
+        batch.set(newDocRef, sanitizeObjectForFirestore(newNumber));
       });
 
       await batch.commit().catch(async (serverError) => {
