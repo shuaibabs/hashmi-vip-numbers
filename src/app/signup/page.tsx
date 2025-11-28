@@ -101,6 +101,7 @@ export default function SignupPage() {
         const userDocRef = doc(db, 'users', newUser.uid);
         await setDoc(userDocRef, {
             uid: newUser.uid,
+            id: newUser.uid,
             email: values.email,
             displayName: values.displayName,
             role: values.role,
