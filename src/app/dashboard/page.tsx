@@ -8,16 +8,32 @@ import { StatusChart } from "@/components/dashboard/status-chart";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/context/auth-context";
 import { LatestActivities } from "@/components/dashboard/latest-activities";
+import { useMemo } from "react";
 
 export default function DashboardPage() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const { numbers, reminders, sales, portOuts } = useApp();
+
+  const roleFilteredSales = useMemo(() => {
+    if (role === 'admin') {
+      return sales;
+    }
+    return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
+  }, [sales, role, user?.displayName]);
+
+  const roleFilteredPortOuts = useMemo(() => {
+    if (role === 'admin') {
+      return portOuts;
+    }
+    return portOuts.filter(portOut => portOut.originalNumberData?.assignedTo === user?.displayName);
+  }, [portOuts, role, user?.displayName]);
+
 
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
-  const salesCount = sales.length;
-  const portOutsCount = portOuts.length;
+  const salesCount = roleFilteredSales.length;
+  const portOutsCount = roleFilteredPortOuts.length;
 
 
   const title = role === 'admin' ? "Admin Dashboard" : "My Dashboard";

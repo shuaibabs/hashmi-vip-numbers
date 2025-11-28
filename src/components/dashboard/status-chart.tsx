@@ -6,17 +6,33 @@ import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts"
 import { useApp } from "@/context/app-context";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/context/auth-context";
 
 
 export function StatusChart() {
+  const { user, role } = useAuth();
   const { numbers, sales, portOuts } = useApp();
   const { theme } = useTheme();
+
+  const roleFilteredSales = React.useMemo(() => {
+    if (role === 'admin') {
+      return sales;
+    }
+    return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
+  }, [sales, role, user?.displayName]);
+
+  const roleFilteredPortOuts = React.useMemo(() => {
+    if (role === 'admin') {
+      return portOuts;
+    }
+    return portOuts.filter(portOut => portOut.originalNumberData?.assignedTo === user?.displayName);
+  }, [portOuts, role, user?.displayName]);
   
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
-  const salesCount = sales.length;
-  const portOutsCount = portOuts.length;
+  const salesCount = roleFilteredSales.length;
+  const portOutsCount = roleFilteredPortOuts.length;
 
   const chartData = [
     { name: "RTS", value: rtsCount, fill: "hsl(var(--chart-2))" },

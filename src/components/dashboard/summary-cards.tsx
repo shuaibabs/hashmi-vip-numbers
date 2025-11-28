@@ -4,16 +4,34 @@
 import { useApp } from "@/context/app-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Smartphone, CheckCircle, Clock, UploadCloud, DollarSign, LogOut } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+import { useMemo } from "react";
 
 export function SummaryCards() {
+  const { user, role } = useAuth();
   const { numbers, sales, portOuts } = useApp();
+
+  const roleFilteredSales = useMemo(() => {
+    if (role === 'admin') {
+      return sales;
+    }
+    return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
+  }, [sales, role, user?.displayName]);
+
+  const roleFilteredPortOuts = useMemo(() => {
+    if (role === 'admin') {
+      return portOuts;
+    }
+    return portOuts.filter(portOut => portOut.originalNumberData?.assignedTo === user?.displayName);
+  }, [portOuts, role, user?.displayName]);
+
 
   const totalNumbers = numbers.length;
   const rtsNumbers = numbers.filter(n => n.status === 'RTS').length;
   const nonRtsNumbers = totalNumbers - rtsNumbers;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
-  const totalSales = sales.length;
-  const totalPortOuts = portOuts.length;
+  const totalSales = roleFilteredSales.length;
+  const totalPortOuts = roleFilteredPortOuts.length;
 
 
   const summaryData = [
