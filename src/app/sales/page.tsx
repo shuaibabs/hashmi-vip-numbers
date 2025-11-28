@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -22,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { BulkEditUpcModal } from '@/components/bulk-edit-upc-modal';
 import { useAuth } from '@/context/auth-context';
+import Papa from 'papaparse';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -448,3 +448,5 @@ export default function SalesPage() {
     </>
   );
 }
+
+    
