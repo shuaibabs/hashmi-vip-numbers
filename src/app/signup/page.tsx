@@ -114,16 +114,12 @@ export default function SignupPage() {
       form.reset();
 
     } catch (err: any) {
-      if (err instanceof FirebaseError) {
-        if (err.code === 'auth/email-already-in-use') {
-            setError('This email address is already in use.');
-        } else if (err.code === 'permission-denied') {
-            setError('Permission denied. Ensure you have admin rights and correct security rules.')
-        } else {
-            setError(err.message || 'An unexpected error occurred during user creation.');
-        }
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email address is already in use.');
+      } else if (err.code === 'permission-denied') {
+        setError('Permission denied. Ensure you have admin rights and correct security rules.')
       } else {
-        setError('An unexpected error occurred.');
+        setError(err.message || 'An unexpected error occurred during user creation.');
       }
     } finally {
       setLoading(false);
