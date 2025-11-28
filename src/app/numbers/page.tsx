@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -28,6 +28,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { BulkSellNumberModal } from '@/components/bulk-sell-modal';
 import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
+import { EditLocationModal } from '@/components/edit-location-modal';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
@@ -45,6 +46,7 @@ export default function AllNumbersPage() {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isBulkSellModalOpen, setIsBulkSellModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -132,6 +134,11 @@ export default function AllNumbersPage() {
     setSelectedNumber(number);
     setIsSellModalOpen(true);
   };
+  
+  const handleEditLocation = (number: NumberRecord) => {
+    setSelectedRows([number.id]);
+    setIsLocationModalOpen(true);
+  }
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -176,6 +183,15 @@ export default function AllNumbersPage() {
     setIsBulkSellModalOpen(false);
     setSelectedRows([]);
   };
+
+  const handleOpenLocationModal = () => {
+    setIsLocationModalOpen(true);
+  }
+
+  const closeLocationModal = () => {
+    setIsLocationModalOpen(false);
+    setSelectedRows([]);
+  }
   
   const handleDeleteSelected = () => {
     deleteNumbers(selectedRows);
@@ -327,6 +343,10 @@ export default function AllNumbersPage() {
                         </AlertDialogContent>
                     </AlertDialog>
                  )}
+                 <Button variant="outline" onClick={handleOpenLocationModal}>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Edit Location ({selectedRows.length})
+                </Button>
                  {role === 'admin' && (
                     <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
                         <UserPlus className="mr-2 h-4 w-4" />
@@ -415,6 +435,7 @@ export default function AllNumbersPage() {
                             <DropdownMenuItem onClick={() => navigate(`/numbers/${num.id}`, pathname)}>View Details</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Update RTS Status</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEditUpload(num)}>Edit Upload Status</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditLocation(num)}>Edit Location</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={() => handleSellNumber(num)}>
                             <DollarSign className="mr-2 h-4 w-4" />
@@ -472,6 +493,11 @@ export default function AllNumbersPage() {
       <BulkSellNumberModal
         isOpen={isBulkSellModalOpen}
         onClose={closeBulkSellModal}
+        selectedNumbers={selectedNumberRecords}
+      />
+      <EditLocationModal 
+        isOpen={isLocationModalOpen}
+        onClose={closeLocationModal}
         selectedNumbers={selectedNumberRecords}
       />
       {role === 'admin' && (

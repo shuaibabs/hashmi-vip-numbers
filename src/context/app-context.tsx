@@ -128,6 +128,7 @@ type AppContextType = {
   updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
   deleteNumbers: (numberIds: string[]) => void;
   deleteUser: (uid: string) => void;
+  updateNumberLocation: (numberIds: string[], location: { locationType: 'Store' | 'Employee' | 'Dealer', currentLocation: string }) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -216,6 +217,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         createdBy: user.uid,
     };
     addDoc(collection(db, 'activities'), newActivity)
+      .then(() => {
+        if (showToast) {
+          toast({
+            title: activity.action,
+            description: activity.description,
+          });
+        }
+      })
       .catch(async (serverError) => {
           const permissionError = new FirestorePermissionError({
             path: 'activities',
@@ -224,13 +233,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
           errorEmitter.emit('permission-error', permissionError);
       });
-
-    if (showToast) {
-       toast({
-        title: activity.action,
-        description: activity.description,
-      });
-    }
   }, [db, user, activities, toast]);
   
 
@@ -437,7 +439,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     updateDoc(numDocRef, updateData).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Updated RTS Status',
             description: `Marked ${num.mobile} as ${status}`
         });
@@ -461,7 +463,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     updateDoc(numDocRef, updateData).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Updated Upload Status',
             description: `Set upload status for ${num.mobile} to ${uploadStatus}`
         });
@@ -483,7 +485,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const saleDocRef = doc(db, 'sales', id);
     updateDoc(saleDocRef, statuses).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Updated Sale Status',
             description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, UPC: ${statuses.upcStatus}.`,
         });
@@ -507,7 +509,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Updated UPC Status',
             description: `Updated UPC status for ${saleIds.length} sale(s) to ${upcStatus}.`
         });
@@ -566,7 +568,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Marked Port Out Done',
             description: `Number ${saleToMove.mobile} has been ported out and moved to history.`,
         });
@@ -624,7 +626,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         description += ` ${skippedCount} record(s) were skipped because their UPC was not generated.`;
       }
       addActivity({
-        employeeName: user.displayName || 'User',
+        employeeName: user.displayName || user.email || 'User',
         action: 'Bulk Port Out',
         description: `Bulk ported out ${eligibleSales.length} record(s).`
       });
@@ -655,7 +657,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     
     updateDoc(reminderDocRef, updateData).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Marked Task Done',
             description: `Completed task: ${reminder.taskName}`
         })
@@ -684,7 +686,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
     batch.commit().then(() => {
         addActivity({
-            employeeName: 'Admin',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Assigned Numbers',
             description: `Assigned ${numberIds.length} number(s) to ${employeeName}.`
         });
@@ -705,7 +707,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     const numDocRef = doc(db, 'numbers', id);
     updateDoc(numDocRef, { checkInDate: Timestamp.now() }).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Checked In Number',
             description: `Checked in SIM number ${num.mobile}.`
         });
@@ -748,7 +750,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     batch.delete(doc(db, 'numbers', id));
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Sold Number',
             description: `Sold number ${soldNumber.mobile} to ${details.soldTo} for ₹${details.salePrice}`
         });
@@ -794,7 +796,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Sold Numbers',
             description: `Sold ${numbersToSell.length} number(s) to ${details.soldTo}.`
         });
@@ -843,7 +845,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     batch.delete(doc(db, 'sales', saleId));
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Cancelled Sale',
             description: `Sale of number ${saleToCancel.mobile} was cancelled.`
         });
@@ -869,7 +871,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       return;
     }
     
-    const assignedToUser = user.displayName || 'User';
+    const assignedToUser = user.displayName || user.email || 'User';
 
     const newNumber: Partial<NumberRecord> = {
         ...data,
@@ -901,7 +903,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     const numbersCollection = collection(db, 'numbers');
     addDoc(numbersCollection, sanitizeObjectForFirestore(newNumber)).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Added Number',
             description: `Manually added new number ${data.mobile}`
         });
@@ -939,7 +941,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     const dealerPurchasesCollection = collection(db, 'dealerPurchases');
     addDoc(dealerPurchasesCollection, newPurchase).then(() => {
         addActivity({
-          employeeName: user.displayName || 'User',
+          employeeName: user.displayName || user.email || 'User',
           action: 'Added Dealer Purchase',
           description: `Added new dealer purchase for ${data.mobile}`,
         });
@@ -961,7 +963,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     updateDoc(docRef, statuses).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Updated Dealer Purchase',
             description: `Updated status for ${purchase.mobile}.`,
         });
@@ -998,7 +1000,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Deleted Port Out Records',
             description: `Deleted ${idsToDelete.length} record(s) from port out history.`
         });
@@ -1047,7 +1049,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     batch.commit().then(() => {
       addActivity({
-        employeeName: user.displayName || 'User',
+        employeeName: user.displayName || user.email || 'User',
         action: 'Deleted Dealer Purchases',
         description: `Deleted ${idsToDelete.length} completed record(s) from dealer purchases.`
       });
@@ -1078,7 +1080,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'Admin',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Deleted Activities',
             description: `Deleted ${activityIds.length} activity record(s).`
         });
@@ -1100,7 +1102,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     updateDoc(docRef, status).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Updated Port Out Status',
             description: `Updated payment status for ${portOut.mobile} to ${status.paymentStatus}.`,
         });
@@ -1124,7 +1126,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Updated Port Out Payment Status',
             description: `Updated payment status for ${portOutIds.length} port out record(s) to ${paymentStatus}.`
         });
@@ -1152,7 +1154,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     
     updateDoc(numDocRef, updateData).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Updated Safe Custody Date',
             description: `Updated Safe Custody Date for ${num.mobile} to ${newDate.toLocaleDateString()}`
         });
@@ -1183,7 +1185,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     batch.commit().then(() => {
       addActivity({
-        employeeName: user.displayName || 'Admin',
+        employeeName: user.displayName || user.email || 'User',
         action: 'Deleted Numbers',
         description: `Permanently deleted ${numberIds.length} number record(s).`
       });
@@ -1218,7 +1220,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     deleteDoc(docRef).then(() => {
         const deletedUser = users.find(u => u.uid === uid);
         addActivity({
-            employeeName: user.displayName || 'Admin',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Deleted User',
             description: `Deleted the user account for ${deletedUser?.displayName || 'Unknown'}.`
         });
@@ -1231,6 +1233,28 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
+  const updateNumberLocation = (numberIds: string[], location: { locationType: 'Store' | 'Employee' | 'Dealer', currentLocation: string }) => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    numberIds.forEach(id => {
+      const docRef = doc(db, 'numbers', id);
+      batch.update(docRef, location);
+    });
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Updated Number Location',
+            description: `Updated location for ${numberIds.length} number(s) to ${location.currentLocation}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'update',
+            requestResourceData: {info: `Batch location update for ${numberIds.length} numbers`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
 
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
     if (!db || !user) return { validRecords: [], failedRecords: [] };
@@ -1238,7 +1262,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     let currentSrNo = getNextSrNo(numbers);
     const validRecords: any[] = [];
     const failedRecords: { record: any, reason: string }[] = [];
-    const assignedToUser = user.displayName || 'User';
+    const assignedToUser = user.displayName || user.email || 'User';
 
     const existingMobiles = new Set([
         ...numbers.map(n => n.mobile),
@@ -1421,7 +1445,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     const remindersCollection = collection(db, 'reminders');
     addDoc(remindersCollection, newReminder).then(() => {
         addActivity({
-            employeeName: user.displayName || 'User',
+            employeeName: user.displayName || user.email || 'User',
             action: 'Added Reminder',
             description: `Assigned task "${data.taskName}" to ${data.assignedTo}`
         });
@@ -1478,6 +1502,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     updateSafeCustodyDate,
     deleteNumbers,
     deleteUser,
+    updateNumberLocation,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
