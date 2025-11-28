@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -343,8 +343,8 @@ export default function AllNumbersPage() {
                         </AlertDialogContent>
                     </AlertDialog>
                  )}
-                 <Button variant="outline" onClick={handleOpenLocationModal}>
-                    <MapPin className="mr-2 h-4 w-4" />
+                <Button variant="outline" onClick={handleOpenLocationModal}>
+                    <Edit className="mr-2 h-4 w-4" />
                     Edit Location ({selectedRows.length})
                 </Button>
                  {role === 'admin' && (
@@ -435,7 +435,10 @@ export default function AllNumbersPage() {
                             <DropdownMenuItem onClick={() => navigate(`/numbers/${num.id}`, pathname)}>View Details</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Update RTS Status</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEditUpload(num)}>Edit Upload Status</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditLocation(num)}>Edit Location</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditLocation(num)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Location
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={() => handleSellNumber(num)}>
                             <DollarSign className="mr-2 h-4 w-4" />
