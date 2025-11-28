@@ -29,7 +29,7 @@ type SortableColumn = keyof NumberRecord;
 
 export default function CocpPage() {
   const { numbers, loading, addActivity } = useApp();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -39,8 +39,12 @@ export default function CocpPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const cocpNumbers = useMemo(() => {
-    return numbers.filter(num => num.numberType === 'COCP');
-  }, [numbers]);
+    const filtered = numbers.filter(num => num.numberType === 'COCP');
+    if (role === 'admin') {
+      return filtered;
+    }
+    return filtered.filter(num => num.assignedTo === user?.displayName);
+  }, [numbers, role, user?.displayName]);
 
   const sortedNumbers = useMemo(() => {
     let sortableItems = [...cocpNumbers];

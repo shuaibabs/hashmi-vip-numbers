@@ -20,7 +20,6 @@ import { Timestamp } from 'firebase/firestore';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import Papa from 'papaparse';
 import { BulkEditUpcModal } from '@/components/bulk-edit-upc-modal';
 import { useAuth } from '@/context/auth-context';
 
@@ -31,7 +30,7 @@ type SortableColumn = keyof SaleRecord;
 
 export default function SalesPage() {
   const { sales, loading, cancelSale, markSaleAsPortedOut, addActivity, bulkMarkAsPortedOut } = useApp();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -44,8 +43,15 @@ export default function SalesPage() {
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
+  const roleFilteredSales = useMemo(() => {
+    if (role === 'admin') {
+      return sales;
+    }
+    return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
+  }, [sales, role, user?.displayName]);
+
   const sortedSales = useMemo(() => {
-    let sortableItems = [...sales];
+    let sortableItems = [...roleFilteredSales];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof SaleRecord];
@@ -71,7 +77,7 @@ export default function SalesPage() {
       });
     }
     return sortableItems;
-  }, [sales, sortConfig]);
+  }, [roleFilteredSales, sortConfig]);
 
   const totalPages = Math.ceil(sortedSales.length / itemsPerPage);
   const paginatedSales = sortedSales.slice(
@@ -375,7 +381,7 @@ export default function SalesPage() {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
-        totalItems={sales.length}
+        totalItems={sortedSales.length}
       />
       {selectedSale && (
         <EditSaleStatusModal
@@ -442,5 +448,3 @@ export default function SalesPage() {
     </>
   );
 }
-
-    

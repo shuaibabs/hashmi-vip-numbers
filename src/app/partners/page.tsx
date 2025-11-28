@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -16,6 +17,7 @@ import { Timestamp } from 'firebase/firestore';
 import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/auth-context';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 
@@ -30,6 +32,7 @@ type CombinedPartnershipRecord = {
   salePrice: number | string;
   saleDate: Timestamp | null;
   status: 'Active' | 'Sold';
+  assignedTo?: string;
 };
 
 type SortableColumn = keyof CombinedPartnershipRecord;
@@ -37,6 +40,7 @@ type SortableColumn = keyof CombinedPartnershipRecord;
 export default function PartnersPage() {
   const { numbers, sales, loading } = useApp();
   const { navigate } = useNavigation();
+  const { user, role } = useAuth();
   const pathname = usePathname();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -56,6 +60,7 @@ export default function PartnersPage() {
         salePrice: num.salePrice,
         saleDate: null,
         status: 'Active',
+        assignedTo: num.assignedTo,
       }));
       
     const soldPartnershipNumbers: CombinedPartnershipRecord[] = sales
@@ -71,10 +76,17 @@ export default function PartnersPage() {
         salePrice: sale.salePrice,
         saleDate: sale.saleDate,
         status: 'Sold',
+        assignedTo: sale.originalNumberData.assignedTo,
       }));
 
-    return [...activePartnershipNumbers, ...soldPartnershipNumbers];
-  }, [numbers, sales]);
+    const allPartnershipNumbers = [...activePartnershipNumbers, ...soldPartnershipNumbers];
+    
+    if (role === 'admin') {
+      return allPartnershipNumbers;
+    }
+    return allPartnershipNumbers.filter(num => num.assignedTo === user?.displayName);
+
+  }, [numbers, sales, role, user?.displayName]);
 
   const sortedNumbers = useMemo(() => {
     let sortableItems = [...combinedPartnershipNumbers];

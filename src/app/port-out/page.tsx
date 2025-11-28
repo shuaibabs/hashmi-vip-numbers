@@ -40,9 +40,15 @@ export default function PortOutPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
+  const roleFilteredPortOuts = useMemo(() => {
+    if (role === 'admin') {
+      return portOuts;
+    }
+    return portOuts.filter(portOut => portOut.originalNumberData?.assignedTo === user?.displayName);
+  }, [portOuts, role, user?.displayName]);
 
   const sortedPortOuts = useMemo(() => {
-    let sortableItems = [...portOuts];
+    let sortableItems = [...roleFilteredPortOuts];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof PortOutRecord];
@@ -68,7 +74,7 @@ export default function PortOutPage() {
       });
     }
     return sortableItems;
-  }, [portOuts, sortConfig]);
+  }, [roleFilteredPortOuts, sortConfig]);
 
   const totalPages = Math.ceil(sortedPortOuts.length / itemsPerPage);
   const paginatedPortOuts = sortedPortOuts.slice(
@@ -347,7 +353,7 @@ export default function PortOutPage() {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
-        totalItems={portOuts.length}
+        totalItems={sortedPortOuts.length}
       />
       {selectedPortOut && (
         <EditPortOutStatusModal
