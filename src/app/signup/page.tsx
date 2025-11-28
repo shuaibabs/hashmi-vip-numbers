@@ -114,7 +114,6 @@ export default function SignupPage() {
       form.reset();
 
     } catch (err: any) {
-      console.error("User creation error:", err);
       if (err instanceof FirebaseError) {
         if (err.code === 'auth/email-already-in-use') {
             setError('This email address is already in use.');
