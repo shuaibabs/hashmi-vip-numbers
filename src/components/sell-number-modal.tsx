@@ -16,7 +16,18 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Combobox } from './ui/combobox';
+
+const SOLD_TO_OPTIONS = [
+    { value: "Lifetimenumber", label: "Lifetimenumber" },
+    { value: "Vipnumberstore", label: "Vipnumberstore" },
+    { value: "Vipnumbershop", label: "Vipnumbershop" },
+    { value: "Numberwale", label: "Numberwale" },
+    { value: "Numberspoint", label: "Numberspoint" },
+    { value: "Vipfancynumber", label: "Vipfancynumber" },
+    { value: "Numberatm", label: "Numberatm" },
+    { value: "Numbersolution", label: "Numbersolution" },
+];
 
 const formSchema = z.object({
   salePrice: z.coerce.number().min(0, "Sale price can't be negative."),
@@ -31,7 +42,7 @@ type SellNumberModalProps = {
 };
 
 export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProps) {
-  const { sellNumber, employees } = useApp();
+  const { sellNumber } = useApp();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -86,11 +97,16 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
               control={form.control}
               name="soldTo"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sold To</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter customer name" {...field} />
-                  </FormControl>
+                <FormItem className="flex flex-col">
+                    <FormLabel>Sold To</FormLabel>
+                    <Combobox
+                        options={SOLD_TO_OPTIONS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select or type a name..."
+                        searchPlaceholder="Search or add new..."
+                        emptyMessage="No matching vendor found."
+                    />
                   <FormMessage />
                 </FormItem>
               )}

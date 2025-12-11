@@ -18,6 +18,18 @@ import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
+import { Combobox } from './ui/combobox';
+
+const SOLD_TO_OPTIONS = [
+    { value: "Lifetimenumber", label: "Lifetimenumber" },
+    { value: "Vipnumberstore", label: "Vipnumberstore" },
+    { value: "Vipnumbershop", label: "Vipnumbershop" },
+    { value: "Numberwale", label: "Numberwale" },
+    { value: "Numberspoint", label: "Numberspoint" },
+    { value: "Vipfancynumber", label: "Vipfancynumber" },
+    { value: "Numberatm", label: "Numberatm" },
+    { value: "Numbersolution", label: "Numbersolution" },
+];
 
 const formSchema = z.object({
   salePrice: z.coerce.number().min(0, "Sale price can't be negative."),
@@ -98,11 +110,16 @@ export function BulkSellNumberModal({ isOpen, onClose, selectedNumbers }: BulkSe
                   control={form.control}
                   name="soldTo"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sold To</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter customer name" {...field} />
-                      </FormControl>
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Sold To</FormLabel>
+                        <Combobox
+                            options={SOLD_TO_OPTIONS}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select or type a name..."
+                            searchPlaceholder="Search or add new..."
+                            emptyMessage="No matching vendor found."
+                        />
                       <FormMessage />
                     </FormItem>
                   )}
