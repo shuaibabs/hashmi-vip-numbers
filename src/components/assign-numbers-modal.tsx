@@ -12,9 +12,13 @@ import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   employeeName: z.string().min(1, { message: 'Please select an employee.' }),
+  locationType: z.enum(['Store', 'Employee', 'Dealer']),
+  currentLocation: z.string().min(1, { message: 'Current location is required.' }),
 });
 
 type AssignNumbersModalProps = {
@@ -30,12 +34,25 @@ export function AssignNumbersModal({ isOpen, onClose, selectedNumbers }: AssignN
     resolver: zodResolver(formSchema),
     defaultValues: {
       employeeName: '',
+      locationType: 'Employee',
+      currentLocation: '',
     },
   });
 
+  const employeeName = form.watch('employeeName');
+
+  useEffect(() => {
+    if (employeeName) {
+      form.setValue('currentLocation', `Employee - ${employeeName}`);
+    }
+  }, [employeeName, form]);
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     const numberIds = selectedNumbers.map(n => n.id);
-    assignNumbersToEmployee(numberIds, values.employeeName);
+    assignNumbersToEmployee(numberIds, values.employeeName, {
+        locationType: values.locationType,
+        currentLocation: values.currentLocation,
+    });
     onClose();
     form.reset();
   }
@@ -51,7 +68,7 @@ export function AssignNumbersModal({ isOpen, onClose, selectedNumbers }: AssignN
         <DialogHeader>
           <DialogTitle>Assign Numbers</DialogTitle>
           <DialogDescription>
-            Assign the selected {selectedNumbers.length} number(s) to an employee.
+            Assign the selected {selectedNumbers.length} number(s) to an employee and update their location.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
@@ -85,6 +102,41 @@ export function AssignNumbersModal({ isOpen, onClose, selectedNumbers }: AssignN
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="locationType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Location Type</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Store">Store</SelectItem>
+                          <SelectItem value="Employee">Employee</SelectItem>
+                          <SelectItem value="Dealer">Dealer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="currentLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Current Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Employee - John Doe" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

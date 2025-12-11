@@ -184,10 +184,6 @@ export default function AllNumbersPage() {
     setSelectedRows([]);
   };
 
-  const handleOpenLocationModal = () => {
-    setIsLocationModalOpen(true);
-  }
-
   const closeLocationModal = () => {
     setIsLocationModalOpen(false);
     setSelectedRows([]);
@@ -343,10 +339,6 @@ export default function AllNumbersPage() {
                         </AlertDialogContent>
                     </AlertDialog>
                  )}
-                <Button variant="outline" onClick={handleOpenLocationModal}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Location ({selectedRows.length})
-                </Button>
                  {role === 'admin' && (
                     <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
                         <UserPlus className="mr-2 h-4 w-4" />

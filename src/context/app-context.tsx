@@ -110,7 +110,7 @@ type AppContextType = {
   bulkMarkAsPortedOut: (sales: SaleRecord[]) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
-  assignNumbersToEmployee: (numberIds: string[], employeeName: string) => void;
+  assignNumbersToEmployee: (numberIds: string[], employeeName: string, location: { locationType: 'Store' | 'Employee' | 'Dealer'; currentLocation: string; }) => void;
   checkInNumber: (id: string) => void;
   sellNumber: (id: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
   bulkSellNumbers: (numbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => void;
@@ -671,14 +671,14 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
-  const assignNumbersToEmployee = (numberIds: string[], employeeName: string) => {
+  const assignNumbersToEmployee = (numberIds: string[], employeeName: string, location: { locationType: 'Store' | 'Employee' | 'Dealer'; currentLocation: string; }) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
     const updateData = {
         assignedTo: employeeName,
         name: employeeName,
-        locationType: 'Employee',
-        currentLocation: `Employee - ${employeeName}`,
+        locationType: location.locationType,
+        currentLocation: location.currentLocation,
     };
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
