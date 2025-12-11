@@ -49,6 +49,7 @@ const navItems: {
   { href: '/users', label: 'Manage Users', icon: Users, adminOnly: true },
   { href: '/sim-locations', label: 'SIM Locations', icon: MapPin, adminOnly: false },
   { href: '/sales', label: 'Sales', icon: DollarSign, adminOnly: false },
+  { href: '/manage-sales', label: 'Manage Sales', icon: Database, adminOnly: false },
   { href: '/port-out', label: 'Port Out', icon: LogOut, adminOnly: false },
   { href: '/dealer-purchases', label: 'Dealer Purchases', icon: ShoppingCart, adminOnly: false },
   { href: '/reminders', label: 'Work Reminders', icon: ClipboardList, adminOnly: false },
