@@ -19,13 +19,15 @@ import { NumberRecord } from '@/lib/data';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination } from '@/components/pagination';
 import { useAuth } from '@/context/auth-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 type FailedRecord = {
   record: any;
   reason: string;
 };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 const REQUIRED_HEADERS = ['Mobile', 'NumberType', 'PurchaseFrom', 'PurchasePrice', 'PurchaseDate', 'CurrentLocation', 'LocationType', 'Status', 'OwnershipType'];
 
 
@@ -38,29 +40,36 @@ export default function ImportExportPage() {
   const [failedRecords, setFailedRecords] = useState<FailedRecord[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
-  const totalPages = Math.ceil(numbers.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(numbers.length / itemsPerPage);
   const paginatedNumbers = numbers.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   const exportToCsv = (dataToExport: NumberRecord[], fileName: string) => {
      const formattedData = dataToExport.map(n => ({
         "Sr.No": n.srNo,
         "Mobile": n.mobile,
+        "Sum": n.sum,
         "Status": n.status,
         "Upload Status": n.uploadStatus,
+        "Number Type": n.numberType,
         "Purchase From": n.purchaseFrom,
         "Purchase Price": n.purchasePrice,
         "Sale Price": n.salePrice,
         "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
+        "Name": n.name,
         "UPC Status": n.upcStatus,
+        "Current Location": n.currentLocation,
+        "Location Type": n.locationType,
         "Assigned To": n.assignedTo,
-        "Number Type": n.numberType,
-        "Account Name": n.accountName,
         "Purchase Date": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
+        "Notes": n.notes,
+        "Check-In Date": n.checkInDate ? format(n.checkInDate.toDate(), 'yyyy-MM-dd HH:mm:ss') : '',
         "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
+        "Account Name": n.accountName,
         "OwnershipType": n.ownershipType,
         "PartnerName": n.partnerName,
     }));
@@ -236,6 +245,11 @@ export default function ImportExportPage() {
     setCurrentPage(page);
   };
 
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
+  };
+
   return (
     <>
       <PageHeader
@@ -294,7 +308,20 @@ export default function ImportExportPage() {
 
         <div>
           <h3 className="text-lg font-semibold mb-2">Select Numbers to Export</h3>
-          <p className="text-sm text-muted-foreground mb-4">Select records from the table below to export them to a CSV file.</p>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-4 flex-wrap">
+                <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+                <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Items per page" />
+                </SelectTrigger>
+                <SelectContent>
+                    {ITEMS_PER_PAGE_OPTIONS.map(val => (
+                    <SelectItem key={val} value={String(val)}>{val} / page</SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+            </div>
+          </div>
         </div>
         <div className="border rounded-lg">
           <Table>
@@ -309,17 +336,26 @@ export default function ImportExportPage() {
                 </TableHead>
                 <TableHead>Sr.No</TableHead>
                 <TableHead>Mobile</TableHead>
+                <TableHead>Sum</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Upload Status</TableHead>
-                <TableHead>Purchase</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Number Type</TableHead>
+                <TableHead>Purchase From</TableHead>
+                <TableHead>Purchase Price</TableHead>
+                <TableHead>Sale Price</TableHead>
                 <TableHead>RTS Date</TableHead>
                 <TableHead>UPC Status</TableHead>
+                <TableHead>Location Type</TableHead>
+                <TableHead>Current Location</TableHead>
+                <TableHead>Assigned To</TableHead>
+                <TableHead>Purchase Date</TableHead>
+                <TableHead>Ownership</TableHead>
+                <TableHead>Partner Name</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableSpinner colSpan={9} />
+                <TableSpinner colSpan={18} />
               ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                   <TableRow key={num.id} data-state={selectedRows.includes(num.id) && "selected"}>
@@ -332,21 +368,30 @@ export default function ImportExportPage() {
                     </TableCell>
                     <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
+                    <TableCell>{num.sum}</TableCell>
                     <TableCell>
                       <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={num.uploadStatus === 'Done' ? 'secondary' : 'outline'}>{num.uploadStatus}</Badge>
                     </TableCell>
+                     <TableCell>{num.numberType}</TableCell>
                     <TableCell>{num.purchaseFrom}</TableCell>
-                    <TableCell>₹{num.purchasePrice}</TableCell>
+                    <TableCell>₹{num.purchasePrice?.toLocaleString()}</TableCell>
+                    <TableCell>₹{Number(num.salePrice)?.toLocaleString()}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell><Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge></TableCell>
+                    <TableCell>{num.locationType}</TableCell>
+                    <TableCell>{num.currentLocation}</TableCell>
+                    <TableCell>{num.assignedTo}</TableCell>
+                    <TableCell>{num.purchaseDate ? format(num.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.ownershipType}</TableCell>
+                    <TableCell>{num.partnerName || 'N/A'}</TableCell>
                   </TableRow>
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={18} className="h-24 text-center">
                         No numbers found.
                     </TableCell>
                 </TableRow>
@@ -358,7 +403,7 @@ export default function ImportExportPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
-            itemsPerPage={ITEMS_PER_PAGE}
+            itemsPerPage={itemsPerPage}
             totalItems={numbers.length}
           />
       </div>
