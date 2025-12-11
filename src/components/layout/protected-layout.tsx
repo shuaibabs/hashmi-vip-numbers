@@ -10,11 +10,15 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { Spinner } from '../ui/spinner';
 import { useNavigationSpinner } from '@/hooks/use-navigation-spinner';
 import { useNavigation } from '@/context/navigation-context';
+import { useIdleTimeout } from '@/hooks/use-idle-timeout';
+
+const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
 export function ProtectedLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const { isNavigating } = useNavigation();
   useNavigationSpinner();
+  useIdleTimeout(IDLE_TIMEOUT);
 
 
   if (loading || !user) {
