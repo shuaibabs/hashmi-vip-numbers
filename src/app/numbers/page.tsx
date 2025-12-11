@@ -382,6 +382,8 @@ export default function AllNumbersPage() {
                 <SortableHeader column="partnerName" label="Partner Name" />
                 <SortableHeader column="uploadStatus" label="Upload Status" />
                 <SortableHeader column="assignedTo" label="Assigned To" />
+                <SortableHeader column="locationType" label="Location Type" />
+                <SortableHeader column="currentLocation" label="Current Location" />
                 <SortableHeader column="status" label="Status" />
                 <SortableHeader column="purchaseFrom" label="Purchase From" />
                 <SortableHeader column="rtsDate" label="RTS Date" />
@@ -390,7 +392,7 @@ export default function AllNumbersPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                  <TableSpinner colSpan={13} />
+                  <TableSpinner colSpan={15} />
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num) => (
                     <TableRow 
@@ -420,6 +422,8 @@ export default function AllNumbersPage() {
                         </Badge>
                     </TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
+                    <TableCell>{num.locationType}</TableCell>
+                    <TableCell>{num.currentLocation}</TableCell>
                     <TableCell>
                         <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
                     </TableCell>
@@ -455,7 +459,7 @@ export default function AllNumbersPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={13} className="h-24 text-center">
+                    <TableCell colSpan={15} className="h-24 text-center">
                         {searchTerm && `No number found for "${searchTerm}".`}
                         {!searchTerm && "No numbers found for the current filters."}
                         {searchTerm && (
@@ -528,4 +532,5 @@ export default function AllNumbersPage() {
     
 
     
+
 
