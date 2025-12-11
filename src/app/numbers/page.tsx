@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -29,6 +29,7 @@ import { BulkSellNumberModal } from '@/components/bulk-sell-modal';
 import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
 import { EditLocationModal } from '@/components/edit-location-modal';
+import { BulkEditUploadStatusModal } from '@/components/bulk-edit-upload-status-modal';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
@@ -46,6 +47,7 @@ export default function AllNumbersPage() {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isBulkSellModalOpen, setIsBulkSellModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -184,6 +186,11 @@ export default function AllNumbersPage() {
     setSelectedRows([]);
   };
 
+  const closeBulkUploadModal = () => {
+    setIsBulkUploadModalOpen(false);
+    setSelectedRows([]);
+  }
+
   const closeLocationModal = () => {
     setIsLocationModalOpen(false);
     setSelectedRows([]);
@@ -313,45 +320,49 @@ export default function AllNumbersPage() {
               </SelectContent>
             </Select>
           </div>
-           {selectedRows.length > 0 && (
-            <div className="flex items-center gap-2">
-                 {role === 'admin' && (
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                        <Button variant="destructive">
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete ({selectedRows.length})
-                        </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete {selectedRows.length} number record(s).
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSelected}>
-                            Yes, delete
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                 )}
-                 {role === 'admin' && (
-                    <Button onClick={handleOpenAssignModal} className="w-full md:w-auto">
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Assign ({selectedRows.length})
-                    </Button>
-                 )}
-                 <Button onClick={handleOpenBulkSellModal} className="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white">
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Sell ({selectedRows.length})
-                 </Button>
-            </div>
-           )}
         </div>
+        {selectedRows.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+              {role === 'admin' && (
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                      <Button variant="destructive">
+                          <Trash className="mr-2 h-4 w-4" />
+                          Delete ({selectedRows.length})
+                      </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete {selectedRows.length} number record(s).
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeleteSelected}>
+                          Yes, delete
+                          </AlertDialogAction>
+                      </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              )}
+              {role === 'admin' && (
+                  <Button onClick={handleOpenAssignModal}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Assign ({selectedRows.length})
+                  </Button>
+              )}
+              <Button onClick={() => setIsBulkUploadModalOpen(true)} variant="outline">
+                  <UploadCloud className="mr-2 h-4 w-4" />
+                  Edit Upload Status ({selectedRows.length})
+              </Button>
+              <Button onClick={handleOpenBulkSellModal} className="bg-green-600 hover:bg-green-700 text-white">
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Sell ({selectedRows.length})
+              </Button>
+          </div>
+        )}
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -490,6 +501,11 @@ export default function AllNumbersPage() {
         onClose={closeBulkSellModal}
         selectedNumbers={selectedNumberRecords}
       />
+       <BulkEditUploadStatusModal
+        isOpen={isBulkUploadModalOpen}
+        onClose={closeBulkUploadModal}
+        selectedNumbers={selectedNumberRecords}
+      />
       <EditLocationModal 
         isOpen={isLocationModalOpen}
         onClose={closeLocationModal}
@@ -512,3 +528,4 @@ export default function AllNumbersPage() {
     
 
     
+

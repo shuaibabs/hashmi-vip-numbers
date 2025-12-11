@@ -104,6 +104,7 @@ type AppContextType = {
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
+  bulkUpdateUploadStatus: (numberIds: string[], uploadStatus: 'Pending' | 'Done') => void;
   updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; }) => void;
   bulkUpdateUpcStatus: (saleIds: string[], upcStatus: 'Pending' | 'Generated') => void;
   markSaleAsPortedOut: (saleId: string) => void;
@@ -472,6 +473,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
             path: numDocRef.path,
             operation: 'update',
             requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const bulkUpdateUploadStatus = (numberIds: string[], uploadStatus: 'Pending' | 'Done') => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    const updateData = { uploadStatus };
+    numberIds.forEach(id => {
+      const docRef = doc(db, 'numbers', id);
+      batch.update(docRef, updateData);
+    });
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Bulk Updated Upload Status',
+            description: `Updated upload status for ${numberIds.length} number(s) to ${uploadStatus}.`
+        });
+         toast({
+            title: "Update Successful",
+            description: `Updated upload status for ${numberIds.length} record(s).`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'update',
+            requestResourceData: {info: `Bulk upload status update for ${numberIds.length} numbers`},
         });
         errorEmitter.emit('permission-error', permissionError);
     });
@@ -1478,6 +1507,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     isMobileNumberDuplicate,
     updateNumberStatus,
     updateUploadStatus,
+    bulkUpdateUploadStatus,
     updateSaleStatuses,
     bulkUpdateUpcStatus,
     markSaleAsPortedOut,
