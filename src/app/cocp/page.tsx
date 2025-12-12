@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -22,6 +21,7 @@ import { EditCocpDateModal } from '@/components/edit-cocp-date-modal';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
+import { Input } from '@/components/ui/input';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -37,6 +37,7 @@ export default function CocpPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const cocpNumbers = useMemo(() => {
     const filtered = numbers.filter(num => num.numberType === 'COCP');
@@ -47,7 +48,10 @@ export default function CocpPage() {
   }, [numbers, role, user?.displayName]);
 
   const sortedNumbers = useMemo(() => {
-    let sortableItems = [...cocpNumbers];
+    let sortableItems = [...cocpNumbers].filter(num => 
+        num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof NumberRecord];
@@ -73,7 +77,7 @@ export default function CocpPage() {
       });
     }
     return sortableItems;
-  }, [cocpNumbers, sortConfig]);
+  }, [cocpNumbers, sortConfig, searchTerm]);
 
   const totalPages = Math.ceil(sortedNumbers.length / itemsPerPage);
   const paginatedNumbers = sortedNumbers.slice(
@@ -183,6 +187,26 @@ export default function CocpPage() {
     </TableHead>
   );
 
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -191,6 +215,15 @@ export default function CocpPage() {
       />
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
+             <Input 
+              placeholder="Search by mobile number..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-full sm:max-w-sm"
+            />
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Items per page" />
@@ -251,7 +284,7 @@ export default function CocpPage() {
                                 />
                             </TableCell>
                             <TableCell>{num.srNo}</TableCell>
-                            <TableCell className="font-medium">{num.mobile}</TableCell>
+                            <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                             <TableCell>{num.accountName}</TableCell>
                             <TableCell>{num.sum}</TableCell>
                             <TableCell>
@@ -280,7 +313,7 @@ export default function CocpPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={9} className="h-24 text-center">
-                  No COCP numbers found.
+                  {searchTerm ? `No COCP numbers found for "${searchTerm}".` : "No COCP numbers found."}
                 </TableCell>
               </TableRow>
             )}
@@ -292,7 +325,7 @@ export default function CocpPage() {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
-        totalItems={cocpNumbers.length}
+        totalItems={sortedNumbers.length}
       />
       {selectedNumber && (
         <EditCocpDateModal 
@@ -304,3 +337,5 @@ export default function CocpPage() {
     </>
   );
 }
+
+    
