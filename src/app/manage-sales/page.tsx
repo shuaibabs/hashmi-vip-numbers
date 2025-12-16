@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +16,8 @@ import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { SaleDetailsModal } from '@/components/sale-details-modal';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 
@@ -26,6 +28,9 @@ export default function ManageSalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [soldToFilter, setSoldToFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
@@ -41,9 +46,10 @@ export default function ManageSalesPage() {
 
   const filteredSales = useMemo(() => {
     return roleFilteredSales.filter(sale => 
-      soldToFilter === 'all' || sale.soldTo === soldToFilter
+      (soldToFilter === 'all' || sale.soldTo === soldToFilter) &&
+      (sale.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [roleFilteredSales, soldToFilter]);
+  }, [roleFilteredSales, soldToFilter, searchTerm]);
 
   const { totalPurchaseAmount, totalSaleAmount } = useMemo(() => {
     return filteredSales.reduce((acc, sale) => {
@@ -72,6 +78,32 @@ export default function ManageSalesPage() {
     setSoldToFilter(value);
     setCurrentPage(1);
   };
+
+  const handleRowClick = (sale: SaleRecord) => {
+    setSelectedSale(sale);
+    setIsDetailsModalOpen(true);
+  };
+
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
 
   const exportToCsv = () => {
     if (filteredSales.length === 0) {
@@ -182,8 +214,20 @@ export default function ManageSalesPage() {
       
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
+             <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search by mobile..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="pl-9 max-w-full sm:max-w-xs"
+                />
+            </div>
             <Select value={soldToFilter} onValueChange={handleSoldToFilterChange}>
-              <SelectTrigger className="w-[240px]">
+              <SelectTrigger className="w-full sm:w-[240px]">
                 <SelectValue placeholder="Filter by Sold To" />
               </SelectTrigger>
               <SelectContent>
@@ -195,7 +239,7 @@ export default function ManageSalesPage() {
               </SelectContent>
             </Select>
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px]">
                 <SelectValue placeholder="Items per page" />
               </SelectTrigger>
               <SelectContent>
@@ -226,9 +270,9 @@ export default function ManageSalesPage() {
                 <TableSpinner colSpan={9} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
-                <TableRow key={sale.srNo}>
+                <TableRow key={sale.srNo} onClick={() => handleRowClick(sale)} className="cursor-pointer">
                     <TableCell>{sale.srNo}</TableCell>
-                    <TableCell className="font-medium">{sale.mobile}</TableCell>
+                    <TableCell className="font-medium">{highlightMatch(sale.mobile, searchTerm)}</TableCell>
                     <TableCell>{sale.sum}</TableCell>
                     <TableCell>{sale.originalNumberData?.purchaseFrom || 'N/A'}</TableCell>
                     <TableCell>₹{sale.originalNumberData?.purchasePrice.toLocaleString() || 'N/A'}</TableCell>
@@ -241,7 +285,7 @@ export default function ManageSalesPage() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
-                        No sales records found for this filter.
+                        {searchTerm ? `No sales records found for "${searchTerm}".` : "No sales records found for this filter."}
                     </TableCell>
                 </TableRow>
             )}
@@ -254,6 +298,11 @@ export default function ManageSalesPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         totalItems={filteredSales.length}
+      />
+      <SaleDetailsModal 
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        sale={selectedSale}
       />
     </>
   );
