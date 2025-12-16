@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -17,7 +16,7 @@ import {
   type User,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { isToday, isPast, isValid, parse } from 'date-fns';
+import { isToday, isPast, isValid, parse, subDays } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import {
   collection,
@@ -123,6 +122,7 @@ type AppContextType = {
   deletePortOuts: (records: PortOutRecord[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData) => void;
+  deleteReminder: (id: string) => void;
   deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
   bulkUpdatePortOutPaymentStatus: (portOutIds: string[], paymentStatus: 'Pending' | 'Done') => void;
@@ -425,6 +425,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   }, [db, numbers, numbersLoading, addActivity]);
 
+  useEffect(() => {
+    if (!db || remindersLoading || role !== 'admin') {
+      return;
+    }
+
+    const cleanupOldReminders = async () => {
+      const sevenDaysAgo = subDays(new Date(), 7);
+      const remindersToDelete: Reminder[] = [];
+
+      reminders.forEach(reminder => {
+        if (
+          reminder.status === 'Done' &&
+          reminder.completionDate &&
+          reminder.completionDate.toDate() < sevenDaysAgo
+        ) {
+          remindersToDelete.push(reminder);
+        }
+      });
+
+      if (remindersToDelete.length > 0) {
+        const batch = writeBatch(db);
+        remindersToDelete.forEach(reminder => {
+          batch.delete(doc(db, 'reminders', reminder.id));
+        });
+        
+        await batch.commit().catch(e => console.error("Error auto-deleting reminders:", e));
+        
+        addActivity({
+            employeeName: 'System',
+            action: 'Auto-deleted reminders',
+            description: `Automatically deleted ${remindersToDelete.length} completed reminder(s) older than 7 days.`,
+        }, false);
+      }
+    };
+    
+    // Run once on load, then set an interval
+    cleanupOldReminders();
+    const intervalId = setInterval(cleanupOldReminders, 24 * 60 * 60 * 1000); // Check once a day
+    
+    return () => clearInterval(intervalId);
+
+  }, [db, reminders, remindersLoading, role, addActivity]);
+
 
   const updateNumberStatus = (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
     if (!db || !user) return;
@@ -680,7 +723,10 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     if (!reminder) return;
     const reminderDocRef = doc(db, 'reminders', id);
 
-    const updateData: { status: 'Done'; notes?: string } = { status: 'Done' };
+    const updateData: { status: 'Done'; notes?: string; completionDate: Timestamp } = { 
+        status: 'Done',
+        completionDate: Timestamp.now(),
+    };
     if (note) {
       updateData.notes = note;
     }
@@ -1568,6 +1614,26 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
+  const deleteReminder = (id: string) => {
+    if (!db || !user || role !== 'admin') return;
+    const reminderToDelete = reminders.find(r => r.id === id);
+    if (!reminderToDelete) return;
+    const docRef = doc(db, 'reminders', id);
+    deleteDoc(docRef).then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Deleted Reminder',
+            description: `Deleted task: ${reminderToDelete.taskName}`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  }
+
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
   const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => r.assignedTo === user?.displayName);
@@ -1606,6 +1672,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     deletePortOuts,
     bulkAddNumbers,
     addReminder,
+    deleteReminder,
     deleteDealerPurchases,
     updatePortOutStatus,
     bulkUpdatePortOutPaymentStatus,
