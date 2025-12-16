@@ -318,10 +318,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Effect to derive vendors list
   useEffect(() => {
     const allSalesVendors = sales.map(s => s.soldTo);
-    const allPurchaseVendors = dealerPurchases.map(p => p.dealerName);
-    const uniqueVendors = [...new Set([...allSalesVendors, ...allPurchaseVendors])];
+    const uniqueVendors = [...new Set(allSalesVendors)];
     setVendors(uniqueVendors.sort());
-  }, [sales, dealerPurchases]);
+  }, [sales]);
 
 
   const isMobileNumberDuplicate = (mobile: string, currentId?: string): boolean => {
