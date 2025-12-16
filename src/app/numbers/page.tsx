@@ -30,6 +30,7 @@ import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
 import { EditLocationModal } from '@/components/edit-location-modal';
 import { BulkEditUploadStatusModal } from '@/components/bulk-edit-upload-status-modal';
+import { BulkDeleteNumbersModal } from '@/components/bulk-delete-numbers-modal';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
@@ -49,6 +50,7 @@ export default function AllNumbersPage() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -268,6 +270,12 @@ export default function AllNumbersPage() {
                 <FileInput className="mr-2 h-4 w-4"/>
                 Import / Export
             </Button>
+            {role === 'admin' && (
+              <Button variant="destructive" onClick={() => setIsBulkDeleteModalOpen(true)} className="w-full sm:w-auto">
+                  <Trash className="mr-2 h-4 w-4"/>
+                  Bulk Delete
+              </Button>
+            )}
         </div>
       </PageHeader>
       <div className="space-y-4">
@@ -515,6 +523,10 @@ export default function AllNumbersPage() {
         onClose={closeLocationModal}
         selectedNumbers={selectedNumberRecords}
       />
+      <BulkDeleteNumbersModal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+      />
       {role === 'admin' && (
         <AssignNumbersModal
             isOpen={isAssignModalOpen}
@@ -534,3 +546,6 @@ export default function AllNumbersPage() {
     
 
 
+
+
+    
