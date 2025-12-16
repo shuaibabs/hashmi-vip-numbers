@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,17 +18,6 @@ import { useApp } from '@/context/app-context';
 import type { NumberRecord } from '@/lib/data';
 import { Combobox } from './ui/combobox';
 
-const SOLD_TO_OPTIONS = [
-    { value: "Lifetimenumber", label: "Lifetimenumber" },
-    { value: "Vipnumberstore", label: "Vipnumberstore" },
-    { value: "Vipnumbershop", label: "Vipnumbershop" },
-    { value: "Numberwale", label: "Numberwale" },
-    { value: "Numberspoint", label: "Numberspoint" },
-    { value: "Vipfancynumber", label: "Vipfancynumber" },
-    { value: "Numberatm", label: "Numberatm" },
-    { value: "Numbersolution", label: "Numbersolution" },
-];
-
 const formSchema = z.object({
   salePrice: z.coerce.number().min(0, "Sale price can't be negative."),
   soldTo: z.string().min(1, 'Sold to is required.'),
@@ -42,8 +31,12 @@ type SellNumberModalProps = {
 };
 
 export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProps) {
-  const { sellNumber } = useApp();
+  const { sellNumber, vendors } = useApp();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+  const vendorOptions = useMemo(() => {
+    return vendors.map(v => ({ label: v, value: v }));
+  }, [vendors]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -100,7 +93,7 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
                 <FormItem className="flex flex-col">
                     <FormLabel>Sold To</FormLabel>
                     <Combobox
-                        options={SOLD_TO_OPTIONS}
+                        options={vendorOptions}
                         value={field.value}
                         onChange={field.onChange}
                         placeholder="Select or type a name..."
@@ -162,3 +155,5 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
     </Dialog>
   );
 }
+
+    

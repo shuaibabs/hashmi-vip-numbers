@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -115,12 +115,12 @@ export default function AllNumbersPage() {
   
   const getSortIcon = (columnKey: SortableColumn) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
-      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
     }
     if (sortConfig.direction === 'ascending') {
-      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+      return <ArrowUp className="ml-2 h-4 w-4" />;
     }
-    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    return <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
 
@@ -537,15 +537,5 @@ export default function AllNumbersPage() {
     </>
   );
 }
-    
-
-    
-
-    
-
-    
-
-
-
 
     

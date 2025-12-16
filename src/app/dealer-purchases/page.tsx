@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, ArrowUpDown, Trash, Download } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, ArrowUpDown, Trash, Download, ArrowUp, ArrowDown } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { AddDealerPurchaseModal } from '@/components/add-dealer-purchase-modal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -173,9 +173,12 @@ export default function DealerPurchasesPage() {
   
   const getSortIcon = (columnKey: SortableColumn) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
-      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
     }
-    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUp className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
   const SortableHeader = ({ column, label }: { column: SortableColumn, label: string }) => (
@@ -379,3 +382,5 @@ export default function DealerPurchasesPage() {
     </>
   );
 }
+
+    

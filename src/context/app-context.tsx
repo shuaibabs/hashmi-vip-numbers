@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   type Activity,
   type NumberRecord,
@@ -97,6 +97,7 @@ type AppContextType = {
   activities: Activity[];
   users: User[];
   employees: string[];
+  vendors: string[];
   dealerPurchases: DealerPurchaseRecord[];
   seenActivitiesCount: number;
   markActivitiesAsSeen: () => void;
@@ -148,6 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
+  const [vendors, setVendors] = useState<string[]>([]);
   
   const [roleFilteredActivities, setRoleFilteredActivities] = useState<Activity[]>([]);
   const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
@@ -175,11 +177,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
   const getSeenCountKey = useCallback(() => {
     return user ? `seenActivitiesCount_${user.uid}` : null;
-  }, [user]);
+  }, [user?.uid]);
 
 
   useEffect(() => {
-    if (activitiesLoading || !user) return; // Wait for activities to load first
+    // This effect runs only when activities are loaded or the user changes.
+    // It prevents a race condition on login where the seen count is calculated before activities are present.
+    if (activitiesLoading || !user) return; 
 
     const seenCountKey = getSeenCountKey();
     if (seenCountKey) {
@@ -193,7 +197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
         setSeenActivitiesCount(0);
     }
-}, [activities, activitiesLoading, user, getSeenCountKey]);
+  }, [activities.length, activitiesLoading, user, getSeenCountKey]);
 
 
   const markActivitiesAsSeen = useCallback(() => {
@@ -244,6 +248,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDealerPurchases([]);
       setUsers([]);
       setEmployees([]);
+      setVendors([]);
       setNumbersLoading(false);
       setSalesLoading(false);
       setPortOutsLoading(false);
@@ -273,7 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
       { name: 'users', setter: (data: User[]) => {
           setUsers(data);
-          setEmployees(data.map(u => u.displayName))
+          setEmployees(data.map(u => u.displayName).sort())
         }, 
         loader: setUsersLoading 
       },
@@ -309,6 +314,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setRoleFilteredActivities(filtered);
     }
   }, [activities, role, user, loading]);
+
+  // Effect to derive vendors list
+  useEffect(() => {
+    const allSalesVendors = sales.map(s => s.soldTo);
+    const allPurchaseVendors = dealerPurchases.map(p => p.dealerName);
+    const uniqueVendors = [...new Set([...allSalesVendors, ...allPurchaseVendors])];
+    setVendors(uniqueVendors.sort());
+  }, [sales, dealerPurchases]);
 
 
   const isMobileNumberDuplicate = (mobile: string, currentId?: string): boolean => {
@@ -1367,6 +1380,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         return;
     }
     const docRef = doc(db, 'users', uid);
+    // This will trigger the onDelete cloud function to delete the user from Auth
     deleteDoc(docRef).then(() => {
         const deletedUser = users.find(u => u.uid === uid);
         addActivity({
@@ -1642,6 +1656,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     activities: roleFilteredActivities,
     users,
     employees,
+    vendors,
     dealerPurchases,
     seenActivitiesCount,
     markActivitiesAsSeen,

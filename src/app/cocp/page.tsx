@@ -10,7 +10,7 @@ import { format, isPast, isToday } from 'date-fns';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, Download, MoreHorizontal } from 'lucide-react';
+import { ArrowUpDown, Download, MoreHorizontal, ArrowUp, ArrowDown } from 'lucide-react';
 import { NumberRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -173,9 +173,12 @@ export default function CocpPage() {
   
   const getSortIcon = (columnKey: SortableColumn) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
-      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
     }
-    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUp className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
   const SortableHeader = ({ column, label }: { column: SortableColumn, label: string }) => (
