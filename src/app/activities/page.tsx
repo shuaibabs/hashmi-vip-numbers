@@ -143,8 +143,8 @@ export default function ActivitiesPage() {
              {loading ? (
               <TableSpinner colSpan={role === 'admin' ? 6 : 5} />
             ) : paginatedActivities.length > 0 ? (
-                paginatedActivities.map((activity) => (
-                <TableRow key={activity.id} data-state={selectedRows.includes(activity.id) && "selected"}>
+                paginatedActivities.map((activity, index) => (
+                <TableRow key={`${activity.id}-${index}`} data-state={selectedRows.includes(activity.id) && "selected"}>
                     {role === 'admin' && (
                         <TableCell>
                             <Checkbox

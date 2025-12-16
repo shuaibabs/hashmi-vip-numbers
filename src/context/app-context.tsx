@@ -179,27 +179,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
+    if (activitiesLoading || !user) return; // Wait for activities to load first
+
     const seenCountKey = getSeenCountKey();
     if (seenCountKey) {
-        const storedCount = localStorage.getItem(seenCountKey);
-        setSeenActivitiesCount(storedCount ? Number(storedCount) : 0);
+        let storedCount = Number(localStorage.getItem(seenCountKey) || 0);
+        // Ensure the stored count is not greater than the actual number of activities
+        if (storedCount > activities.length) {
+            storedCount = activities.length;
+            localStorage.setItem(seenCountKey, String(storedCount));
+        }
+        setSeenActivitiesCount(storedCount);
     } else {
         setSeenActivitiesCount(0);
     }
-  }, [getSeenCountKey]);
+}, [activities, activitiesLoading, user, getSeenCountKey]);
 
-  useEffect(() => {
-     if (activitiesLoading) return;
-     const currentTotal = activities.length;
-     // Adjust seen count if activities have been deleted
-     if (seenActivitiesCount > currentTotal) {
-         const seenCountKey = getSeenCountKey();
-         if (seenCountKey) {
-            setSeenActivitiesCount(currentTotal);
-            localStorage.setItem(seenCountKey, String(currentTotal));
-         }
-     }
-  }, [activities, seenActivitiesCount, activitiesLoading, getSeenCountKey]);
 
   const markActivitiesAsSeen = useCallback(() => {
     const total = activities.length;
