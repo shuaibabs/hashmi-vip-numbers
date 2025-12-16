@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -18,6 +17,7 @@ import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/auth-context';
+import { Input } from '@/components/ui/input';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 
@@ -45,6 +45,7 @@ export default function PartnersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const combinedPartnershipNumbers: CombinedPartnershipRecord[] = useMemo(() => {
     const activePartnershipNumbers: CombinedPartnershipRecord[] = numbers
@@ -89,7 +90,9 @@ export default function PartnersPage() {
   }, [numbers, sales, role, user?.displayName]);
 
   const sortedNumbers = useMemo(() => {
-    let sortableItems = [...combinedPartnershipNumbers];
+    let sortableItems = [...combinedPartnershipNumbers].filter(num => 
+        num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof CombinedPartnershipRecord];
@@ -115,7 +118,7 @@ export default function PartnersPage() {
       });
     }
     return sortableItems;
-  }, [combinedPartnershipNumbers, sortConfig]);
+  }, [combinedPartnershipNumbers, sortConfig, searchTerm]);
 
   const totalPages = Math.ceil(sortedNumbers.length / itemsPerPage);
   const paginatedNumbers = sortedNumbers.slice(
@@ -160,6 +163,26 @@ export default function PartnersPage() {
     </TableHead>
   );
 
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -168,6 +191,15 @@ export default function PartnersPage() {
       />
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
+             <Input 
+              placeholder="Search by mobile number..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-full sm:max-w-sm"
+            />
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Items per page" />
@@ -205,7 +237,7 @@ export default function PartnersPage() {
                         key={num.id} 
                     >
                         <TableCell>{num.srNo ?? 'N/A'}</TableCell>
-                        <TableCell className="font-medium">{num.mobile}</TableCell>
+                        <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                         <TableCell>{num.sum}</TableCell>
                         <TableCell>{num.partnerName ?? 'N/A'}</TableCell>
                         <TableCell>₹{num.purchasePrice.toLocaleString()}</TableCell>
@@ -229,7 +261,7 @@ export default function PartnersPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={10} className="h-24 text-center">
-                  No partnership numbers found.
+                  {searchTerm ? `No partnership numbers found for "${searchTerm}".` : "No partnership numbers found."}
                 </TableCell>
               </TableRow>
             )}
@@ -241,10 +273,8 @@ export default function PartnersPage() {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
-        totalItems={combinedPartnershipNumbers.length}
+        totalItems={sortedNumbers.length}
       />
     </>
   );
 }
-
-    
