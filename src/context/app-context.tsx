@@ -175,7 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
   const getSeenCountKey = useCallback(() => {
     return user ? `seenActivitiesCount_${user.uid}` : null;
-  }, [user?.uid]);
+  }, [user]);
 
 
   useEffect(() => {
@@ -193,7 +193,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
         setSeenActivitiesCount(0);
     }
-}, [activities, activitiesLoading, user?.uid, getSeenCountKey]);
+}, [activities, activitiesLoading, user, getSeenCountKey]);
 
 
   const markActivitiesAsSeen = useCallback(() => {
