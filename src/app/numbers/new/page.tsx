@@ -25,7 +25,7 @@ import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
 
 const formSchema = z.object({
-  mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits.'),
+  mobile: z.string().min(10, 'At least one 10-digit mobile number is required.'),
   numberType: z.enum(['Prepaid', 'Postpaid', 'COCP']),
   purchaseFrom: z.string().min(1, 'Purchase from is required.'),
   purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative.'),
@@ -76,12 +76,13 @@ const formSchema = z.object({
 });
 
 export default function NewNumberPage() {
-  const { addNumber } = useApp();
+  const { addMultipleNumbers } = useApp();
   const { navigate, back } = useNavigation();
   const pathname = usePathname();
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
   const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -103,8 +104,10 @@ export default function NewNumberPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    addNumber(values as NewNumberData);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    await addMultipleNumbers(values as NewNumberData);
+    setIsSubmitting(false);
     navigate('/numbers', pathname);
   }
   
@@ -114,8 +117,8 @@ export default function NewNumberPage() {
   return (
     <>
       <PageHeader
-        title="Add New Number"
-        description="Manually add a new number to the master inventory."
+        title="Add New Number(s)"
+        description="Manually add one or more numbers to the master inventory."
       >
         <Button variant="outline" onClick={() => back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -130,15 +133,18 @@ export default function NewNumberPage() {
               <CardTitle>Number Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="mobile"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mobile Number</FormLabel>
+                      <FormLabel>Mobile Number(s)</FormLabel>
                       <FormControl>
-                        <Input placeholder="9876543210" {...field} />
+                        <Textarea
+                          placeholder="Enter one or more 10-digit mobile numbers, separated by commas or newlines."
+                          className="min-h-[120px]"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -166,7 +172,6 @@ export default function NewNumberPage() {
                       </FormItem>
                   )}
                   />
-              </div>
                 {numberType === 'COCP' && (
                     <FormField
                         control={form.control}
@@ -529,9 +534,8 @@ export default function NewNumberPage() {
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => navigate('/numbers', pathname)}>Cancel</Button>
-            <Button type="submit">
-                <Save className="mr-2 h-4 w-4" />
-                Save Number
+            <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save Number(s)</>}
             </Button>
           </div>
         </form>

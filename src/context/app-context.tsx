@@ -117,6 +117,7 @@ type AppContextType = {
   bulkSellNumbers: (numbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => void;
   cancelSale: (saleId: string) => void;
   addNumber: (data: NewNumberData) => void;
+  addMultipleNumbers: (data: NewNumberData) => Promise<void>;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
   deletePortOuts: (records: PortOutRecord[]) => void;
@@ -945,6 +946,85 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         errorEmitter.emit('permission-error', permissionError);
     });
   };
+
+  const addMultipleNumbers = async (data: NewNumberData) => {
+    if (!db || !user) return;
+    
+    const mobileNumbers = data.mobile.split(/[\n,]+/).map(n => n.trim()).filter(n => n);
+    const assignedToUser = user.displayName || user.email || 'User';
+
+    const validNumbers: string[] = [];
+    const skippedNumbers: string[] = [];
+
+    for (const mobile of mobileNumbers) {
+      if (!/^\d{10}$/.test(mobile) || isMobileNumberDuplicate(mobile)) {
+        skippedNumbers.push(mobile);
+        continue;
+      }
+      validNumbers.push(mobile);
+    }
+    
+    if (validNumbers.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Valid Numbers to Add',
+        description: 'All numbers entered were either invalid (not 10 digits) or already exist.',
+      });
+      return;
+    }
+    
+    let currentSrNo = getNextSrNo(numbers);
+    const batch = writeBatch(db);
+    const numbersCollection = collection(db, 'numbers');
+
+    validNumbers.forEach(mobile => {
+      const newDocRef = doc(numbersCollection);
+      const newNumber: Partial<NumberRecord> = {
+          ...data,
+          mobile,
+          srNo: currentSrNo++,
+          sum: calculateDigitalRoot(mobile),
+          upcStatus: 'Pending',
+          rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+          safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
+          assignedTo: assignedToUser,
+          name: assignedToUser,
+          checkInDate: null,
+          createdBy: user.uid,
+          purchaseDate: Timestamp.fromDate(data.purchaseDate),
+      };
+
+      if (data.ownershipType !== 'Partnership') newNumber.partnerName = '';
+      if (data.numberType !== 'COCP') {
+        delete (newNumber as any).accountName;
+        delete (newNumber as any).safeCustodyDate;
+      }
+      batch.set(newDocRef, sanitizeObjectForFirestore(newNumber));
+    });
+
+    await batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Bulk Added Numbers',
+            description: `Added ${validNumbers.length} new number(s).`
+        });
+        let toastDescription = `Successfully added ${validNumbers.length} number(s).`;
+        if (skippedNumbers.length > 0) {
+          toastDescription += ` Skipped ${skippedNumbers.length} invalid or duplicate number(s).`;
+        }
+        toast({
+          title: 'Bulk Add Complete',
+          description: toastDescription,
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'create',
+            requestResourceData: { info: `Bulk add of ${validNumbers.length} numbers.` },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
   
   const addDealerPurchase = (data: NewDealerPurchaseData) => {
     if (!db || !user) return;
@@ -1520,6 +1600,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     bulkSellNumbers,
     cancelSale,
     addNumber,
+    addMultipleNumbers,
     addDealerPurchase,
     updateDealerPurchase,
     deletePortOuts,
