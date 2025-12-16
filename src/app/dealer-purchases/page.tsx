@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Input } from '@/components/ui/input';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -38,9 +39,12 @@ export default function DealerPurchasesPage() {
   const [selectedPurchase, setSelectedPurchase] = useState<DealerPurchaseRecord | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'srNo', direction: 'descending' });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const sortedPurchases = useMemo(() => {
-    let sortableItems = [...dealerPurchases];
+    let sortableItems = [...dealerPurchases].filter(purchase => 
+        purchase.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof DealerPurchaseRecord];
@@ -64,7 +68,7 @@ export default function DealerPurchasesPage() {
       });
     }
     return sortableItems;
-  }, [dealerPurchases, sortConfig]);
+  }, [dealerPurchases, sortConfig, searchTerm]);
 
 
   const totalPages = Math.ceil(sortedPurchases.length / itemsPerPage);
@@ -183,6 +187,26 @@ export default function DealerPurchasesPage() {
     </TableHead>
   );
 
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -198,6 +222,15 @@ export default function DealerPurchasesPage() {
       </PageHeader>
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
+            <Input 
+              placeholder="Search by mobile number..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-full sm:max-w-sm"
+            />
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-full sm:w-[120px]">
                 <SelectValue placeholder="Items per page" />
@@ -282,7 +315,7 @@ export default function DealerPurchasesPage() {
                        )}
                     </TableCell>
                     <TableCell>{purchase.srNo}</TableCell>
-                    <TableCell className="font-medium">{purchase.mobile}</TableCell>
+                    <TableCell className="font-medium">{highlightMatch(purchase.mobile, searchTerm)}</TableCell>
                     <TableCell>{purchase.dealerName}</TableCell>
                     <TableCell>{purchase.sum}</TableCell>
                     <TableCell>₹{purchase.price.toLocaleString()}</TableCell>
@@ -321,7 +354,7 @@ export default function DealerPurchasesPage() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={10} className="h-24 text-center">
-                        No dealer purchases found.
+                        {searchTerm ? `No dealer purchases found for "${searchTerm}".` : "No dealer purchases found."}
                     </TableCell>
                 </TableRow>
             )}
@@ -333,7 +366,7 @@ export default function DealerPurchasesPage() {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
-        totalItems={dealerPurchases.length}
+        totalItems={sortedPurchases.length}
       />
       <AddDealerPurchaseModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       {selectedPurchase && (
