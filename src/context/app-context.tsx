@@ -315,8 +315,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Effect to derive vendors list
   useEffect(() => {
+    const defaultVendors = [
+        "lifetimenumber",
+        "vipnumberstore",
+        "vipnumbershop",
+        "numberwale",
+        "numberspoint",
+        "vipfancynumber",
+        "numberatm",
+        "numbersolution"
+    ];
     const allSalesVendors = sales.map(s => s.soldTo);
-    const uniqueVendors = [...new Set(allSalesVendors)];
+    const uniqueVendors = [...new Set([...defaultVendors, ...allSalesVendors])];
     setVendors(uniqueVendors.sort());
   }, [sales]);
 
