@@ -23,6 +23,8 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 import { useNavigation } from '@/context/navigation-context';
 import { usePathname } from 'next/navigation';
+import { AddNumbersReviewModal } from '@/components/add-numbers-review-modal';
+
 
 const formSchema = z.object({
   mobile: z.string().min(10, 'At least one 10-digit mobile number is required.'),
@@ -76,13 +78,13 @@ const formSchema = z.object({
 });
 
 export default function NewNumberPage() {
-  const { addMultipleNumbers } = useApp();
   const { navigate, back } = useNavigation();
   const pathname = usePathname();
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
   const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [formData, setFormData] = useState<NewNumberData | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -104,11 +106,9 @@ export default function NewNumberPage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    await addMultipleNumbers(values as NewNumberData);
-    setIsSubmitting(false);
-    navigate('/numbers', pathname);
+  function onReview(values: z.infer<typeof formSchema>) {
+    setFormData(values as NewNumberData);
+    setIsReviewModalOpen(true);
   }
   
   const numberType = form.watch('numberType');
@@ -127,7 +127,7 @@ export default function NewNumberPage() {
       </PageHeader>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onReview)} className="space-y-8">
           <Card>
             <CardHeader>
               <CardTitle>Number Details</CardTitle>
@@ -534,12 +534,19 @@ export default function NewNumberPage() {
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => navigate('/numbers', pathname)}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save Number(s)</>}
+            <Button type="submit">
+                <Save className="mr-2 h-4 w-4" /> Review & Save
             </Button>
           </div>
         </form>
       </Form>
+      {formData && (
+        <AddNumbersReviewModal
+            isOpen={isReviewModalOpen}
+            onClose={() => setIsReviewModalOpen(false)}
+            formData={formData}
+        />
+      )}
     </>
   );
 }

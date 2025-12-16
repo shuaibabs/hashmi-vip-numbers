@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -117,7 +118,7 @@ type AppContextType = {
   bulkSellNumbers: (numbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => void;
   cancelSale: (saleId: string) => void;
   addNumber: (data: NewNumberData) => void;
-  addMultipleNumbers: (data: NewNumberData) => Promise<void>;
+  addMultipleNumbers: (data: NewNumberData, validNumbers: string[]) => Promise<void>;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
   deletePortOuts: (records: PortOutRecord[]) => void;
@@ -181,14 +182,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    // This effect runs only when activities are loaded or the user changes.
-    // It prevents a race condition on login where the seen count is calculated before activities are present.
     if (activitiesLoading || !user) return; 
 
     const seenCountKey = getSeenCountKey();
     if (seenCountKey) {
         let storedCount = Number(localStorage.getItem(seenCountKey) || 0);
-        // Ensure the stored count is not greater than the actual number of activities
         if (storedCount > activities.length) {
             storedCount = activities.length;
             localStorage.setItem(seenCountKey, String(storedCount));
@@ -1000,32 +998,10 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
-  const addMultipleNumbers = async (data: NewNumberData) => {
-    if (!db || !user) return;
+  const addMultipleNumbers = async (data: NewNumberData, validNumbers: string[]) => {
+    if (!db || !user || validNumbers.length === 0) return;
     
-    const mobileNumbers = data.mobile.split(/[\n,]+/).map(n => n.trim()).filter(n => n);
     const assignedToUser = user.displayName || user.email || 'User';
-
-    const validNumbers: string[] = [];
-    const skippedNumbers: string[] = [];
-
-    for (const mobile of mobileNumbers) {
-      if (!/^\d{10}$/.test(mobile) || isMobileNumberDuplicate(mobile)) {
-        skippedNumbers.push(mobile);
-        continue;
-      }
-      validNumbers.push(mobile);
-    }
-    
-    if (validNumbers.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'No Valid Numbers to Add',
-        description: 'All numbers entered were either invalid (not 10 digits) or already exist.',
-      });
-      return;
-    }
-    
     let currentSrNo = getNextSrNo(numbers);
     const batch = writeBatch(db);
     const numbersCollection = collection(db, 'numbers');
@@ -1062,9 +1038,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             description: `Added ${validNumbers.length} new number(s).`
         });
         let toastDescription = `Successfully added ${validNumbers.length} number(s).`;
-        if (skippedNumbers.length > 0) {
-          toastDescription += ` Skipped ${skippedNumbers.length} invalid or duplicate number(s).`;
-        }
         toast({
           title: 'Bulk Add Complete',
           description: toastDescription,
@@ -1702,5 +1675,3 @@ export function useApp() {
   }
   return context;
 }
-
-    
