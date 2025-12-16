@@ -22,6 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { BulkEditUpcModal } from '@/components/bulk-edit-upc-modal';
 import { useAuth } from '@/context/auth-context';
 import Papa from 'papaparse';
+import { Input } from '@/components/ui/input';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -42,6 +43,7 @@ export default function SalesPage() {
   const [isBulkPortOutDialogOpen, setIsBulkPortOutDialogOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
@@ -51,7 +53,9 @@ export default function SalesPage() {
   }, [sales, role, user?.displayName]);
 
   const sortedSales = useMemo(() => {
-    let sortableItems = [...roleFilteredSales];
+    let sortableItems = [...roleFilteredSales].filter(sale => 
+        sale.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof SaleRecord];
@@ -77,7 +81,7 @@ export default function SalesPage() {
       });
     }
     return sortableItems;
-  }, [roleFilteredSales, sortConfig]);
+  }, [roleFilteredSales, sortConfig, searchTerm]);
 
   const totalPages = Math.ceil(sortedSales.length / itemsPerPage);
   const paginatedSales = sortedSales.slice(
@@ -236,6 +240,26 @@ export default function SalesPage() {
     </TableHead>
   );
 
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -244,6 +268,15 @@ export default function SalesPage() {
       />
        <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div className="flex items-center gap-4 flex-wrap">
+             <Input 
+              placeholder="Search by mobile number..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-full sm:max-w-sm"
+            />
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Items per page" />
@@ -310,7 +343,7 @@ export default function SalesPage() {
                         />
                     </TableCell>
                     <TableCell>{sale.srNo}</TableCell>
-                    <TableCell className="font-medium">{sale.mobile}</TableCell>
+                    <TableCell className="font-medium">{highlightMatch(sale.mobile, searchTerm)}</TableCell>
                     <TableCell>{sale.sum}</TableCell>
                     <TableCell>{sale.soldTo}</TableCell>
                     <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
@@ -369,7 +402,7 @@ export default function SalesPage() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={12} className="h-24 text-center">
-                        No sales records found.
+                        {searchTerm ? `No sales records found for "${searchTerm}".` : "No sales records found."}
                     </TableCell>
                 </TableRow>
             )}
@@ -448,5 +481,3 @@ export default function SalesPage() {
     </>
   );
 }
-
-    

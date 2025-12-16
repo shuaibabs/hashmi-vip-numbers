@@ -23,6 +23,7 @@ import { EditPortOutStatusModal } from '@/components/edit-port-out-status-modal'
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
 import { BulkEditPortOutPaymentModal } from '@/components/bulk-edit-port-out-payment-modal';
+import { Input } from '@/components/ui/input';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -39,6 +40,7 @@ export default function PortOutPage() {
   const [selectedPortOut, setSelectedPortOut] = useState<PortOutRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const roleFilteredPortOuts = useMemo(() => {
     if (role === 'admin') {
@@ -48,7 +50,9 @@ export default function PortOutPage() {
   }, [portOuts, role, user?.displayName]);
 
   const sortedPortOuts = useMemo(() => {
-    let sortableItems = [...roleFilteredPortOuts];
+    let sortableItems = [...roleFilteredPortOuts].filter(portOut => 
+        portOut.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof PortOutRecord];
@@ -74,7 +78,7 @@ export default function PortOutPage() {
       });
     }
     return sortableItems;
-  }, [roleFilteredPortOuts, sortConfig]);
+  }, [roleFilteredPortOuts, sortConfig, searchTerm]);
 
   const totalPages = Math.ceil(sortedPortOuts.length / itemsPerPage);
   const paginatedPortOuts = sortedPortOuts.slice(
@@ -201,6 +205,26 @@ export default function PortOutPage() {
     setSelectedRows([]);
   }
 
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -234,6 +258,15 @@ export default function PortOutPage() {
       </PageHeader>
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
+            <Input 
+              placeholder="Search by mobile number..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-full sm:max-w-sm"
+            />
              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Items per page" />
@@ -300,7 +333,7 @@ export default function PortOutPage() {
                       )}
                     </TableCell>
                     <TableCell>{record.srNo}</TableCell>
-                    <TableCell className="font-medium">{record.mobile}</TableCell>
+                    <TableCell className="font-medium">{highlightMatch(record.mobile, searchTerm)}</TableCell>
                     <TableCell>{record.sum}</TableCell>
                     <TableCell>{record.soldTo}</TableCell>
                     <TableCell>₹{record.salePrice.toLocaleString()}</TableCell>
@@ -341,7 +374,7 @@ export default function PortOutPage() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={12} className="h-24 text-center">
-                        No port out records found.
+                        {searchTerm ? `No port out records found for "${searchTerm}".` : "No port out records found."}
                     </TableCell>
                 </TableRow>
             )}
