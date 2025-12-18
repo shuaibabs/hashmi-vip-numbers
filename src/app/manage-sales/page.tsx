@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -10,7 +11,7 @@ import { Download, Search } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SaleRecord } from '@/lib/data';
+import { SaleRecord, PortOutRecord, NumberRecord } from '@/lib/data';
 import { format } from 'date-fns';
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
@@ -18,38 +19,58 @@ import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SaleDetailsModal } from '@/components/sale-details-modal';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { Timestamp } from 'firebase/firestore';
+
+
+type CombinedSaleRecord = SaleRecord & {
+  status: 'Active Sale' | 'Ported Out';
+};
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 
 export default function ManageSalesPage() {
-  const { sales, loading, addActivity } = useApp();
+  const { sales, portOuts, loading, addActivity } = useApp();
   const { role, user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [soldToFilter, setSoldToFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
+  const [selectedSale, setSelectedSale] = useState<CombinedSaleRecord | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const roleFilteredSales = useMemo(() => {
+  const combinedSales = useMemo(() => {
+    const activeSales: CombinedSaleRecord[] = sales.map(s => ({ ...s, status: 'Active Sale' }));
+    
+    const portedOutSales: CombinedSaleRecord[] = portOuts.map(p => ({
+        ...p,
+        status: 'Ported Out',
+        portOutStatus: 'Done', // Implicitly done
+    } as CombinedSaleRecord));
+
+    const allSales = [...activeSales, ...portedOutSales];
+
+    // Filter based on user role
     if (role === 'admin') {
-      return sales;
+      return allSales;
     }
-    return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
-  }, [sales, role, user?.displayName]);
+    return allSales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
+  }, [sales, portOuts, role, user?.displayName]);
+
 
   const soldToOptions = useMemo(() => {
-    const allVendors = roleFilteredSales.map(s => s.soldTo);
+    const allVendors = combinedSales.map(s => s.soldTo);
     return ['all', ...Array.from(new Set(allVendors))];
-  }, [roleFilteredSales]);
+  }, [combinedSales]);
 
   const filteredSales = useMemo(() => {
-    return roleFilteredSales.filter(sale => 
+    return combinedSales.filter(sale => 
       (soldToFilter === 'all' || sale.soldTo === soldToFilter) &&
       (sale.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [roleFilteredSales, soldToFilter, searchTerm]);
+  }, [combinedSales, soldToFilter, searchTerm]);
 
   const { totalPurchaseAmount, totalSaleAmount } = useMemo(() => {
     return filteredSales.reduce((acc, sale) => {
@@ -79,7 +100,7 @@ export default function ManageSalesPage() {
     setCurrentPage(1);
   };
 
-  const handleRowClick = (sale: SaleRecord) => {
+  const handleRowClick = (sale: CombinedSaleRecord) => {
     setSelectedSale(sale);
     setIsDetailsModalOpen(true);
   };
@@ -125,6 +146,7 @@ export default function ManageSalesPage() {
       "Sold To": s.soldTo,
       "Sale Price": s.salePrice,
       "Sale Date": format(s.saleDate.toDate(), 'PPP'),
+      "Status": s.status,
     }));
     
     // Add summary row
@@ -138,6 +160,7 @@ export default function ManageSalesPage() {
         "Sold To": "",
         "Sale Price": totalSaleAmount,
         "Sale Date": "",
+        "Status": "",
     };
     
     const csv = Papa.unparse([...formattedData, summary]);
@@ -257,34 +280,34 @@ export default function ManageSalesPage() {
               <TableHead>Sr.No</TableHead>
               <TableHead>Mobile</TableHead>
               <TableHead>Sum</TableHead>
-              <TableHead>Purchase From</TableHead>
-              <TableHead>Purchase Price</TableHead>
-              <TableHead>Purchase Date</TableHead>
               <TableHead>Sold To</TableHead>
               <TableHead>Sale Price</TableHead>
               <TableHead>Sale Date</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={9} />
+                <TableSpinner colSpan={7} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
-                <TableRow key={sale.srNo} onClick={() => handleRowClick(sale)} className="cursor-pointer">
+                <TableRow key={sale.id} onClick={() => handleRowClick(sale)} className={cn("cursor-pointer", sale.status === 'Ported Out' && "bg-muted/50 hover:bg-muted")}>
                     <TableCell>{sale.srNo}</TableCell>
                     <TableCell className="font-medium">{highlightMatch(sale.mobile, searchTerm)}</TableCell>
                     <TableCell>{sale.sum}</TableCell>
-                    <TableCell>{sale.originalNumberData?.purchaseFrom || 'N/A'}</TableCell>
-                    <TableCell>₹{sale.originalNumberData?.purchasePrice.toLocaleString() || 'N/A'}</TableCell>
-                    <TableCell>{sale.originalNumberData?.purchaseDate ? format(sale.originalNumberData.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{sale.soldTo}</TableCell>
                     <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
                     <TableCell>{format(sale.saleDate.toDate(), 'PPP')}</TableCell>
+                     <TableCell>
+                        <Badge variant={sale.status === 'Active Sale' ? 'default' : 'secondary'} className={sale.status === 'Active Sale' ? 'bg-green-500/20 text-green-700' : ''}>
+                          {sale.status}
+                        </Badge>
+                    </TableCell>
                 </TableRow>
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                         {searchTerm ? `No sales records found for "${searchTerm}".` : "No sales records found for this filter."}
                     </TableCell>
                 </TableRow>
@@ -307,3 +330,4 @@ export default function ManageSalesPage() {
     </>
   );
 }
+
