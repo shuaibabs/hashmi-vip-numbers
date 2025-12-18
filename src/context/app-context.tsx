@@ -85,19 +85,13 @@ const sanitizeObjectForFirestore = (obj: any): any => {
 };
 
 const createDetailedDescription = (baseText: string, affectedNumbers: string[]) => {
-    const MAX_NUMBERS_TO_LIST = 5;
     if (affectedNumbers.length === 0) {
         return `${baseText} 0 numbers.`;
     }
     if (affectedNumbers.length === 1) {
         return `${baseText} number: ${affectedNumbers[0]}.`;
     }
-    if (affectedNumbers.length <= MAX_NUMBERS_TO_LIST) {
-        return `${baseText} ${affectedNumbers.length} numbers: ${affectedNumbers.join(', ')}.`;
-    }
-    const firstFew = affectedNumbers.slice(0, MAX_NUMBERS_TO_LIST).join(', ');
-    const remainingCount = affectedNumbers.length - MAX_NUMBERS_TO_LIST;
-    return `${baseText} ${affectedNumbers.length} numbers: ${firstFew}, and ${remainingCount} more.`;
+    return `${baseText} ${affectedNumbers.length} numbers: ${affectedNumbers.join(', ')}.`;
 };
 
 
