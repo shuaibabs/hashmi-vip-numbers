@@ -23,6 +23,9 @@ service cloud.firestore {
     match /sales/{docId} {
        allow read, create, update, delete: if request.auth != null;
     }
+    match /prebookings/{docId} {
+       allow read, create, update, delete: if request.auth != null;
+    }
     match /portouts/{docId} {
        allow read, create, update, delete: if request.auth != null;
     }

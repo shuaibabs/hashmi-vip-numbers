@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -30,10 +31,11 @@ type BulkSellNumberModalProps = {
   isOpen: boolean;
   onClose: () => void;
   selectedNumbers: NumberRecord[];
+  isPreBooking?: boolean;
 };
 
-export function BulkSellNumberModal({ isOpen, onClose, selectedNumbers }: BulkSellNumberModalProps) {
-  const { bulkSellNumbers, vendors } = useApp();
+export function BulkSellNumberModal({ isOpen, onClose, selectedNumbers, isPreBooking = false }: BulkSellNumberModalProps) {
+  const { bulkSellNumbers, bulkSellPreBookedNumbers, vendors } = useApp();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const vendorOptions = useMemo(() => {
@@ -60,15 +62,21 @@ export function BulkSellNumberModal({ isOpen, onClose, selectedNumbers }: BulkSe
   }, [isOpen, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    bulkSellNumbers(selectedNumbers, values);
+    if (isPreBooking) {
+      bulkSellPreBookedNumbers(selectedNumbers, values);
+    } else {
+      bulkSellNumbers(selectedNumbers, values);
+    }
     onClose();
   }
+
+  const title = isPreBooking ? "Bulk Sell Pre-Booked Numbers" : "Bulk Mark as Sold";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Bulk Mark as Sold</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Enter sales details for the selected {selectedNumbers.length} number(s). These details will be applied to all.
           </DialogDescription>
@@ -169,5 +177,3 @@ export function BulkSellNumberModal({ isOpen, onClose, selectedNumbers }: BulkSe
     </Dialog>
   );
 }
-
-    

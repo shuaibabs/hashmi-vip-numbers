@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -28,9 +29,10 @@ type SellNumberModalProps = {
   isOpen: boolean;
   onClose: () => void;
   number: NumberRecord;
+  onSell?: (details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
 };
 
-export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProps) {
+export function SellNumberModal({ isOpen, onClose, number, onSell }: SellNumberModalProps) {
   const { sellNumber, vendors } = useApp();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
@@ -58,7 +60,11 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
   }, [isOpen, number, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    sellNumber(number.id, values);
+    if (onSell) {
+      onSell(values);
+    } else {
+      sellNumber(number.id, values);
+    }
     onClose();
   }
 
@@ -155,5 +161,3 @@ export function SellNumberModal({ isOpen, onClose, number }: SellNumberModalProp
     </Dialog>
   );
 }
-
-    

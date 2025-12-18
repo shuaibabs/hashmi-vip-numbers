@@ -29,6 +29,7 @@ import {
   Users,
   Database,
   Handshake,
+  Bookmark,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
@@ -44,6 +45,7 @@ const navItems: {
 }[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
+  { href: '/pre-booking', label: 'Pre-Booking', icon: Bookmark, adminOnly: false },
   { href: '/partners', label: 'Partners', icon: Handshake, adminOnly: false },
   { href: '/signup', label: 'Create User', icon: UserPlus, adminOnly: true },
   { href: '/users', label: 'Manage Users', icon: Users, adminOnly: true },

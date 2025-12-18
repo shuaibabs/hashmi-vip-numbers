@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud, ArrowUp, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud, ArrowUp, ArrowDown, Bookmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -35,7 +35,7 @@ import { BulkDeleteNumbersModal } from '@/components/bulk-delete-numbers-modal';
 type SortableColumn = keyof NumberRecord | 'id';
 
 export default function AllNumbersPage() {
-  const { numbers, loading, isMobileNumberDuplicate, deleteNumbers } = useApp();
+  const { numbers, loading, isMobileNumberDuplicate, deleteNumbers, markAsPreBooked } = useApp();
   const { role } = useAuth();
   const { navigate } = useNavigation();
   const pathname = usePathname();
@@ -56,6 +56,7 @@ export default function AllNumbersPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'srNo', direction: 'ascending'});
+  const [isPreBookConfirmationOpen, setIsPreBookConfirmationOpen] = useState(false);
 
   const sortedAndFilteredNumbers = useMemo(() => {
     let sortableItems = [...numbers]
@@ -255,6 +256,17 @@ export default function AllNumbersPage() {
     navigate(`/numbers/new?mobile=${trimmedSearch}`, pathname);
   };
 
+  const handlePreBook = (number: NumberRecord) => {
+    setSelectedRows([number.id]);
+    setIsPreBookConfirmationOpen(true);
+  }
+
+  const handleConfirmPreBook = () => {
+    markAsPreBooked(selectedRows);
+    setIsPreBookConfirmationOpen(false);
+    setSelectedRows([]);
+  }
+
   return (
     <>
       <PageHeader
@@ -365,6 +377,10 @@ export default function AllNumbersPage() {
                   <UploadCloud className="mr-2 h-4 w-4" />
                   Edit Upload Status ({selectedRows.length})
               </Button>
+              <Button onClick={() => setIsPreBookConfirmationOpen(true)} variant="outline">
+                  <Bookmark className="mr-2 h-4 w-4" />
+                  Pre-Book ({selectedRows.length})
+              </Button>
               <Button onClick={handleOpenBulkSellModal} className="bg-green-600 hover:bg-green-700 text-white">
                   <DollarSign className="mr-2 h-4 w-4" />
                   Sell ({selectedRows.length})
@@ -455,6 +471,10 @@ export default function AllNumbersPage() {
                               Edit Location
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
+                             <DropdownMenuItem onClick={() => handlePreBook(num)}>
+                              <Bookmark className="mr-2 h-4 w-4" />
+                              Pre-Book Number
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={() => handleSellNumber(num)}>
                             <DollarSign className="mr-2 h-4 w-4" />
                             Mark as Sold
@@ -534,8 +554,22 @@ export default function AllNumbersPage() {
             selectedNumbers={selectedNumberRecords}
         />
       )}
+      <AlertDialog open={isPreBookConfirmationOpen} onOpenChange={setIsPreBookConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will move {selectedRows.length} number(s) to the Pre-Booking list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPreBook}>
+              Yes, Pre-Book
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
-
-    

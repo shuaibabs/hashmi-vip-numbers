@@ -15,6 +15,7 @@ import {
   type PortOutRecord,
   NewReminderData,
   type User,
+  PreBookingRecord,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast, isValid, parse, subDays } from 'date-fns';
@@ -88,9 +89,6 @@ const createDetailedDescription = (baseText: string, affectedNumbers: string[]) 
     if (affectedNumbers.length === 0) {
         return `${baseText} 0 numbers.`;
     }
-    if (affectedNumbers.length === 1) {
-        return `${baseText} number: ${affectedNumbers[0]}.`;
-    }
     return `${baseText} ${affectedNumbers.length} numbers: ${affectedNumbers.join(', ')}.`;
 };
 
@@ -111,6 +109,7 @@ type AppContextType = {
   employees: string[];
   vendors: string[];
   dealerPurchases: DealerPurchaseRecord[];
+  preBookings: PreBookingRecord[];
   seenActivitiesCount: number;
   markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
@@ -144,6 +143,10 @@ type AppContextType = {
   deleteNumbers: (numberIds: string[]) => void;
   deleteUser: (uid: string) => void;
   updateNumberLocation: (numberIds: string[], location: { locationType: 'Store' | 'Employee' | 'Dealer', currentLocation: string }) => void;
+  markAsPreBooked: (numberIds: string[]) => void;
+  cancelPreBooking: (preBookingId: string) => void;
+  sellPreBookedNumber: (preBookingId: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
+  bulkSellPreBookedNumbers: (preBookedNumbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -159,6 +162,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
+  const [preBookings, setPreBookings] = useState<PreBookingRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
@@ -172,6 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [remindersLoading, setRemindersLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
+  const [preBookingsLoading, setPreBookingsLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
 
     // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
@@ -184,6 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       remindersLoading ||
       activitiesLoading ||
       dealerPurchasesLoading ||
+      preBookingsLoading ||
       usersLoading
     ));
     
@@ -255,6 +261,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReminders([]);
       setActivities([]);
       setDealerPurchases([]);
+      setPreBookings([]);
       setUsers([]);
       setEmployees([]);
       setVendors([]);
@@ -264,6 +271,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setRemindersLoading(false);
       setActivitiesLoading(false);
       setDealerPurchasesLoading(false);
+      setPreBookingsLoading(false);
       setUsersLoading(false);
       return;
     }
@@ -275,6 +283,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRemindersLoading(true);
     setActivitiesLoading(true);
     setDealerPurchasesLoading(true);
+    setPreBookingsLoading(true);
     setUsersLoading(true);
 
     const subscriptions: Unsubscribe[] = [];
@@ -285,6 +294,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { name: 'reminders', setter: setReminders, loader: setRemindersLoading },
       { name: 'activities', setter: setActivities, loader: setActivitiesLoading },
       { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
+      { name: 'prebookings', setter: setPreBookings, loader: setPreBookingsLoading },
       { name: 'users', setter: (data: User[]) => {
           setUsers(data);
           setEmployees(data.map(u => u.displayName).sort())
@@ -349,6 +359,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...sales,
       ...portOuts,
       ...dealerPurchases,
+      ...preBookings,
     ];
   
     return allNumbers.some(item => 
@@ -1431,6 +1442,170 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
+  const markAsPreBooked = (numberIds: string[]) => {
+    if (!db || !user) return;
+    let currentPreBookingSrNo = getNextSrNo(preBookings);
+    const batch = writeBatch(db);
+    const numbersToPreBook = numbers.filter(n => numberIds.includes(n.id));
+    const affectedNumbers = numbersToPreBook.map(n => n.mobile);
+
+    numbersToPreBook.forEach(num => {
+      const { id, ...originalData } = num;
+      const newPreBooking: Omit<PreBookingRecord, 'id'> = {
+        srNo: currentPreBookingSrNo++,
+        mobile: originalData.mobile,
+        sum: originalData.sum,
+        uploadStatus: originalData.uploadStatus,
+        preBookingDate: Timestamp.now(),
+        createdBy: user.uid,
+        originalNumberData: sanitizeObjectForFirestore(originalData),
+      };
+      batch.set(doc(collection(db, 'prebookings')), newPreBooking);
+      batch.delete(doc(db, 'numbers', num.id));
+    });
+
+    batch.commit().then(() => {
+      addActivity({
+        employeeName: user.displayName || user.email || 'User',
+        action: 'Pre-Booked Numbers',
+        description: createDetailedDescription('Moved to Pre-Booking:', affectedNumbers),
+      });
+      toast({
+        title: 'Numbers Pre-Booked',
+        description: `${affectedNumbers.length} number(s) have been moved to the Pre-Booking list.`
+      });
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'prebookings/numbers',
+        operation: 'write',
+        requestResourceData: { info: `Pre-booking ${numberIds.length} numbers` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const cancelPreBooking = (preBookingId: string) => {
+    if (!db || !user) return;
+    const preBookingToCancel = preBookings.find(pb => pb.id === preBookingId);
+    if (!preBookingToCancel || !preBookingToCancel.originalNumberData) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not find the pre-booking record to cancel.' });
+      return;
+    }
+    
+    const restoredNumberData = sanitizeObjectForFirestore(preBookingToCancel.originalNumberData);
+    const restoredNumber: Omit<NumberRecord, 'id'> = {
+      ...(restoredNumberData as Omit<NumberRecord, 'id'>),
+    };
+
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, 'numbers')), restoredNumber);
+    batch.delete(doc(db, 'prebookings', preBookingId));
+    
+    batch.commit().then(() => {
+      addActivity({
+        employeeName: user.displayName || user.email || 'User',
+        action: 'Cancelled Pre-Booking',
+        description: `Cancelled pre-booking for ${preBookingToCancel.mobile} and returned it to inventory.`,
+      });
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'prebookings/numbers',
+        operation: 'write',
+        requestResourceData: { info: `Cancel pre-booking for ${preBookingToCancel.mobile}` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const sellPreBookedNumber = (preBookingId: string, details: { salePrice: number; soldTo: string; saleDate: Date; }) => {
+    if (!db || !user) return;
+    const preBookingToSell = preBookings.find(pb => pb.id === preBookingId);
+    if (!preBookingToSell || !preBookingToSell.originalNumberData) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not find the pre-booking record to sell.' });
+      return;
+    }
+
+    const newSale: Omit<SaleRecord, 'id'> = {
+      srNo: getNextSrNo(sales),
+      mobile: preBookingToSell.mobile,
+      sum: preBookingToSell.sum,
+      salePrice: details.salePrice,
+      soldTo: details.soldTo,
+      paymentStatus: 'Pending',
+      portOutStatus: 'Pending',
+      upcStatus: 'Pending',
+      uploadStatus: preBookingToSell.uploadStatus || 'Pending',
+      saleDate: Timestamp.fromDate(details.saleDate),
+      createdBy: user.uid,
+      originalNumberData: sanitizeObjectForFirestore(preBookingToSell.originalNumberData),
+    };
+
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, 'sales')), newSale);
+    batch.delete(doc(db, 'prebookings', preBookingId));
+    
+    batch.commit().then(() => {
+      addActivity({
+        employeeName: user.displayName || user.email || 'User',
+        action: 'Sold Pre-Booked Number',
+        description: `Sold pre-booked number ${preBookingToSell.mobile} to ${details.soldTo}.`
+      });
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'sales/prebookings',
+        operation: 'write',
+        requestResourceData: { info: `Sell pre-booked number ${preBookingToSell.mobile}` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const bulkSellPreBookedNumbers = (preBookedNumbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => {
+    if (!db || !user || preBookedNumbersToSell.length === 0) return;
+    
+    let currentSaleSrNo = getNextSrNo(sales);
+    const batch = writeBatch(db);
+    const affectedNumbers = preBookedNumbersToSell.map(n => n.mobile);
+
+    preBookedNumbersToSell.forEach(pb => {
+      const preBookingToSell = preBookings.find(pre => pre.id === pb.id);
+      if (!preBookingToSell || !preBookingToSell.originalNumberData) return;
+
+      const newSale: Omit<SaleRecord, 'id'> = {
+        srNo: currentSaleSrNo++,
+        mobile: preBookingToSell.mobile,
+        sum: preBookingToSell.sum,
+        salePrice: details.salePrice,
+        soldTo: details.soldTo,
+        paymentStatus: 'Pending',
+        portOutStatus: 'Pending',
+        upcStatus: 'Pending',
+        uploadStatus: preBookingToSell.uploadStatus || 'Pending',
+        saleDate: Timestamp.fromDate(details.saleDate),
+        createdBy: user.uid,
+        originalNumberData: sanitizeObjectForFirestore(preBookingToSell.originalNumberData),
+      };
+      
+      batch.set(doc(collection(db, 'sales')), newSale);
+      batch.delete(doc(db, 'prebookings', pb.id));
+    });
+
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Bulk Sold Pre-Booked',
+            description: createDetailedDescription(`Sold to ${details.soldTo}:`, affectedNumbers)
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'sales/prebookings',
+            operation: 'write',
+            requestResourceData: { info: `Bulk sell of ${preBookedNumbersToSell.length} pre-booked numbers.` },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
     if (!db || !user) return { validRecords: [], failedRecords: [] };
     
@@ -1444,6 +1619,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         ...sales.map(s => s.mobile),
         ...portOuts.map(p => p.mobile),
         ...dealerPurchases.map(d => d.mobile),
+        ...preBookings.map(pb => pb.mobile),
     ]);
     
     const parseDate = (rawDate: any): Date | null => {
@@ -1657,6 +1833,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
   const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => r.assignedTo === user?.displayName);
+  const roleFilteredPreBookings = role === 'admin' ? preBookings : (preBookings || []).filter(pb => pb.originalNumberData?.assignedTo === user?.displayName);
+
 
   const value: AppContextType = {
     loading,
@@ -1669,6 +1847,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     employees,
     vendors,
     dealerPurchases,
+    preBookings: roleFilteredPreBookings,
     seenActivitiesCount,
     markActivitiesAsSeen,
     isMobileNumberDuplicate,
@@ -1702,6 +1881,10 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     deleteNumbers,
     deleteUser,
     updateNumberLocation,
+    markAsPreBooked,
+    cancelPreBooking,
+    sellPreBookedNumber,
+    bulkSellPreBookedNumbers,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

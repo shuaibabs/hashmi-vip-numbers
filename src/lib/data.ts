@@ -62,6 +62,17 @@ export type SaleRecord = {
   originalNumberData: Omit<NumberRecord, 'id'>;
 };
 
+export type PreBookingRecord = {
+  id: string; // Firestore document ID
+  srNo: number;
+  mobile: string;
+  sum: number;
+  uploadStatus: 'Pending' | 'Done';
+  preBookingDate: Timestamp;
+  createdBy: string;
+  originalNumberData: Omit<NumberRecord, 'id'>;
+}
+
 export type PortOutRecord = Omit<SaleRecord, 'portOutStatus'> & { portOutDate: Timestamp };
 
 export type Reminder = {
@@ -103,5 +114,4 @@ export type DealerPurchaseRecord = {
 };
 
 export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'srNo' | 'createdBy' | 'paymentStatus' | 'portOutStatus' | 'sum' | 'upcStatus'>;
-
     
