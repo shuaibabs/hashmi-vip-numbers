@@ -22,6 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BulkSellNumberModal } from '@/components/bulk-sell-modal';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -46,14 +47,27 @@ export default function PreBookingPage() {
     return preBookings.filter(pb => pb.originalNumberData?.assignedTo === user?.displayName);
   }, [preBookings, role, user?.displayName]);
 
-  const filteredPreBookings = useMemo(() => {
-    return roleFilteredPreBookings.filter(pb => 
+  const sortedAndFilteredPreBookings = useMemo(() => {
+    let filtered = roleFilteredPreBookings.filter(pb => 
       (pb.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+    
+    // Sort by RTS status first, then by pre-booking date
+    filtered.sort((a, b) => {
+        const aIsRts = a.originalNumberData?.status === 'RTS';
+        const bIsRts = b.originalNumberData?.status === 'RTS';
+        
+        if (aIsRts && !bIsRts) return -1;
+        if (!aIsRts && bIsRts) return 1;
+
+        return b.preBookingDate.toDate().getTime() - a.preBookingDate.toDate().getTime();
+    });
+
+    return filtered;
   }, [roleFilteredPreBookings, searchTerm]);
 
-  const totalPages = Math.ceil(filteredPreBookings.length / itemsPerPage);
-  const paginatedPreBookings = filteredPreBookings.slice(
+  const totalPages = Math.ceil(sortedAndFilteredPreBookings.length / itemsPerPage);
+  const paginatedPreBookings = sortedAndFilteredPreBookings.slice(
       (currentPage - 1) * itemsPerPage,
       currentPage * itemsPerPage
   );
@@ -198,49 +212,56 @@ export default function PreBookingPage() {
             {loading ? (
                 <TableSpinner colSpan={9} />
             ) : paginatedPreBookings.length > 0 ? (
-                paginatedPreBookings.map((pb) => (
-                <TableRow key={pb.srNo} data-state={selectedRows.includes(pb.id) && "selected"}>
-                    <TableCell>
-                        <Checkbox
-                            checked={selectedRows.includes(pb.id)}
-                            onCheckedChange={() => handleSelectRow(pb.id)}
-                            aria-label="Select row"
-                        />
-                    </TableCell>
-                    <TableCell>{pb.srNo}</TableCell>
-                    <TableCell className="font-medium">{highlightMatch(pb.mobile, searchTerm)}</TableCell>
-                    <TableCell>{pb.sum}</TableCell>
-                    <TableCell>₹{pb.originalNumberData?.purchasePrice.toLocaleString() || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant={pb.originalNumberData?.status === 'RTS' ? 'default' : 'destructive'} className={pb.originalNumberData?.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{pb.originalNumberData?.status}</Badge>
-                    </TableCell>
-                    <TableCell>{format(pb.preBookingDate.toDate(), 'PPP')}</TableCell>
-                    <TableCell>{pb.originalNumberData?.assignedTo || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleSellClick(pb)} className="text-green-600 focus:text-green-700">
-                                    <DollarSign className="mr-2 h-4 w-4" />
-                                    Mark as Sold
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleCancelClick(pb)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash className="mr-2 h-4 w-4" />
-                                    Cancel Pre-Booking
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                </TableRow>
-                ))
+                paginatedPreBookings.map((pb) => {
+                    const isRts = pb.originalNumberData?.status === 'RTS';
+                    return (
+                        <TableRow 
+                            key={pb.srNo} 
+                            data-state={selectedRows.includes(pb.id) && "selected"}
+                            className={cn(isRts && "bg-yellow-200 dark:bg-yellow-800/30 hover:bg-yellow-200/80 dark:hover:bg-yellow-800/40 data-[state=selected]:bg-yellow-300 dark:data-[state=selected]:bg-yellow-800/50")}
+                        >
+                            <TableCell>
+                                <Checkbox
+                                    checked={selectedRows.includes(pb.id)}
+                                    onCheckedChange={() => handleSelectRow(pb.id)}
+                                    aria-label="Select row"
+                                />
+                            </TableCell>
+                            <TableCell>{pb.srNo}</TableCell>
+                            <TableCell className="font-medium">{highlightMatch(pb.mobile, searchTerm)}</TableCell>
+                            <TableCell>{pb.sum}</TableCell>
+                            <TableCell>₹{pb.originalNumberData?.purchasePrice.toLocaleString() || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge variant={pb.originalNumberData?.status === 'RTS' ? 'default' : 'destructive'} className={pb.originalNumberData?.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{pb.originalNumberData?.status}</Badge>
+                            </TableCell>
+                            <TableCell>{format(pb.preBookingDate.toDate(), 'PPP')}</TableCell>
+                            <TableCell>{pb.originalNumberData?.assignedTo || 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleSellClick(pb)} className="text-green-600 focus:text-green-700">
+                                            <DollarSign className="mr-2 h-4 w-4" />
+                                            Mark as Sold
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                          onClick={() => handleCancelClick(pb)}
+                                          className="text-destructive focus:text-destructive"
+                                        >
+                                            <Trash className="mr-2 h-4 w-4" />
+                                            Cancel Pre-Booking
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    )
+                })
             ) : (
                 <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
@@ -256,7 +277,7 @@ export default function PreBookingPage() {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
-        totalItems={filteredPreBookings.length}
+        totalItems={sortedAndFilteredPreBookings.length}
       />
        {selectedPreBooking && (
             <SellNumberModal 
