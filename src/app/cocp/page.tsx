@@ -54,8 +54,25 @@ export default function CocpPage() {
         num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Primary sort: bring records with arrived safe custody date to the top
+    sortableItems.sort((a, b) => {
+        const aHasArrived = a.safeCustodyDate && (isToday(a.safeCustodyDate.toDate()) || isPast(a.safeCustodyDate.toDate()));
+        const bHasArrived = b.safeCustodyDate && (isToday(b.safeCustodyDate.toDate()) || isPast(b.safeCustodyDate.toDate()));
+        
+        if (aHasArrived && !bHasArrived) return -1;
+        if (!aHasArrived && bHasArrived) return 1;
+        return 0;
+    });
+
+    // Secondary sort: user-defined column sorting
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
+        // Keep the primary sort order
+        const aHasArrived = a.safeCustodyDate && (isToday(a.safeCustodyDate.toDate()) || isPast(a.safeCustodyDate.toDate()));
+        const bHasArrived = b.safeCustodyDate && (isToday(b.safeCustodyDate.toDate()) || isPast(b.safeCustodyDate.toDate()));
+        if (aHasArrived && !bHasArrived) return -1;
+        if (!aHasArrived && bHasArrived) return 1;
+
         const aValue = a[sortConfig.key as keyof NumberRecord];
         const bValue = b[sortConfig.key as keyof NumberRecord];
 
