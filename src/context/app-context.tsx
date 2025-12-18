@@ -111,6 +111,7 @@ type AppContextType = {
   dealerPurchases: DealerPurchaseRecord[];
   preBookings: PreBookingRecord[];
   seenActivitiesCount: number;
+  recentlyAutoRtsIds: string[];
   markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
@@ -169,6 +170,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const [roleFilteredActivities, setRoleFilteredActivities] = useState<Activity[]>([]);
   const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
+  const [recentlyAutoRtsIds, setRecentlyAutoRtsIds] = useState<string[]>([]);
 
   const [numbersLoading, setNumbersLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(true);
@@ -379,6 +381,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const batch = writeBatch(db);
       let updated = false;
+      const updatedIds: string[] = [];
       
       numbers.forEach(num => {
         if (num.status === 'Non-RTS' && num.rtsDate) {
@@ -395,11 +398,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 description: `Number ${num.mobile} automatically became RTS.`
             }, false);
             updated = true;
+            updatedIds.push(num.id);
           }
         }
       });
 
       if (updated) {
+        setRecentlyAutoRtsIds(updatedIds);
+        setTimeout(() => setRecentlyAutoRtsIds([]), 5 * 60 * 1000); // Clear after 5 minutes
         await batch.commit().catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: 'numbers',
@@ -1849,6 +1855,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     dealerPurchases,
     preBookings: roleFilteredPreBookings,
     seenActivitiesCount,
+    recentlyAutoRtsIds,
     markActivitiesAsSeen,
     isMobileNumberDuplicate,
     updateNumberStatus,

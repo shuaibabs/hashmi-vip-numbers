@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BulkSellNumberModal } from '@/components/bulk-sell-modal';
+import { Badge } from '@/components/ui/badge';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -187,7 +188,7 @@ export default function PreBookingPage() {
               <TableHead>Mobile</TableHead>
               <TableHead>Sum</TableHead>
               <TableHead>Purchase Price</TableHead>
-              <TableHead>Intended Sale Price</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Pre-Booking Date</TableHead>
               <TableHead>Assigned To</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -210,7 +211,9 @@ export default function PreBookingPage() {
                     <TableCell className="font-medium">{highlightMatch(pb.mobile, searchTerm)}</TableCell>
                     <TableCell>{pb.sum}</TableCell>
                     <TableCell>₹{pb.originalNumberData?.purchasePrice.toLocaleString() || 'N/A'}</TableCell>
-                    <TableCell>₹{Number(pb.originalNumberData?.salePrice).toLocaleString() || 'N/A'}</TableCell>
+                    <TableCell>
+                      <Badge variant={pb.originalNumberData?.status === 'RTS' ? 'default' : 'destructive'} className={pb.originalNumberData?.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{pb.originalNumberData?.status}</Badge>
+                    </TableCell>
                     <TableCell>{format(pb.preBookingDate.toDate(), 'PPP')}</TableCell>
                     <TableCell>{pb.originalNumberData?.assignedTo || 'N/A'}</TableCell>
                     <TableCell className="text-right">

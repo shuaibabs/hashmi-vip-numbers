@@ -31,11 +31,12 @@ import { usePathname } from 'next/navigation';
 import { EditLocationModal } from '@/components/edit-location-modal';
 import { BulkEditUploadStatusModal } from '@/components/bulk-edit-upload-status-modal';
 import { BulkDeleteNumbersModal } from '@/components/bulk-delete-numbers-modal';
+import { cn } from '@/lib/utils';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
 export default function AllNumbersPage() {
-  const { numbers, loading, isMobileNumberDuplicate, deleteNumbers, markAsPreBooked } = useApp();
+  const { numbers, loading, isMobileNumberDuplicate, deleteNumbers, markAsPreBooked, recentlyAutoRtsIds } = useApp();
   const { role } = useAuth();
   const { navigate } = useNavigation();
   const pathname = usePathname();
@@ -67,9 +68,24 @@ export default function AllNumbersPage() {
       .filter(num => 
         num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
       );
+      
+    // Prioritize recently auto-RTS'd numbers
+    sortableItems.sort((a, b) => {
+        const aIsRecent = recentlyAutoRtsIds.includes(a.id);
+        const bIsRecent = recentlyAutoRtsIds.includes(b.id);
+        if (aIsRecent && !bIsRecent) return -1;
+        if (!aIsRecent && bIsRecent) return 1;
+        return 0;
+    });
 
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
+        // Keep recent RTS at top regardless of other sorting
+        const aIsRecent = recentlyAutoRtsIds.includes(a.id);
+        const bIsRecent = recentlyAutoRtsIds.includes(b.id);
+        if (aIsRecent && !bIsRecent) return -1;
+        if (!aIsRecent && bIsRecent) return 1;
+        
         const aValue = a[sortConfig.key as keyof NumberRecord];
         const bValue = b[sortConfig.key as keyof NumberRecord];
 
@@ -97,7 +113,7 @@ export default function AllNumbersPage() {
     }
 
     return sortableItems;
-  }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig]);
+  }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig, recentlyAutoRtsIds]);
 
   const totalPages = Math.ceil(sortedAndFilteredNumbers.length / itemsPerPage);
   const paginatedNumbers = sortedAndFilteredNumbers.slice(
@@ -422,6 +438,7 @@ export default function AllNumbersPage() {
                     <TableRow 
                         key={num.srNo}
                         data-state={selectedRows.includes(num.id) && "selected"}
+                        className={cn(recentlyAutoRtsIds.includes(num.id) && "bg-yellow-200 dark:bg-yellow-800/30 hover:bg-yellow-200/80 dark:hover:bg-yellow-800/40 data-[state=selected]:bg-yellow-300 dark:data-[state=selected]:bg-yellow-800/50")}
                     >
                     <TableCell>
                         {num.id && (
