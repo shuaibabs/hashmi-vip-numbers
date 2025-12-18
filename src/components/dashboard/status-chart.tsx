@@ -11,7 +11,7 @@ import { useAuth } from "@/context/auth-context";
 
 export function StatusChart() {
   const { user, role } = useAuth();
-  const { numbers, sales, portOuts } = useApp();
+  const { numbers, sales, portOuts, preBookings } = useApp();
   const { theme } = useTheme();
 
   const roleFilteredSales = React.useMemo(() => {
@@ -33,6 +33,7 @@ export function StatusChart() {
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const salesCount = roleFilteredSales.length;
   const portOutsCount = roleFilteredPortOuts.length;
+  const preBookingsCount = preBookings.length;
 
   const chartData = [
     { name: "RTS", value: rtsCount, fill: "hsl(var(--chart-2))" },
@@ -40,6 +41,7 @@ export function StatusChart() {
     { name: "Pending Uploads", value: pendingUploads, fill: "hsl(var(--chart-4))" },
     { name: "Sales", value: salesCount, fill: "hsl(var(--chart-1))" },
     { name: "Port Outs", value: portOutsCount, fill: "hsl(var(--chart-3))" },
+    { name: "Pre-Bookings", value: preBookingsCount, fill: "hsla(var(--chart-1), 0.5)" },
   ].filter(item => item.value > 0);
 
    const chartConfig = {
@@ -62,6 +64,10 @@ export function StatusChart() {
     "port-outs": {
         label: "Port Outs",
         color: "hsl(var(--chart-3))"
+    },
+    "pre-bookings": {
+        label: "Pre-Bookings",
+        color: "hsla(var(--chart-1), 0.5)"
     }
   }
 

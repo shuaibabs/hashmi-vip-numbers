@@ -3,13 +3,13 @@
 
 import { useApp } from "@/context/app-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, CheckCircle, Clock, UploadCloud, DollarSign, LogOut } from "lucide-react";
+import { Smartphone, CheckCircle, Clock, UploadCloud, DollarSign, LogOut, Bookmark } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useMemo } from "react";
 
 export function SummaryCards() {
   const { user, role } = useAuth();
-  const { numbers, sales, portOuts } = useApp();
+  const { numbers, sales, portOuts, preBookings } = useApp();
 
   const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
@@ -32,13 +32,14 @@ export function SummaryCards() {
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const totalSales = roleFilteredSales.length;
   const totalPortOuts = roleFilteredPortOuts.length;
+  const totalPreBookings = preBookings.length;
 
 
   const summaryData = [
     { title: "Total Numbers", value: totalNumbers, icon: Smartphone, color: "text-blue-500" },
     { title: "RTS Numbers", value: rtsNumbers, icon: CheckCircle, color: "text-green-500" },
     { title: "Non-RTS Numbers", value: nonRtsNumbers, icon: Clock, color: "text-red-500" },
-    { title: "Pending Uploads", value: pendingUploads, icon: UploadCloud, color: "text-yellow-500" },
+    { title: "Pre-Bookings", value: totalPreBookings, icon: Bookmark, color: "text-amber-500" },
     { title: "Sales", value: totalSales, icon: DollarSign, color: "text-indigo-500" },
     { title: "Port Outs", value: totalPortOuts, icon: LogOut, color: "text-purple-500" },
   ];

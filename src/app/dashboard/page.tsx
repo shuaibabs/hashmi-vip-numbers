@@ -12,7 +12,7 @@ import { useMemo } from "react";
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
-  const { numbers, reminders, sales, portOuts } = useApp();
+  const { numbers, reminders, sales, portOuts, preBookings } = useApp();
 
   const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const salesCount = roleFilteredSales.length;
   const portOutsCount = roleFilteredPortOuts.length;
+  const preBookingsCount = preBookings.length;
 
 
   const title = role === 'admin' ? "Admin Dashboard" : "My Dashboard";
@@ -86,6 +87,11 @@ export default function DashboardPage() {
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-3))]"></span>
                     <span className="font-medium">Port Outs</span>
                     <span className="ml-auto text-muted-foreground">{portOutsCount}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-1))] opacity-50"></span>
+                    <span className="font-medium">Pre-Bookings</span>
+                    <span className="ml-auto text-muted-foreground">{preBookingsCount}</span>
                 </div>
             </div>
             </CardContent>
