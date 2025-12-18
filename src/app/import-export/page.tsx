@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState } from 'react';
@@ -50,28 +49,22 @@ export default function ImportExportPage() {
 
   const exportToCsv = (dataToExport: NumberRecord[], fileName: string) => {
      const formattedData = dataToExport.map(n => ({
-        "Sr.No": n.srNo,
         "Mobile": n.mobile,
-        "Sum": n.sum,
+        "NumberType": n.numberType,
+        "PurchaseFrom": n.purchaseFrom,
+        "PurchasePrice": n.purchasePrice,
+        "PurchaseDate": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
+        "CurrentLocation": n.currentLocation,
+        "LocationType": n.locationType,
         "Status": n.status,
-        "Upload Status": n.uploadStatus,
-        "Number Type": n.numberType,
-        "Purchase From": n.purchaseFrom,
-        "Purchase Price": n.purchasePrice,
-        "Sale Price": n.salePrice,
-        "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
-        "Name": n.name,
-        "UPC Status": n.upcStatus,
-        "Current Location": n.currentLocation,
-        "Location Type": n.locationType,
-        "Assigned To": n.assignedTo,
-        "Purchase Date": n.purchaseDate ? format(n.purchaseDate.toDate(), 'yyyy-MM-dd') : '',
-        "Notes": n.notes,
-        "Check-In Date": n.checkInDate ? format(n.checkInDate.toDate(), 'yyyy-MM-dd HH:mm:ss') : '',
-        "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
-        "Account Name": n.accountName,
         "OwnershipType": n.ownershipType,
-        "PartnerName": n.partnerName,
+        "SalePrice": n.salePrice || '',
+        "Notes": n.notes || '',
+        "UploadStatus": n.uploadStatus,
+        "PartnerName": n.partnerName || '',
+        "RTSDate": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
+        "SafeCustodyDate": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
+        "AccountName": n.accountName || '',
     }));
 
     const csv = Papa.unparse(formattedData);
