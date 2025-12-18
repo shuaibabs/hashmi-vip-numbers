@@ -23,7 +23,8 @@ const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 export default function SimLocationsPage() {
   const { numbers, checkInNumber, loading } = useApp();
   const { user, role } = useAuth();
-  const [locationFilter, setLocationFilter] = useState('all');
+  const [locationTypeFilter, setLocationTypeFilter] = useState('all');
+  const [currentLocationFilter, setCurrentLocationFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -37,11 +38,17 @@ export default function SimLocationsPage() {
     return (numbers || []).filter(n => n.assignedTo === user?.displayName);
   }, [numbers, role, user?.displayName]);
 
+  const currentLocationOptions = useMemo(() => {
+    const allLocations = roleFilteredNumbers.map(n => n.currentLocation);
+    return ['all', ...Array.from(new Set(allLocations))];
+  }, [roleFilteredNumbers]);
+
   const filteredNumbers = useMemo(() => {
     return roleFilteredNumbers
-      .filter(num => locationFilter === 'all' || num.locationType === locationFilter)
-      .filter(num => num.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [roleFilteredNumbers, locationFilter, searchTerm]);
+      .filter(num => locationTypeFilter === 'all' || num.locationType === locationTypeFilter)
+      .filter(num => currentLocationFilter === 'all' || num.currentLocation === currentLocationFilter)
+      .filter(num => num.mobile.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [roleFilteredNumbers, locationTypeFilter, currentLocationFilter, searchTerm]);
 
   const totalPages = Math.ceil(filteredNumbers.length / itemsPerPage);
   const paginatedNumbers = filteredNumbers.slice(
@@ -120,23 +127,35 @@ export default function SimLocationsPage() {
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
         <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap w-full">
             <Input 
-              placeholder="Search by location..."
+              placeholder="Search by mobile number..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="max-w-full sm:max-w-sm"
+              className="max-w-full sm:max-w-xs"
             />
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <Select value={locationTypeFilter} onValueChange={setLocationTypeFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by location type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
+                <SelectItem value="all">All Location Types</SelectItem>
                 <SelectItem value="Store">Store</SelectItem>
                 <SelectItem value="Employee">Employee</SelectItem>
                 <SelectItem value="Dealer">Dealer</SelectItem>
+              </SelectContent>
+            </Select>
+             <Select value={currentLocationFilter} onValueChange={setCurrentLocationFilter}>
+              <SelectTrigger className="w-full sm:w-[240px]">
+                <SelectValue placeholder="Filter by Current Location" />
+              </SelectTrigger>
+              <SelectContent>
+                {currentLocationOptions.map(location => (
+                    <SelectItem key={location} value={location}>
+                        {location === 'all' ? 'All Current Locations' : location}
+                    </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
@@ -191,8 +210,8 @@ export default function SimLocationsPage() {
                         />
                     </TableCell>
                     <TableCell>{num.srNo}</TableCell>
-                    <TableCell className="font-medium">{num.mobile}</TableCell>
-                    <TableCell>{highlightMatch(num.currentLocation, searchTerm)}</TableCell>
+                    <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
+                    <TableCell>{num.currentLocation}</TableCell>
                     <TableCell>{num.locationType}</TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
                     <TableCell>{num.checkInDate ? format(num.checkInDate.toDate(), 'PPP p') : 'N/A'}</TableCell>
@@ -223,7 +242,7 @@ export default function SimLocationsPage() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center">
-                        {searchTerm ? `No locations found for "${searchTerm}".` : "No locations found for this filter."}
+                        {searchTerm ? `No SIMs found for "${searchTerm}".` : "No SIMs found for this filter."}
                     </TableCell>
                 </TableRow>
             )}
