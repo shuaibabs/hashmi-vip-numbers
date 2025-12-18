@@ -10,7 +10,7 @@ import { format, isPast, isToday } from 'date-fns';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, Download, MoreHorizontal, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, Download, MoreHorizontal, ArrowUp, ArrowDown, Edit } from 'lucide-react';
 import { NumberRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Input } from '@/components/ui/input';
+import { BulkEditCocpDateModal } from '@/components/bulk-edit-cocp-date-modal';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
@@ -37,6 +38,7 @@ export default function CocpPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const cocpNumbers = useMemo(() => {
@@ -209,6 +211,8 @@ export default function CocpPage() {
       </span>
     );
   };
+  
+  const selectedNumberRecords = cocpNumbers.filter(n => selectedRows.includes(n.id));
 
   return (
     <>
@@ -238,10 +242,16 @@ export default function CocpPage() {
               </SelectContent>
             </Select>
              {selectedRows.length > 0 && (
-                <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Selected ({selectedRows.length})
-                </Button>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" onClick={handleExportSelected} disabled={loading || selectedRows.length === 0}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export Selected ({selectedRows.length})
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsBulkEditModalOpen(true)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Safe Custody Date ({selectedRows.length})
+                    </Button>
+                </div>
             )}
           </div>
         </div>
@@ -337,8 +347,14 @@ export default function CocpPage() {
             number={selectedNumber}
         />
       )}
+      <BulkEditCocpDateModal
+        isOpen={isBulkEditModalOpen}
+        onClose={() => {
+            setIsBulkEditModalOpen(false);
+            setSelectedRows([]);
+        }}
+        selectedNumbers={selectedNumberRecords}
+      />
     </>
   );
 }
-
-    

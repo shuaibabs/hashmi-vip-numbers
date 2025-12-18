@@ -141,6 +141,7 @@ type AppContextType = {
   bulkUpdatePortOutPaymentStatus: (portOutIds: string[], paymentStatus: 'Pending' | 'Done') => void;
   deleteActivities: (activityIds: string[]) => void;
   updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
+  bulkUpdateSafeCustodyDate: (numberIds: string[], newDate: Date) => void;
   deleteNumbers: (numberIds: string[]) => void;
   deleteUser: (uid: string) => void;
   updateNumberLocation: (numberIds: string[], location: { locationType: 'Store' | 'Employee' | 'Dealer', currentLocation: string }) => void;
@@ -1354,6 +1355,36 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
+  const bulkUpdateSafeCustodyDate = (numberIds: string[], newDate: Date) => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    const updateData = { safeCustodyDate: Timestamp.fromDate(newDate) };
+    const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
+
+    numberIds.forEach(id => {
+        const docRef = doc(db, 'numbers', id);
+        batch.update(docRef, updateData);
+    });
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Bulk Updated Safe Custody Date',
+            description: createDetailedDescription(`Updated Safe Custody Date to ${newDate.toLocaleDateString()} for`, affectedNumbers)
+        });
+        toast({
+            title: "Update Successful",
+            description: `Updated Safe Custody Date for ${numberIds.length} record(s).`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'update',
+            requestResourceData: {info: `Bulk update of Safe Custody Date for ${numberIds.length} records`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
   const deleteNumbers = (numberIds: string[]) => {
     if (!db || !user || role !== 'admin') {
       toast({
@@ -1885,6 +1916,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     bulkUpdatePortOutPaymentStatus,
     deleteActivities,
     updateSafeCustodyDate,
+    bulkUpdateSafeCustodyDate,
     deleteNumbers,
     deleteUser,
     updateNumberLocation,
@@ -1904,5 +1936,3 @@ export function useApp() {
   }
   return context;
 }
-
-    
