@@ -16,6 +16,7 @@ import { NumberRecord } from '@/lib/data';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EditLocationModal } from '@/components/edit-location-modal';
+import { Input } from '@/components/ui/input';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
@@ -27,6 +28,7 @@ export default function SimLocationsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const roleFilteredNumbers = useMemo(() => {
     if (role === 'admin') {
@@ -36,8 +38,10 @@ export default function SimLocationsPage() {
   }, [numbers, role, user?.displayName]);
 
   const filteredNumbers = useMemo(() => {
-    return roleFilteredNumbers.filter(num => locationFilter === 'all' || num.locationType === locationFilter);
-  }, [roleFilteredNumbers, locationFilter]);
+    return roleFilteredNumbers
+      .filter(num => locationFilter === 'all' || num.locationType === locationFilter)
+      .filter(num => num.currentLocation.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [roleFilteredNumbers, locationFilter, searchTerm]);
 
   const totalPages = Math.ceil(filteredNumbers.length / itemsPerPage);
   const paginatedNumbers = filteredNumbers.slice(
@@ -85,6 +89,27 @@ export default function SimLocationsPage() {
     setSelectedRows([]);
   }
 
+  const highlightMatch = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+      return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <span key={i} className="bg-yellow-300 dark:bg-yellow-700 rounded-sm">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </span>
+    );
+  };
+
+
   return (
     <>
       <PageHeader
@@ -94,6 +119,15 @@ export default function SimLocationsPage() {
       </PageHeader>
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
         <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap w-full">
+            <Input 
+              placeholder="Search by location..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-full sm:max-w-sm"
+            />
             <Select value={locationFilter} onValueChange={setLocationFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by location type" />
@@ -158,7 +192,7 @@ export default function SimLocationsPage() {
                     </TableCell>
                     <TableCell>{num.srNo}</TableCell>
                     <TableCell className="font-medium">{num.mobile}</TableCell>
-                    <TableCell>{num.currentLocation}</TableCell>
+                    <TableCell>{highlightMatch(num.currentLocation, searchTerm)}</TableCell>
                     <TableCell>{num.locationType}</TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
                     <TableCell>{num.checkInDate ? format(num.checkInDate.toDate(), 'PPP p') : 'N/A'}</TableCell>
@@ -189,7 +223,7 @@ export default function SimLocationsPage() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center">
-                        No locations found for this filter.
+                        {searchTerm ? `No locations found for "${searchTerm}".` : "No locations found for this filter."}
                     </TableCell>
                 </TableRow>
             )}
