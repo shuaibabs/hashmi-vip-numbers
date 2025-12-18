@@ -84,6 +84,23 @@ const sanitizeObjectForFirestore = (obj: any): any => {
     return newObj;
 };
 
+const createDetailedDescription = (baseText: string, affectedNumbers: string[]) => {
+    const MAX_NUMBERS_TO_LIST = 5;
+    if (affectedNumbers.length === 0) {
+        return `${baseText} 0 numbers.`;
+    }
+    if (affectedNumbers.length === 1) {
+        return `${baseText} number: ${affectedNumbers[0]}.`;
+    }
+    if (affectedNumbers.length <= MAX_NUMBERS_TO_LIST) {
+        return `${baseText} ${affectedNumbers.length} numbers: ${affectedNumbers.join(', ')}.`;
+    }
+    const firstFew = affectedNumbers.slice(0, MAX_NUMBERS_TO_LIST).join(', ');
+    const remainingCount = affectedNumbers.length - MAX_NUMBERS_TO_LIST;
+    return `${baseText} ${affectedNumbers.length} numbers: ${firstFew}, and ${remainingCount} more.`;
+};
+
+
 type BulkAddResult = {
   validRecords: NewNumberData[];
   failedRecords: { record: any, reason: string }[];
@@ -541,6 +558,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!db || !user) return;
     const batch = writeBatch(db);
     const updateData = { uploadStatus };
+    const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
+
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
       batch.update(docRef, updateData);
@@ -549,7 +568,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Updated Upload Status',
-            description: `Updated upload status for ${numberIds.length} number(s) to ${uploadStatus}.`
+            description: createDetailedDescription(`Updated upload status to ${uploadStatus} for`, affectedNumbers)
         });
          toast({
             title: "Update Successful",
@@ -591,6 +610,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!db || !user) return;
     const batch = writeBatch(db);
     const updateData = { upcStatus };
+    const affectedNumbers = sales.filter(s => saleIds.includes(s.id)).map(s => s.mobile);
+    
     saleIds.forEach(id => {
       const docRef = doc(db, 'sales', id);
       batch.update(docRef, updateData);
@@ -599,7 +620,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Updated UPC Status',
-            description: `Updated UPC status for ${saleIds.length} sale(s) to ${upcStatus}.`
+            description: createDetailedDescription(`Updated UPC status to ${upcStatus} for`, affectedNumbers)
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -657,7 +678,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     batch.commit().then(() => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
-            action: 'Marked Port Out Done',
+            action: 'Marked as Ported Out',
             description: `Number ${saleToMove.mobile} has been ported out and moved to history.`,
         });
     }).catch(async (serverError) => {
@@ -687,6 +708,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     let currentPortOutSrNo = getNextSrNo(portOuts);
     const batch = writeBatch(db);
+    const affectedNumbers = eligibleSales.map(s => s.mobile);
 
     eligibleSales.forEach(sale => {
       const sanitizedOriginalData = sanitizeObjectForFirestore(sale.originalNumberData);
@@ -709,18 +731,19 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
 
     batch.commit().then(() => {
-      let description = `${eligibleSales.length} record(s) marked as ported out.`;
+      let toastDescription = `${eligibleSales.length} record(s) marked as ported out.`;
       if (skippedCount > 0) {
-        description += ` ${skippedCount} record(s) were skipped because their UPC was not generated.`;
+        toastDescription += ` ${skippedCount} record(s) were skipped because their UPC was not generated.`;
       }
+      
       addActivity({
         employeeName: user.displayName || user.email || 'User',
         action: 'Bulk Port Out',
-        description: `Bulk ported out ${eligibleSales.length} record(s).`
+        description: createDetailedDescription('Moved to Port Out History:', affectedNumbers)
       });
        toast({
         title: "Bulk Port Out Successful",
-        description: description,
+        description: toastDescription,
       });
     }).catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
@@ -771,6 +794,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         locationType: location.locationType,
         currentLocation: location.currentLocation,
     };
+    const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
+
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
       batch.update(docRef, updateData);
@@ -779,7 +804,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Assigned Numbers',
-            description: `Assigned ${numberIds.length} number(s) to ${employeeName}.`
+            description: createDetailedDescription(`Assigned to ${employeeName}:`, affectedNumbers)
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -861,6 +886,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     let currentSaleSrNo = getNextSrNo(sales);
     const batch = writeBatch(db);
+    const affectedNumbers = numbersToSell.map(n => n.mobile);
 
     numbersToSell.forEach(soldNumber => {
       const { id: numberId, ...originalDataWithoutId } = soldNumber;
@@ -889,7 +915,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Sold Numbers',
-            description: `Sold ${numbersToSell.length} number(s) to ${details.soldTo}.`
+            description: createDetailedDescription(`Sold to ${details.soldTo}:`, affectedNumbers)
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -938,7 +964,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Cancelled Sale',
-            description: `Sale of number ${saleToCancel.mobile} was cancelled.`
+            description: `Sale of number ${saleToCancel.mobile} was cancelled and it was returned to inventory.`
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -1045,7 +1071,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Added Numbers',
-            description: `Added ${validNumbers.length} new number(s).`
+            description: createDetailedDescription('Added', validNumbers)
         });
         let toastDescription = `Successfully added ${validNumbers.length} number(s).`;
         toast({
@@ -1137,6 +1163,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     }
     
     const idsToDelete = recordsToDelete.map(r => r.id);
+    const affectedNumbers = recordsToDelete.map(r => r.mobile);
 
     const batch = writeBatch(db);
     idsToDelete.forEach(id => {
@@ -1147,7 +1174,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Deleted Port Out Records',
-            description: `Deleted ${idsToDelete.length} record(s) from port out history.`
+            description: createDetailedDescription('Deleted from Port Out history:', affectedNumbers)
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -1187,6 +1214,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     }
 
     const idsToDelete = recordsThatCanBeDeleted.map(r => r.id);
+    const affectedNumbers = recordsThatCanBeDeleted.map(r => r.mobile);
     const batch = writeBatch(db);
     idsToDelete.forEach(id => {
       batch.delete(doc(db, 'dealerPurchases', id));
@@ -1196,7 +1224,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       addActivity({
         employeeName: user.displayName || user.email || 'User',
         action: 'Deleted Dealer Purchases',
-        description: `Deleted ${idsToDelete.length} completed record(s) from dealer purchases.`
+        description: createDetailedDescription('Deleted from dealer purchases:', affectedNumbers)
       });
     }).catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
@@ -1265,6 +1293,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
     const updateData = { paymentStatus };
+    const affectedNumbers = portOuts.filter(p => portOutIds.includes(p.id)).map(p => p.mobile);
+
     portOutIds.forEach(id => {
       const docRef = doc(db, 'portouts', id);
       batch.update(docRef, updateData);
@@ -1273,7 +1303,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Bulk Updated Port Out Payment Status',
-            description: `Updated payment status for ${portOutIds.length} port out record(s) to ${paymentStatus}.`
+            description: createDetailedDescription(`Updated payment status to ${paymentStatus} for`, affectedNumbers)
         });
         toast({
             title: "Update Successful",
@@ -1323,6 +1353,9 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       return;
     }
 
+    const numbersToDelete = numbers.filter(n => numberIds.includes(n.id));
+    const affectedNumbers = numbersToDelete.map(n => n.mobile);
+
     const batch = writeBatch(db);
     numberIds.forEach(id => {
       batch.delete(doc(db, 'numbers', id));
@@ -1332,7 +1365,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       addActivity({
         employeeName: user.displayName || user.email || 'User',
         action: 'Deleted Numbers',
-        description: `Permanently deleted ${numberIds.length} number record(s).`
+        description: createDetailedDescription('Permanently deleted from master inventory:', affectedNumbers)
       });
     }).catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
@@ -1382,6 +1415,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
   const updateNumberLocation = (numberIds: string[], location: { locationType: 'Store' | 'Employee' | 'Dealer', currentLocation: string }) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
+    const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
+    
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
       batch.update(docRef, location);
@@ -1390,7 +1425,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Updated Number Location',
-            description: `Updated location for ${numberIds.length} number(s) to ${location.currentLocation}.`
+            description: createDetailedDescription(`Updated location to ${location.currentLocation} for`, affectedNumbers)
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
