@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -218,7 +219,7 @@ export default function PreBookingPage() {
                         <TableRow 
                             key={pb.srNo} 
                             data-state={selectedRows.includes(pb.id) && "selected"}
-                            className={cn(isRts && "bg-yellow-200 dark:bg-yellow-800/30 hover:bg-yellow-200/80 dark:hover:bg-yellow-800/40 data-[state=selected]:bg-yellow-300 dark:data-[state=selected]:bg-yellow-800/50")}
+                            className={cn(isRts && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50")}
                         >
                             <TableCell>
                                 <Checkbox

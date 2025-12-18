@@ -438,7 +438,7 @@ export default function AllNumbersPage() {
                     <TableRow 
                         key={num.srNo}
                         data-state={selectedRows.includes(num.id) && "selected"}
-                        className={cn(recentlyAutoRtsIds.includes(num.id) && "bg-yellow-200 dark:bg-yellow-800/30 hover:bg-yellow-200/80 dark:hover:bg-yellow-800/40 data-[state=selected]:bg-yellow-300 dark:data-[state=selected]:bg-yellow-800/50")}
+                        className={cn(recentlyAutoRtsIds.includes(num.id) && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50")}
                     >
                     <TableCell>
                         {num.id && (
