@@ -87,6 +87,8 @@ export default function ManageSalesPage() {
     return { ...totals, totalPaid, totalRemaining: totals.totalSaleAmount - totalPaid };
   }, [filteredSales, payments, soldToFilter]);
   
+  const totalProfitLoss = totalSaleAmount - totalPurchaseAmount;
+  
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const paginatedSales = filteredSales.slice(
       (currentPage - 1) * itemsPerPage,
@@ -213,17 +215,8 @@ export default function ManageSalesPage() {
         </div>
       </PageHeader>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 mb-6">
-             <Card className="xl:col-span-2">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Purchase Amount</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">₹{totalPurchaseAmount.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">{filteredSales.length} records</p>
-                </CardContent>
-            </Card>
-            <Card className="xl:col-span-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+            <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
                 </CardHeader>
@@ -232,7 +225,26 @@ export default function ManageSalesPage() {
                     <p className="text-xs text-muted-foreground">{filteredSales.length} records</p>
                 </CardContent>
             </Card>
-            <Card className="xl:col-span-2">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Purchase Amount</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">₹{totalPurchaseAmount.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">{filteredSales.length} records</p>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Profit / Loss</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className={cn("text-2xl font-bold", totalProfitLoss >= 0 ? "text-green-600" : "text-red-600")}>
+                        ₹{totalProfitLoss.toLocaleString()}
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
                 </CardHeader>
@@ -240,7 +252,7 @@ export default function ManageSalesPage() {
                     <div className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</div>
                 </CardContent>
             </Card>
-             <Card className="xl:col-span-2">
+             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Amount Remaining</CardTitle>
                 </CardHeader>
@@ -350,7 +362,3 @@ export default function ManageSalesPage() {
     </>
   );
 }
-
-
-
-
