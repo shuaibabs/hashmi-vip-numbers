@@ -16,6 +16,8 @@ import {
   NewReminderData,
   type User,
   PreBookingRecord,
+  NewPaymentData,
+  PaymentRecord,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast, isValid, parse, subDays } from 'date-fns';
@@ -110,6 +112,7 @@ type AppContextType = {
   vendors: string[];
   dealerPurchases: DealerPurchaseRecord[];
   preBookings: PreBookingRecord[];
+  payments: PaymentRecord[];
   seenActivitiesCount: number;
   recentlyAutoRtsIds: string[];
   markActivitiesAsSeen: () => void;
@@ -149,6 +152,7 @@ type AppContextType = {
   cancelPreBooking: (preBookingId: string) => void;
   sellPreBookedNumber: (preBookingId: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
   bulkSellPreBookedNumbers: (preBookedNumbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => void;
+  addPayment: (data: NewPaymentData) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -166,6 +170,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
   const [preBookings, setPreBookings] = useState<PreBookingRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
   
@@ -181,6 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
   const [preBookingsLoading, setPreBookingsLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
 
     // Combined loading state: true if auth is loading OR if auth is done but any data is still loading.
   const loading =
@@ -193,7 +199,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activitiesLoading ||
       dealerPurchasesLoading ||
       preBookingsLoading ||
-      usersLoading
+      usersLoading ||
+      paymentsLoading
     ));
     
   const getSeenCountKey = useCallback(() => {
@@ -266,6 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDealerPurchases([]);
       setPreBookings([]);
       setUsers([]);
+      setPayments([]);
       setEmployees([]);
       setVendors([]);
       setNumbersLoading(false);
@@ -276,6 +284,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDealerPurchasesLoading(false);
       setPreBookingsLoading(false);
       setUsersLoading(false);
+      setPaymentsLoading(false);
       return;
     }
     
@@ -288,6 +297,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDealerPurchasesLoading(true);
     setPreBookingsLoading(true);
     setUsersLoading(true);
+    setPaymentsLoading(true);
 
     const subscriptions: Unsubscribe[] = [];
     const collectionMappings = [
@@ -298,6 +308,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { name: 'activities', setter: setActivities, loader: setActivitiesLoading },
       { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
       { name: 'prebookings', setter: setPreBookings, loader: setPreBookingsLoading },
+      { name: 'payments', setter: setPayments, loader: setPaymentsLoading },
       { name: 'users', setter: (data: User[]) => {
           setUsers(data);
           setEmployees(data.map(u => u.displayName).sort())
@@ -1643,6 +1654,31 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
+  const addPayment = (data: NewPaymentData) => {
+    if (!db || !user) return;
+    const newPayment: Omit<PaymentRecord, 'id'> = {
+        ...data,
+        srNo: getNextSrNo(payments),
+        paymentDate: Timestamp.fromDate(data.paymentDate),
+        createdBy: user.uid,
+    };
+    addDoc(collection(db, 'payments'), newPayment).then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Received Payment',
+            description: `Received payment of ₹${data.amount.toLocaleString()} from ${data.vendorName}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'payments',
+            operation: 'create',
+            requestResourceData: newPayment,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
     if (!db || !user) return { validRecords: [], failedRecords: [] };
     
@@ -1885,6 +1921,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     vendors,
     dealerPurchases,
     preBookings: roleFilteredPreBookings,
+    payments,
     seenActivitiesCount,
     recentlyAutoRtsIds,
     markActivitiesAsSeen,
@@ -1924,6 +1961,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     cancelPreBooking,
     sellPreBookedNumber,
     bulkSellPreBookedNumbers,
+    addPayment,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

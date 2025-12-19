@@ -128,4 +128,3 @@ export type PaymentRecord = {
 
 export type NewPaymentData = Omit<PaymentRecord, 'id' | 'srNo' | 'createdBy' | 'paymentDate'> & { paymentDate: Date };
     
-
