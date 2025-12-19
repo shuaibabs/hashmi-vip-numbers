@@ -11,7 +11,7 @@ import { Download, Search, DollarSign } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SaleRecord, PortOutRecord, NumberRecord } from '@/lib/data';
+import { SaleRecord, PortOutRecord, NumberRecord, PaymentRecord } from '@/lib/data';
 import { format } from 'date-fns';
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
@@ -81,7 +81,7 @@ export default function ManageSalesPage() {
       return acc;
     }, { totalPurchaseAmount: 0, totalSaleAmount: 0 });
 
-    const vendorPayments = payments.filter(p => p.vendorName === soldToFilter);
+    const vendorPayments = (payments || []).filter(p => p.vendorName === soldToFilter);
     const totalPaid = vendorPayments.reduce((acc, p) => acc + p.amount, 0);
 
     return { ...totals, totalPaid, totalRemaining: totals.totalSaleAmount - totalPaid };
@@ -341,5 +341,6 @@ export default function ManageSalesPage() {
     </>
   );
 }
+
 
 
