@@ -39,5 +39,8 @@ service cloud.firestore {
     match /dealerPurchases/{docId} {
        allow read, create, update, delete: if request.auth != null;
     }
+    match /payments/{docId} {
+       allow read, create, update, delete: if request.auth != null;
+    }
   }
 }

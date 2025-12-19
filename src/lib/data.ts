@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from 'firebase/firestore';
 
 // Base User profile stored in Firestore
@@ -114,4 +115,17 @@ export type DealerPurchaseRecord = {
 };
 
 export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'srNo' | 'createdBy' | 'paymentStatus' | 'portOutStatus' | 'sum' | 'upcStatus'>;
+
+export type PaymentRecord = {
+    id: string;
+    srNo: number;
+    vendorName: string;
+    amount: number;
+    paymentDate: Timestamp;
+    notes?: string;
+    createdBy: string;
+};
+
+export type NewPaymentData = Omit<PaymentRecord, 'id' | 'srNo' | 'createdBy' | 'paymentDate'> & { paymentDate: Date };
     
+

@@ -7,7 +7,7 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, DollarSign } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +22,7 @@ import { SaleDetailsModal } from '@/components/sale-details-modal';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
+import { ReceivePaymentModal } from '@/components/receive-payment-modal';
 
 
 type CombinedSaleRecord = SaleRecord & {
@@ -31,7 +32,7 @@ type CombinedSaleRecord = SaleRecord & {
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
 
 export default function ManageSalesPage() {
-  const { sales, portOuts, loading, addActivity } = useApp();
+  const { sales, portOuts, loading, addActivity, payments } = useApp();
   const { role, user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,6 +41,7 @@ export default function ManageSalesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<CombinedSaleRecord | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const combinedSales = useMemo(() => {
     const activeSales: CombinedSaleRecord[] = sales.map(s => ({ ...s, status: 'Active Sale' }));
@@ -72,13 +74,18 @@ export default function ManageSalesPage() {
     );
   }, [combinedSales, soldToFilter, searchTerm]);
 
-  const { totalPurchaseAmount, totalSaleAmount } = useMemo(() => {
-    return filteredSales.reduce((acc, sale) => {
+  const { totalPurchaseAmount, totalSaleAmount, totalPaid, totalRemaining } = useMemo(() => {
+    const totals = filteredSales.reduce((acc, sale) => {
       acc.totalPurchaseAmount += sale.originalNumberData?.purchasePrice || 0;
       acc.totalSaleAmount += sale.salePrice || 0;
       return acc;
     }, { totalPurchaseAmount: 0, totalSaleAmount: 0 });
-  }, [filteredSales]);
+
+    const vendorPayments = payments.filter(p => p.vendorName === soldToFilter);
+    const totalPaid = vendorPayments.reduce((acc, p) => acc + p.amount, 0);
+
+    return { ...totals, totalPaid, totalRemaining: totals.totalSaleAmount - totalPaid };
+  }, [filteredSales, payments, soldToFilter]);
   
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const paginatedSales = filteredSales.slice(
@@ -192,45 +199,44 @@ export default function ManageSalesPage() {
         title="Manage Sales"
         description="Review, filter, and export sales records with calculated totals."
       >
-        <Button onClick={exportToCsv} disabled={loading}>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+            {soldToFilter !== 'all' && (
+                <Button onClick={() => setIsPaymentModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Receive Payment
+                </Button>
+            )}
+            <Button onClick={exportToCsv} disabled={loading} variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+            </Button>
+        </div>
       </PageHeader>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
+            <Card className="xl:col-span-2">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{filteredSales.length}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Purchase Amount</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">₹{totalPurchaseAmount.toLocaleString()}</div>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Sale Amount</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">₹{totalSaleAmount.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">{filteredSales.length} records</p>
                 </CardContent>
             </Card>
-             <Card>
+            <Card className="xl:col-span-2">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Profit / Loss</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className={`text-2xl font-bold ${(totalSaleAmount - totalPurchaseAmount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ₹{(totalSaleAmount - totalPurchaseAmount).toLocaleString()}
-                    </div>
+                    <div className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</div>
+                </CardContent>
+            </Card>
+             <Card className="xl:col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Amount Remaining</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold text-red-600">₹{totalRemaining.toLocaleString()}</div>
                 </CardContent>
             </Card>
         </div>
@@ -327,7 +333,13 @@ export default function ManageSalesPage() {
         onClose={() => setIsDetailsModalOpen(false)}
         sale={selectedSale}
       />
+       <ReceivePaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        vendorName={soldToFilter}
+      />
     </>
   );
 }
+
 
