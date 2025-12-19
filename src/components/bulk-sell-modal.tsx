@@ -51,6 +51,13 @@ export function BulkSellNumberModal({ isOpen, onClose, selectedNumbers, isPreBoo
     },
   });
 
+  const totalPurchasePrice = useMemo(() => {
+    return selectedNumbers.reduce((acc, num) => {
+        const price = num.purchasePrice ?? num.originalNumberData?.purchasePrice ?? 0;
+        return acc + price;
+    }, 0);
+  }, [selectedNumbers]);
+
   React.useEffect(() => {
     if (isOpen) {
       form.reset({
@@ -79,6 +86,7 @@ export function BulkSellNumberModal({ isOpen, onClose, selectedNumbers, isPreBoo
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Enter sales details for the selected {selectedNumbers.length} number(s). These details will be applied to all.
+            Total purchase price: <span className='font-semibold'>₹{totalPurchasePrice.toLocaleString()}</span>.
           </DialogDescription>
         </DialogHeader>
          <div className="py-4 space-y-4">

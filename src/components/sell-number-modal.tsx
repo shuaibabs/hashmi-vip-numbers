@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -68,13 +67,16 @@ export function SellNumberModal({ isOpen, onClose, number, onSell }: SellNumberM
     onClose();
   }
 
+  const purchasePrice = number?.purchasePrice ?? number?.originalNumberData?.purchasePrice ?? 0;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Mark Number as Sold</DialogTitle>
           <DialogDescription>
-            Enter sales details for <span className="font-semibold">{number.mobile}</span>.
+            Enter sales details for <span className="font-semibold">{number.mobile}</span>. 
+            Purchase price: <span className='font-semibold'>₹{purchasePrice.toLocaleString()}</span>.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
