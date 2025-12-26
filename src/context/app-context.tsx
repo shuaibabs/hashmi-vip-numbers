@@ -1691,11 +1691,9 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     if (!db || !user) return { successCount: 0, updatedCount: 0, failedRecords: [] };
     
     let currentSrNo = getNextSrNo(numbers);
-    const updates: { id: string, data: Partial<NumberRecord> }[] = [];
     const creations: Partial<NumberRecord>[] = [];
     const failedRecords: { record: any, reason: string }[] = [];
 
-    const existingMobilesMap = new Map(numbers.map(n => [n.mobile, n.id]));
     const processedMobiles = new Set<string>();
     
     const parseDate = (rawDate: any): Date | null => {
@@ -1721,10 +1719,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             failedRecords.push({ record, reason: 'Duplicate mobile number found within the import file.' });
             continue;
         }
+         if (isMobileNumberDuplicate(mobile)) {
+            failedRecords.push({ record, reason: 'Mobile number already exists in the system.' });
+            continue;
+        }
         
-        const isUpdate = existingMobilesMap.has(mobile);
-        const numberId = isUpdate ? existingMobilesMap.get(mobile)! : '';
-
         const status = record.Status;
         if (!status || !['RTS', 'Non-RTS'].includes(status)) {
             failedRecords.push({ record, reason: 'Status is a required field. Must be "RTS" or "Non-RTS".' });
@@ -1813,15 +1812,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             recordData.pdBill = ['Yes', 'No'].includes(record.PDBill) ? record.PDBill : 'No';
         }
 
-        if (isUpdate) {
-            updates.push({ id: numberId, data: recordData });
-        } else {
-            creations.push({ ...recordData, srNo: currentSrNo++, createdBy: user.uid, checkInDate: null });
-        }
+        creations.push({ ...recordData, srNo: currentSrNo++, createdBy: user.uid, checkInDate: null });
         processedMobiles.add(mobile);
     }
     
-    if (creations.length > 0 || updates.length > 0) {
+    if (creations.length > 0) {
       const batch = writeBatch(db);
       
       creations.forEach(record => {
@@ -1829,26 +1824,20 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         batch.set(newDocRef, sanitizeObjectForFirestore(record));
       });
 
-      updates.forEach(update => {
-        const docRef = doc(db, 'numbers', update.id);
-        batch.update(docRef, sanitizeObjectForFirestore(update.data));
-      });
-
       await batch.commit().catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: 'numbers',
             operation: 'write',
-            requestResourceData: {info: `Bulk add/update of ${creations.length + updates.length} records.`},
+            requestResourceData: {info: `Bulk add of ${creations.length} records.`},
         });
         errorEmitter.emit('permission-error', permissionError);
         // If the whole batch fails, move all processed records to failed
         creations.forEach(cr => failedRecords.push({ record: cr, reason: "Firestore permission denied."}));
-        updates.forEach(up => failedRecords.push({ record: up.data, reason: "Firestore permission denied."}));
         return { successCount: 0, updatedCount: 0, failedRecords };
       });
     }
     
-    return { successCount: creations.length, updatedCount: updates.length, failedRecords };
+    return { successCount: creations.length, updatedCount: 0, failedRecords };
   };
 
   const addReminder = (data: NewReminderData) => {

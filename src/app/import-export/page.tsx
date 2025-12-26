@@ -251,14 +251,14 @@ export default function ImportExportPage() {
     <>
       <PageHeader
         title="Manage Numbers via CSV"
-        description="Bulk import to create or update, and export your number inventory."
+        description="Bulk import to create numbers, and export your number inventory."
       />
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <Card>
              <CardHeader>
                 <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from CSV</CardTitle>
-                <CardDescription>Upload a CSV file to add or update multiple numbers.</CardDescription>
+                <CardDescription>Upload a CSV file to add new numbers. Existing numbers will be skipped.</CardDescription>
              </CardHeader>
              <CardContent>
                 <Button onClick={handleImportClick} disabled={isImporting}>
