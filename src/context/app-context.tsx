@@ -121,8 +121,7 @@ type AppContextType = {
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
   bulkUpdateUploadStatus: (numberIds: string[], uploadStatus: 'Pending' | 'Done') => void;
-  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; }) => void;
-  bulkUpdateUpcStatus: (saleIds: string[], upcStatus: 'Pending' | 'Generated') => void;
+  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; }) => void;
   markSaleAsPortedOut: (saleId: string) => void;
   bulkMarkAsPortedOut: (sales: SaleRecord[]) => void;
   markReminderDone: (id: string, note?: string) => void;
@@ -135,7 +134,7 @@ type AppContextType = {
   addNumber: (data: NewNumberData) => void;
   addMultipleNumbers: (data: NewNumberData, validNumbers: string[]) => Promise<void>;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
-  updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => void;
+  updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; }) => void;
   deletePortOuts: (records: PortOutRecord[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData) => void;
@@ -640,7 +639,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending'; }) => {
+  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; }) => {
     if (!db || !user) return;
     const saleToUpdate = sales.find(s => s.id === id);
     if (!saleToUpdate) return;
@@ -650,39 +649,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addActivity({
             employeeName: user.displayName || user.email || 'User',
             action: 'Updated Sale Status',
-            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}, UPC: ${statuses.upcStatus}.`,
+            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}.`,
         });
     }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: saleDocRef.path,
             operation: 'update',
             requestResourceData: statuses,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-  };
-
-  const bulkUpdateUpcStatus = (saleIds: string[], upcStatus: 'Pending' | 'Generated') => {
-    if (!db || !user) return;
-    const batch = writeBatch(db);
-    const updateData = { upcStatus };
-    const affectedNumbers = sales.filter(s => saleIds.includes(s.id)).map(s => s.mobile);
-    
-    saleIds.forEach(id => {
-      const docRef = doc(db, 'sales', id);
-      batch.update(docRef, updateData);
-    });
-    batch.commit().then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Bulk Updated UPC Status',
-            description: createDetailedDescription(`Updated UPC status to ${upcStatus} for`, affectedNumbers)
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'sales',
-            operation: 'update',
-            requestResourceData: {info: `Bulk UPC status update for ${saleIds.length} sales`},
         });
         errorEmitter.emit('permission-error', permissionError);
     });
@@ -722,7 +695,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         paymentStatus: saleToMove.paymentStatus,
         uploadStatus: saleToMove.uploadStatus,
         saleDate: saleToMove.saleDate,
-        upcStatus: saleToMove.upcStatus,
         createdBy: saleToMove.createdBy,
         originalNumberData: sanitizedOriginalData,
         portOutDate: Timestamp.now(),
@@ -750,14 +722,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     if (!db || !user || salesToMove.length === 0) return;
 
-    const eligibleSales = salesToMove.filter(s => s.upcStatus === 'Generated');
+    const eligibleSales = salesToMove;
     const skippedCount = salesToMove.length - eligibleSales.length;
 
     if (eligibleSales.length === 0) {
       toast({
         variant: "destructive",
         title: "No Eligible Records",
-        description: "None of the selected records have a 'Generated' UPC status.",
+        description: "No records were selected to port out.",
       });
       return;
     }
@@ -777,7 +749,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         paymentStatus: sale.paymentStatus,
         uploadStatus: sale.uploadStatus,
         saleDate: sale.saleDate,
-        upcStatus: sale.upcStatus,
         createdBy: sale.createdBy,
         originalNumberData: sanitizedOriginalData,
         portOutDate: Timestamp.now(),
@@ -788,9 +759,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
     batch.commit().then(() => {
       let toastDescription = `${eligibleSales.length} record(s) marked as ported out.`;
-      if (skippedCount > 0) {
-        toastDescription += ` ${skippedCount} record(s) were skipped because their UPC was not generated.`;
-      }
       
       addActivity({
         employeeName: user.displayName || user.email || 'User',
@@ -910,7 +878,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
-      upcStatus: 'Pending',
       uploadStatus: soldNumber.uploadStatus || 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
@@ -956,7 +923,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         soldTo: details.soldTo,
         paymentStatus: 'Pending',
         portOutStatus: 'Pending',
-        upcStatus: 'Pending',
         uploadStatus: soldNumber.uploadStatus || 'Pending',
         saleDate: Timestamp.fromDate(details.saleDate),
         createdBy: user.uid,
@@ -1050,7 +1016,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         ...data,
         srNo: getNextSrNo(numbers),
         sum: calculateDigitalRoot(data.mobile),
-        upcStatus: 'Pending',
         rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
         safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
         assignedTo: assignedToUser,
@@ -1105,7 +1070,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
           mobile,
           srNo: currentSrNo++,
           sum: calculateDigitalRoot(mobile),
-          upcStatus: 'Pending',
           rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
           safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
           assignedTo: assignedToUser,
@@ -1162,7 +1126,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       sum: calculateDigitalRoot(data.mobile),
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
-      upcStatus: 'Pending',
       createdBy: user.uid,
     };
     const dealerPurchasesCollection = collection(db, 'dealerPurchases');
@@ -1182,7 +1145,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
-  const updateDealerPurchase = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; upcStatus: 'Generated' | 'Pending' }) => {
+  const updateDealerPurchase = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; }) => {
     if (!db || !user) return;
     const purchase = dealerPurchases.find(p => p.id === id);
     if (!purchase) return;
@@ -1249,7 +1212,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     const recordsThatCannotBeDeleted: DealerPurchaseRecord[] = [];
 
     recordsToDelete.forEach(record => {
-      if (record.paymentStatus === 'Done' && record.portOutStatus === 'Done' && record.upcStatus === 'Generated') {
+      if (record.paymentStatus === 'Done' && record.portOutStatus === 'Done') {
         recordsThatCanBeDeleted.push(record);
       } else {
         recordsThatCannotBeDeleted.push(record);
@@ -1614,7 +1577,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       soldTo: details.soldTo,
       paymentStatus: 'Pending',
       portOutStatus: 'Pending',
-      upcStatus: 'Pending',
       uploadStatus: preBookingToSell.uploadStatus || 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
@@ -1660,7 +1622,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         soldTo: details.soldTo,
         paymentStatus: 'Pending',
         portOutStatus: 'Pending',
-        upcStatus: 'Pending',
         uploadStatus: preBookingToSell.uploadStatus || 'Pending',
         saleDate: Timestamp.fromDate(details.saleDate),
         createdBy: user.uid,
@@ -1854,7 +1815,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             ...record,
             srNo: currentSrNo++,
             sum: calculateDigitalRoot(record.mobile),
-            upcStatus: 'Pending',
             checkInDate: null,
             createdBy: user.uid,
             purchaseDate: Timestamp.fromDate(record.purchaseDate),
@@ -1964,7 +1924,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     updateUploadStatus,
     bulkUpdateUploadStatus,
     updateSaleStatuses,
-    bulkUpdateUpcStatus,
     markSaleAsPortedOut,
     bulkMarkAsPortedOut,
     markReminderDone,

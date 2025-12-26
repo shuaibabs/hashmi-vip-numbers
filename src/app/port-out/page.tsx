@@ -130,7 +130,6 @@ export default function PortOutPage() {
         "Sale Price": p.salePrice,
         "Sale Date": format(p.saleDate.toDate(), 'yyyy-MM-dd'),
         "Payment Status": p.paymentStatus,
-        "UPC Status": p.upcStatus,
         "Upload Status": p.uploadStatus,
         "Port Out Date": format(p.portOutDate.toDate(), 'yyyy-MM-dd'),
     }));
@@ -314,7 +313,6 @@ export default function PortOutPage() {
               <SortableHeader column="salePrice" label="Sale Price" />
               <SortableHeader column="saleDate" label="Sale Date" />
               <SortableHeader column="paymentStatus" label="Payment Status" />
-              <SortableHeader column="upcStatus" label="UPC Status" />
               <SortableHeader column="uploadStatus" label="Upload Status" />
               <SortableHeader column="portOutDate" label="Port Out Date" />
                <TableHead className="text-right">Actions</TableHead>
@@ -322,7 +320,7 @@ export default function PortOutPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={12} />
+                <TableSpinner colSpan={11} />
             ) : paginatedPortOuts.length > 0 ? (
                 paginatedPortOuts.map((record) => (
                 <TableRow key={record.srNo} data-state={selectedRows.includes(record.id) && "selected"}>
@@ -344,11 +342,6 @@ export default function PortOutPage() {
                     <TableCell>
                          <Badge variant={record.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
                             {record.paymentStatus}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>
-                         <Badge variant={record.upcStatus === 'Generated' ? 'secondary' : 'outline'}>
-                            {record.upcStatus}
                         </Badge>
                     </TableCell>
                      <TableCell>
@@ -376,7 +369,7 @@ export default function PortOutPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={12} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                         {searchTerm ? `No port out records found for "${searchTerm}".` : "No port out records found."}
                     </TableCell>
                 </TableRow>

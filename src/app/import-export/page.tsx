@@ -337,7 +337,6 @@ export default function ImportExportPage() {
                 <TableHead>Purchase Price</TableHead>
                 <TableHead>Sale Price</TableHead>
                 <TableHead>RTS Date</TableHead>
-                <TableHead>UPC Status</TableHead>
                 <TableHead>Location Type</TableHead>
                 <TableHead>Current Location</TableHead>
                 <TableHead>Assigned To</TableHead>
@@ -348,7 +347,7 @@ export default function ImportExportPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableSpinner colSpan={18} />
+                <TableSpinner colSpan={17} />
               ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                   <TableRow key={num.id} data-state={selectedRows.includes(num.id) && "selected"}>
@@ -373,7 +372,6 @@ export default function ImportExportPage() {
                     <TableCell>₹{num.purchasePrice?.toLocaleString()}</TableCell>
                     <TableCell>₹{Number(num.salePrice)?.toLocaleString()}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell><Badge variant={num.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{num.upcStatus}</Badge></TableCell>
                     <TableCell>{num.locationType}</TableCell>
                     <TableCell>{num.currentLocation}</TableCell>
                     <TableCell>{num.assignedTo}</TableCell>
@@ -384,7 +382,7 @@ export default function ImportExportPage() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={18} className="h-24 text-center">
+                    <TableCell colSpan={17} className="h-24 text-center">
                         No numbers found.
                     </TableCell>
                 </TableRow>

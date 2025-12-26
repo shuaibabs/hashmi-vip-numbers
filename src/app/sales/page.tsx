@@ -20,7 +20,6 @@ import { Timestamp } from 'firebase/firestore';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { BulkEditUpcModal } from '@/components/bulk-edit-upc-modal';
 import { useAuth } from '@/context/auth-context';
 import Papa from 'papaparse';
 import { Input } from '@/components/ui/input';
@@ -37,7 +36,6 @@ export default function SalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isBulkUpcModalOpen, setIsBulkUpcModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [saleToCancel, setSaleToCancel] = useState<SaleRecord | null>(null);
   const [saleToPortOut, setSaleToPortOut] = useState<SaleRecord | null>(null);
@@ -109,14 +107,6 @@ export default function SalesPage() {
   };
 
   const handlePortOutClick = (sale: SaleRecord) => {
-    if (sale.upcStatus !== 'Generated') {
-      toast({
-        variant: "destructive",
-        title: "Port Out Blocked",
-        description: "The UPC status must be 'Generated' before you can mark this sale as ported out.",
-      });
-      return;
-    }
     setSaleToPortOut(sale);
   };
   
@@ -160,7 +150,6 @@ export default function SalesPage() {
       "Sale Price": s.salePrice,
       "Sale Date": format(s.saleDate.toDate(), 'yyyy-MM-dd'),
       "Payment Status": s.paymentStatus,
-      "UPC Status": s.upcStatus,
       "Upload Status": s.uploadStatus,
       "Portout Status": s.portOutStatus,
     }));
@@ -200,20 +189,14 @@ export default function SalesPage() {
     setSelectedRows([]);
   }
 
-  const closeBulkUpcModal = () => {
-    setIsBulkUpcModalOpen(false);
-    setSelectedRows([]);
-  };
-
   const handleConfirmBulkPortOut = () => {
-    const eligibleSales = sales.filter(s => selectedRows.includes(s.id) && s.upcStatus === 'Generated');
-    bulkMarkAsPortedOut(eligibleSales);
+    const salesToPortOut = sales.filter(s => selectedRows.includes(s.id));
+    bulkMarkAsPortedOut(salesToPortOut);
     setIsBulkPortOutDialogOpen(false);
     setSelectedRows([]);
   };
 
   const selectedSaleRecords = sales.filter(s => selectedRows.includes(s.id));
-  const eligibleForPortOutCount = selectedSaleRecords.filter(s => s.upcStatus === 'Generated').length;
 
 
   const requestSort = (key: SortableColumn) => {
@@ -297,10 +280,6 @@ export default function SalesPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Export ({selectedRows.length})
                     </Button>
-                     <Button variant="outline" onClick={() => setIsBulkUpcModalOpen(true)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit UPC ({selectedRows.length})
-                    </Button>
                      <Button variant="outline" onClick={() => setIsBulkPortOutDialogOpen(true)}>
                         <LogOut className="mr-2 h-4 w-4" />
                         Port Out ({selectedRows.length})
@@ -327,7 +306,6 @@ export default function SalesPage() {
               <SortableHeader column="salePrice" label="Sale Price" />
               <SortableHeader column="saleDate" label="Sale Date" />
               <SortableHeader column="paymentStatus" label="Payment Status" />
-              <SortableHeader column="upcStatus" label="UPC Status" />
               <SortableHeader column="uploadStatus" label="Upload Status" />
               <SortableHeader column="portOutStatus" label="Portout Status" />
               <TableHead className="text-right">Actions</TableHead>
@@ -335,7 +313,7 @@ export default function SalesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={12} />
+                <TableSpinner colSpan={11} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
                 <TableRow key={sale.srNo} data-state={selectedRows.includes(sale.id) && "selected"}>
@@ -355,11 +333,6 @@ export default function SalesPage() {
                     <TableCell>
                          <Badge variant={sale.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
                             {sale.paymentStatus}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>
-                         <Badge variant={sale.upcStatus === 'Generated' ? 'secondary' : 'outline'}>
-                            {sale.upcStatus}
                         </Badge>
                     </TableCell>
                      <TableCell>
@@ -405,7 +378,7 @@ export default function SalesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={12} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                         {searchTerm ? `No sales records found for "${searchTerm}".` : "No sales records found."}
                     </TableCell>
                 </TableRow>
@@ -427,11 +400,6 @@ export default function SalesPage() {
             sale={selectedSale}
         />
       )}
-      <BulkEditUpcModal
-        isOpen={isBulkUpcModalOpen}
-        onClose={closeBulkUpcModal}
-        selectedSales={selectedSaleRecords}
-      />
       <AlertDialog open={!!saleToCancel} onOpenChange={() => setSaleToCancel(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -469,15 +437,13 @@ export default function SalesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Bulk Mark as Ported Out</AlertDialogTitle>
             <AlertDialogDescription>
-              You have selected {selectedRows.length} record(s). Out of these, {eligibleForPortOutCount} have a 'Generated' UPC status and can be ported out.
-              <br/><br/>
-              This action will move all eligible records to the Port Out history. This cannot be undone.
+              You have selected {selectedRows.length} record(s). This action will move all selected records to the Port Out history. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsBulkPortOutDialogOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmBulkPortOut} disabled={eligibleForPortOutCount === 0}>
-              Port Out {eligibleForPortOutCount} Record(s)
+            <AlertDialogAction onClick={handleConfirmBulkPortOut}>
+              Port Out {selectedRows.length} Record(s)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

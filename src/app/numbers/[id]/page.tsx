@@ -119,7 +119,6 @@ export default function NumberDetailsPage() {
             <h4 className="text-lg font-semibold col-span-full">Status & Location</h4>
              <DetailItem label="Scheduled RTS Date" value={number.rtsDate ? format(number.rtsDate.toDate(), 'PPP') : 'N/A'} />
              {number.numberType === 'COCP' && <DetailItem label="Safe Custody Date" value={number.safeCustodyDate ? format(number.safeCustodyDate.toDate(), 'PPP') : 'N/A'} />}
-            <DetailItem label="UPC Status" value={<Badge variant={number.upcStatus === 'Generated' ? 'secondary' : 'outline'}>{number.upcStatus}</Badge>} />
             <DetailItem label="Current Location" value={number.currentLocation} />
             <DetailItem label="Location Type" value={number.locationType} />
           </div>

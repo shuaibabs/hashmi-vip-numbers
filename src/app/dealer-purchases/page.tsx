@@ -130,7 +130,6 @@ export default function DealerPurchasesPage() {
       "Price": p.price,
       "Payment Status": p.paymentStatus,
       "Port Out Status": p.portOutStatus,
-      "UPC Status": p.upcStatus,
     }));
 
     const csv = Papa.unparse(formattedData);
@@ -258,7 +257,7 @@ export default function DealerPurchasesPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                This action cannot be undone. Only records where Payment Status is 'Done', Port Out Status is 'Done', AND UPC Status is 'Generated' will be permanently deleted.
+                                This action cannot be undone. Only records where Payment Status is 'Done' AND Port Out Status is 'Done' will be permanently deleted.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -298,13 +297,12 @@ export default function DealerPurchasesPage() {
               <SortableHeader column="price" label="Price" />
               <SortableHeader column="paymentStatus" label="Payment Status" />
               <SortableHeader column="portOutStatus" label="Port Out Status" />
-              <SortableHeader column="upcStatus" label="UPC Status" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={10} />
+                <TableSpinner colSpan={9} />
             ) : paginatedPurchases.length > 0 ? (
                 paginatedPurchases.map((purchase) => (
                 <TableRow key={purchase.srNo} data-state={selectedRows.includes(purchase.id) && "selected"}>
@@ -332,11 +330,6 @@ export default function DealerPurchasesPage() {
                         {purchase.portOutStatus}
                         </Badge>
                     </TableCell>
-                    <TableCell>
-                        <Badge variant={purchase.upcStatus === 'Generated' ? 'secondary' : 'outline'}>
-                        {purchase.upcStatus}
-                        </Badge>
-                    </TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -356,7 +349,7 @@ export default function DealerPurchasesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                         {searchTerm ? `No dealer purchases found for "${searchTerm}".` : "No dealer purchases found."}
                     </TableCell>
                 </TableRow>

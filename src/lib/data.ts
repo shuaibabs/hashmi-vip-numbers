@@ -25,7 +25,6 @@ export type NumberRecord = {
   salePrice: number | string;
   rtsDate: Timestamp | null;
   name: string;
-  upcStatus: 'Generated' | 'Pending';
   currentLocation: string;
   locationType: 'Store' | 'Employee' | 'Dealer';
   assignedTo: string; // Can be 'Unassigned', or employee name
@@ -43,7 +42,7 @@ export type NumberRecord = {
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'upcStatus' | 'safeCustodyDate' | 'safeCustodyNotificationSent'
+  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'safeCustodyNotificationSent'
 > & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date };
 
 
@@ -56,7 +55,6 @@ export type SaleRecord = {
   salePrice: number;
   paymentStatus: 'Pending' | 'Done';
   saleDate: Timestamp;
-  upcStatus: 'Generated' | 'Pending';
   portOutStatus: 'Pending' | 'Done';
   uploadStatus: 'Pending' | 'Done';
   createdBy: string;
@@ -110,11 +108,10 @@ export type DealerPurchaseRecord = {
   price: number;
   paymentStatus: 'Pending' | 'Done';
   portOutStatus: 'Pending' | 'Done';
-  upcStatus: 'Pending' | 'Generated';
   createdBy: string;
 };
 
-export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'srNo' | 'createdBy' | 'paymentStatus' | 'portOutStatus' | 'sum' | 'upcStatus'>;
+export type NewDealerPurchaseData = Omit<DealerPurchaseRecord, 'id' | 'srNo' | 'createdBy' | 'paymentStatus' | 'portOutStatus' | 'sum' >;
 
 export type PaymentRecord = {
     id: string;

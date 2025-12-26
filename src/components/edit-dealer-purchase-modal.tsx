@@ -15,7 +15,6 @@ import { DealerPurchaseRecord } from '@/lib/data';
 const formSchema = z.object({
   paymentStatus: z.enum(['Pending', 'Done']),
   portOutStatus: z.enum(['Pending', 'Done']),
-  upcStatus: z.enum(['Pending', 'Generated']),
 });
 
 type EditDealerPurchaseModalProps = {
@@ -32,7 +31,6 @@ export function EditDealerPurchaseModal({ isOpen, onClose, purchase }: EditDeale
     defaultValues: {
       paymentStatus: purchase.paymentStatus,
       portOutStatus: purchase.portOutStatus,
-      upcStatus: purchase.upcStatus,
     },
   });
 
@@ -41,7 +39,6 @@ export function EditDealerPurchaseModal({ isOpen, onClose, purchase }: EditDeale
       form.reset({
         paymentStatus: purchase.paymentStatus,
         portOutStatus: purchase.portOutStatus,
-        upcStatus: purchase.upcStatus,
       });
     }
   }, [purchase, form]);
@@ -99,27 +96,6 @@ export function EditDealerPurchaseModal({ isOpen, onClose, purchase }: EditDeale
                     <SelectContent>
                       <SelectItem value="Pending">Pending</SelectItem>
                       <SelectItem value="Done">Done</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="upcStatus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>UPC Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select UPC status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Generated">Generated</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
