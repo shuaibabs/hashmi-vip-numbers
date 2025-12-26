@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -96,7 +95,8 @@ const createDetailedDescription = (baseText: string, affectedNumbers: string[]) 
 
 
 type BulkAddResult = {
-  validRecords: NewNumberData[];
+  successCount: number;
+  updatedCount: number;
   failedRecords: { record: any, reason: string }[];
 }
 
@@ -153,6 +153,8 @@ type AppContextType = {
   sellPreBookedNumber: (preBookingId: string, details: { salePrice: number; soldTo: string; saleDate: Date }) => void;
   bulkSellPreBookedNumbers: (preBookedNumbersToSell: NumberRecord[], details: { salePrice: number; soldTo: string; saleDate: Date; }) => void;
   addPayment: (data: NewPaymentData) => void;
+  updatePostpaidDetails: (id: string, details: { billDate: Date, pdBill: 'Yes' | 'No' }) => void;
+  bulkUpdatePostpaidDetails: (numberIds: string[], details: { billDate: Date, pdBill: 'Yes' | 'No' }) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -535,6 +537,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       purchaseDate: Timestamp.fromDate(data.purchaseDate),
       rtsDate: data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
       safeCustodyDate: data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
+      billDate: data.billDate ? Timestamp.fromDate(data.billDate) : null,
       salePrice: data.salePrice || 0,
     };
   
@@ -1018,8 +1021,9 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         sum: calculateDigitalRoot(data.mobile),
         rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
         safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
-        assignedTo: assignedToUser,
-        name: assignedToUser,
+        billDate: data.numberType === 'Postpaid' && data.billDate ? Timestamp.fromDate(data.billDate) : null,
+        assignedTo: data.assignedTo || assignedToUser,
+        name: data.assignedTo || assignedToUser,
         checkInDate: null,
         createdBy: user.uid,
         purchaseDate: Timestamp.fromDate(data.purchaseDate),
@@ -1036,6 +1040,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     } else {
         delete (newNumber as any).accountName;
         delete (newNumber as any).safeCustodyDate;
+    }
+
+    if (data.numberType !== 'Postpaid') {
+      delete (newNumber as any).billDate;
+      delete (newNumber as any).pdBill;
     }
 
     const numbersCollection = collection(db, 'numbers');
@@ -1072,8 +1081,9 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
           sum: calculateDigitalRoot(mobile),
           rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
           safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
-          assignedTo: assignedToUser,
-          name: assignedToUser,
+          billDate: data.numberType === 'Postpaid' && data.billDate ? Timestamp.fromDate(data.billDate) : null,
+          assignedTo: data.assignedTo || assignedToUser,
+          name: data.assignedTo || assignedToUser,
           checkInDate: null,
           createdBy: user.uid,
           purchaseDate: Timestamp.fromDate(data.purchaseDate),
@@ -1083,6 +1093,10 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       if (data.numberType !== 'COCP') {
         delete (newNumber as any).accountName;
         delete (newNumber as any).safeCustodyDate;
+      }
+      if (data.numberType !== 'Postpaid') {
+        delete (newNumber as any).billDate;
+        delete (newNumber as any).pdBill;
       }
       batch.set(newDocRef, sanitizeObjectForFirestore(newNumber));
     });
@@ -1674,29 +1688,20 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
 
   const bulkAddNumbers = async (records: any[]): Promise<BulkAddResult> => {
-    if (!db || !user) return { validRecords: [], failedRecords: [] };
+    if (!db || !user) return { successCount: 0, updatedCount: 0, failedRecords: [] };
     
     let currentSrNo = getNextSrNo(numbers);
-    const validRecords: any[] = [];
+    const updates: { id: string, data: Partial<NumberRecord> }[] = [];
+    const creations: Partial<NumberRecord>[] = [];
     const failedRecords: { record: any, reason: string }[] = [];
 
-    const existingMobiles = new Set([
-        ...numbers.map(n => n.mobile),
-        ...sales.map(s => s.mobile),
-        ...portOuts.map(p => p.mobile),
-        ...dealerPurchases.map(d => d.mobile),
-        ...preBookings.map(pb => pb.mobile),
-    ]);
+    const existingMobilesMap = new Map(numbers.map(n => [n.mobile, n.id]));
+    const processedMobiles = new Set<string>();
     
     const parseDate = (rawDate: any): Date | null => {
-        if (rawDate instanceof Date && isValid(rawDate)) {
-            return rawDate;
-        }
+        if (rawDate instanceof Date && isValid(rawDate)) return rawDate;
         if (typeof rawDate === 'string') {
-            const dateFormats = [
-                'dd-MM-yyyy', 'MM-dd-yyyy', 'yyyy-MM-dd', 'MM/dd/yyyy', 'yyyy/MM/dd', 
-                "M/d/yy", "M/d/yyyy", "MM/dd/yy",
-            ];
+            const dateFormats = ['dd-MM-yyyy', 'MM-dd-yyyy', 'yyyy-MM-dd', 'MM/dd/yyyy', 'yyyy/MM/dd', "M/d/yy", "M/d/yyyy", "MM/dd/yy"];
             for (const formatStr of dateFormats) {
                 const parsed = parse(rawDate, formatStr, new Date());
                 if (isValid(parsed)) return parsed;
@@ -1705,7 +1710,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         return null;
     };
 
-
     for (const record of records) {
         const mobile = record.Mobile?.toString().trim();
 
@@ -1713,11 +1717,14 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             failedRecords.push({ record, reason: 'Invalid or missing mobile number (must be 10 digits).' });
             continue;
         }
-        if (existingMobiles.has(mobile)) {
-            failedRecords.push({ record, reason: 'Duplicate mobile number.' });
+        if (processedMobiles.has(mobile)) {
+            failedRecords.push({ record, reason: 'Duplicate mobile number found within the import file.' });
             continue;
         }
         
+        const isUpdate = existingMobilesMap.has(mobile);
+        const numberId = isUpdate ? existingMobilesMap.get(mobile)! : '';
+
         const status = record.Status;
         if (!status || !['RTS', 'Non-RTS'].includes(status)) {
             failedRecords.push({ record, reason: 'Status is a required field. Must be "RTS" or "Non-RTS".' });
@@ -1725,14 +1732,9 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         }
         
         const uploadStatus = ['Pending', 'Done'].includes(record.UploadStatus) ? record.UploadStatus : 'Pending';
-        
         const numberType = ['Prepaid', 'Postpaid', 'COCP'].includes(record.NumberType) ? record.NumberType : 'Prepaid';
-
-        const ownershipTypeRaw = record.OwnershipType;
-        const ownershipType = ['Individual', 'Partnership'].includes(ownershipTypeRaw) ? ownershipTypeRaw : 'Individual';
-        
-        const partnerNameRaw = record.PartnerName;
-        const partnerName = partnerNameRaw?.trim();
+        const ownershipType = ['Individual', 'Partnership'].includes(record.OwnershipType) ? record.OwnershipType : 'Individual';
+        const partnerName = record.PartnerName?.trim();
 
         if (ownershipType === 'Partnership' && !partnerName) {
             failedRecords.push({ record, reason: 'PartnerName is required for Partnership ownership.' });
@@ -1750,11 +1752,16 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
             failedRecords.push({ record, reason: 'Missing AccountName (required for COCP).' });
             continue;
         }
+        
+        const billDate = parseDate(record.BillDate);
+        if (numberType === 'Postpaid' && !billDate) {
+            failedRecords.push({ record, reason: 'Invalid or missing BillDate (required for Postpaid).' });
+            continue;
+        }
 
-        const rtsDateValue = record.RTSDate;
         let rtsDate: Date | null = null;
         if (status === 'Non-RTS') {
-            rtsDate = parseDate(rtsDateValue);
+            rtsDate = parseDate(record.RTSDate);
              if (!rtsDate) {
                 failedRecords.push({ record, reason: 'Invalid or missing RTSDate (required for Non-RTS status).' });
                 continue;
@@ -1774,80 +1781,74 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         }
         
         const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
-        
         const assignedTo = record.AssignedTo?.trim() || 'Unassigned';
         const assignedUser = employees.includes(assignedTo) ? assignedTo : 'Unassigned';
 
-        const newRecord: any = {
+        const recordData: Partial<NumberRecord> = {
             mobile: mobile,
             name: assignedUser,
             assignedTo: assignedUser,
             numberType: numberType,
             status: status,
             uploadStatus: uploadStatus,
-            rtsDate: rtsDate,
+            rtsDate: rtsDate ? Timestamp.fromDate(rtsDate) : null,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
-            purchaseDate: purchaseDate,
-            safeCustodyDate: safeCustodyDate,
+            purchaseDate: Timestamp.fromDate(purchaseDate),
             currentLocation: record.CurrentLocation || 'N/A',
             locationType: ['Store', 'Employee', 'Dealer'].includes(record.LocationType) ? record.LocationType : 'Store',
             notes: record.Notes || '',
             ownershipType: ownershipType,
             partnerName: partnerName || '',
+            sum: calculateDigitalRoot(mobile),
         };
-
-        if (numberType === 'COCP') {
-            newRecord.accountName = accountName;
-        }
-
-        validRecords.push(newRecord);
-        existingMobiles.add(mobile);
-    }
-
-    if (validRecords.length > 0) {
-      const batch = writeBatch(db);
-      const numbersCollection = collection(db, 'numbers');
-      
-      validRecords.forEach(record => {
-        const newDocRef = doc(numbersCollection);
-
-        const newNumber: Partial<NumberRecord> = {
-            ...record,
-            srNo: currentSrNo++,
-            sum: calculateDigitalRoot(record.mobile),
-            checkInDate: null,
-            createdBy: user.uid,
-            purchaseDate: Timestamp.fromDate(record.purchaseDate),
-            rtsDate: record.rtsDate ? Timestamp.fromDate(record.rtsDate) : null,
-            safeCustodyDate: record.safeCustodyDate ? Timestamp.fromDate(record.safeCustodyDate) : null,
-        };
-
-        if (newNumber.numberType !== 'COCP') {
-          delete (newNumber as any).accountName;
-          delete (newNumber as any).safeCustodyDate;
-        }
-        if (newNumber.ownershipType !== 'Partnership') {
-          delete (newNumber as any).partnerName;
-        }
         
-        batch.set(newDocRef, sanitizeObjectForFirestore(newNumber));
+        if (numberType === 'COCP') {
+            recordData.safeCustodyDate = safeCustodyDate ? Timestamp.fromDate(safeCustodyDate) : null;
+            recordData.accountName = accountName;
+        }
+        if (numberType === 'Postpaid') {
+            recordData.billDate = billDate ? Timestamp.fromDate(billDate) : null;
+            recordData.pdBill = ['Yes', 'No'].includes(record.PDBill) ? record.PDBill : 'No';
+        }
+
+        if (isUpdate) {
+            updates.push({ id: numberId, data: recordData });
+        } else {
+            creations.push({ ...recordData, srNo: currentSrNo++, createdBy: user.uid, checkInDate: null });
+        }
+        processedMobiles.add(mobile);
+    }
+    
+    if (creations.length > 0 || updates.length > 0) {
+      const batch = writeBatch(db);
+      
+      creations.forEach(record => {
+        const newDocRef = doc(collection(db, 'numbers'));
+        batch.set(newDocRef, sanitizeObjectForFirestore(record));
+      });
+
+      updates.forEach(update => {
+        const docRef = doc(db, 'numbers', update.id);
+        batch.update(docRef, sanitizeObjectForFirestore(update.data));
       });
 
       await batch.commit().catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: 'numbers',
-            operation: 'create',
-            requestResourceData: {info: `Bulk add of ${validRecords.length} records.`},
+            operation: 'write',
+            requestResourceData: {info: `Bulk add/update of ${creations.length + updates.length} records.`},
         });
         errorEmitter.emit('permission-error', permissionError);
-        validRecords.forEach(vr => failedRecords.push({ record: vr, reason: "Firestore permission denied."}));
-        return { validRecords: [], failedRecords };
+        // If the whole batch fails, move all processed records to failed
+        creations.forEach(cr => failedRecords.push({ record: cr, reason: "Firestore permission denied."}));
+        updates.forEach(up => failedRecords.push({ record: up.data, reason: "Firestore permission denied."}));
+        return { successCount: 0, updatedCount: 0, failedRecords };
       });
     }
     
-    return { validRecords, failedRecords };
+    return { successCount: creations.length, updatedCount: updates.length, failedRecords };
   };
 
   const addReminder = (data: NewReminderData) => {
@@ -1897,6 +1898,65 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         errorEmitter.emit('permission-error', permissionError);
     });
   }
+
+  const updatePostpaidDetails = (id: string, details: { billDate: Date, pdBill: 'Yes' | 'No' }) => {
+    if (!db || !user) return;
+    const num = numbers.find(n => n.id === id);
+    if (!num) return;
+    const numDocRef = doc(db, 'numbers', id);
+    const updateData = {
+        billDate: Timestamp.fromDate(details.billDate),
+        pdBill: details.pdBill
+    };
+    updateDoc(numDocRef, updateData).then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Updated Postpaid Details',
+            description: `Updated bill details for ${num.mobile}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: numDocRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const bulkUpdatePostpaidDetails = (numberIds: string[], details: { billDate: Date, pdBill: 'Yes' | 'No' }) => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    const updateData = {
+        billDate: Timestamp.fromDate(details.billDate),
+        pdBill: details.pdBill
+    };
+    const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
+
+    numberIds.forEach(id => {
+        const docRef = doc(db, 'numbers', id);
+        batch.update(docRef, updateData);
+    });
+
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Bulk Updated Postpaid Details',
+            description: createDetailedDescription(`Updated bill details for`, affectedNumbers)
+        });
+        toast({
+            title: "Update Successful",
+            description: `Updated bill details for ${numberIds.length} record(s).`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers',
+            operation: 'update',
+            requestResourceData: {info: `Bulk update of postpaid details for ${numberIds.length} records`},
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
 
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
@@ -1957,6 +2017,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     sellPreBookedNumber,
     bulkSellPreBookedNumbers,
     addPayment,
+    updatePostpaidDetails,
+    bulkUpdatePostpaidDetails,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

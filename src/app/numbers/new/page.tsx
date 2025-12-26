@@ -35,6 +35,7 @@ const formSchema = z.object({
   purchaseDate: z.date({ required_error: 'Purchase date is required.'}),
   currentLocation: z.string().min(1, 'Current location is required.'),
   locationType: z.enum(['Store', 'Employee', 'Dealer']),
+  assignedTo: z.string().optional(),
   notes: z.string().optional(),
   status: z.enum(['RTS', 'Non-RTS']),
   uploadStatus: z.enum(['Pending', 'Done']),
@@ -89,6 +90,7 @@ const formSchema = z.object({
 
 export default function NewNumberPage() {
   const { navigate, back } = useNavigation();
+  const { employees } = useApp();
   const pathname = usePathname();
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
@@ -115,6 +117,7 @@ export default function NewNumberPage() {
       ownershipType: 'Individual',
       partnerName: '',
       pdBill: 'No',
+      assignedTo: '',
     },
   });
 
@@ -484,47 +487,66 @@ export default function NewNumberPage() {
                 />
                 )}
                 {numberType === 'Postpaid' && (
-                <FormField
-                    control={form.control}
-                    name="billDate"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                        <FormLabel>Bill Date</FormLabel>
-                        <Popover open={isBillDatePickerOpen} onOpenChange={setIsBillDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                                )}
-                            >
-                                {field.value ? (
-                                format(field.value, "PPP")
-                                ) : (
-                                <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={(date) => {
-                                if(date) field.onChange(date);
-                                setIsBillDatePickerOpen(false);
-                            }}
-                            initialFocus
-                            />
-                        </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="billDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Bill Date</FormLabel>
+                            <Popover open={isBillDatePickerOpen} onOpenChange={setIsBillDatePickerOpen}>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "PPP")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={(date) => {
+                                    if(date) field.onChange(date);
+                                    setIsBillDatePickerOpen(false);
+                                }}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="pdBill"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>PD Bill</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="No">No</SelectItem>
+                                        <SelectItem value="Yes">Yes</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
                 )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -559,6 +581,29 @@ export default function NewNumberPage() {
                   )}
                 />
               </div>
+              <FormField
+                  control={form.control}
+                  name="assignedTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assign To (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Leave unassigned or select employee" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Unassigned</SelectItem>
+                          {employees.map(employee => (
+                            <SelectItem key={employee} value={employee}>{employee}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </CardContent>
           </Card>
           

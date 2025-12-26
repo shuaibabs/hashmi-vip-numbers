@@ -35,7 +35,7 @@ export default function ImportExportPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: number, failed: number} | null>(null);
+  const [importResult, setImportResult] = useState<{ successCount: number; updatedCount: number; failedCount: number } | null>(null);
   const [failedRecords, setFailedRecords] = useState<FailedRecord[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,6 +66,8 @@ export default function ImportExportPage() {
         "RTSDate": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
         "SafeCustodyDate": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
         "AccountName": n.accountName || '',
+        "BillDate": n.billDate ? format(n.billDate.toDate(), 'yyyy-MM-dd') : '',
+        "PDBill": n.pdBill || 'No',
     }));
 
     const csv = Papa.unparse(formattedData);
@@ -121,15 +123,16 @@ export default function ImportExportPage() {
   };
 
   const processImportedData = async (data: any[], fileName: string) => {
-    const { validRecords, failedRecords: newFailedRecords } = await bulkAddNumbers(data as any[]);
+    const { successCount, updatedCount, failedRecords: newFailedRecords } = await bulkAddNumbers(data as any[]);
     
-    setImportResult({ success: validRecords.length, failed: newFailedRecords.length });
+    setImportResult({ successCount, updatedCount, failedCount: newFailedRecords.length });
     setFailedRecords(newFailedRecords);
     setIsImporting(false);
 
     toast({
       title: "Import Complete",
-      description: `${validRecords.length} records imported successfully. ${newFailedRecords.length} records failed.`,
+      description: `${successCount} created, ${updatedCount} updated, ${newFailedRecords.length} failed.`,
+      duration: 7000,
     });
 
     addActivity({
@@ -248,14 +251,14 @@ export default function ImportExportPage() {
     <>
       <PageHeader
         title="Manage Numbers via CSV"
-        description="Bulk import and export your number inventory."
+        description="Bulk import to create or update, and export your number inventory."
       />
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <Card>
              <CardHeader>
                 <CardTitle className="flex items-center gap-2"><FileInput className="w-5 h-5 text-primary" /> Import from CSV</CardTitle>
-                <CardDescription>Upload a CSV file to add multiple numbers.</CardDescription>
+                <CardDescription>Upload a CSV file to add or update multiple numbers.</CardDescription>
              </CardHeader>
              <CardContent>
                 <Button onClick={handleImportClick} disabled={isImporting}>
@@ -263,7 +266,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, OwnershipType. Optional: AssignedTo, SalePrice, Notes, UploadStatus, PartnerName (required if OwnershipType is Partnership). Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, OwnershipType. Optional: AssignedTo, SalePrice, Notes, UploadStatus, PartnerName (required if OwnershipType is Partnership). Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP'), BillDate and PDBill (required for Postpaid).</p>
              </CardContent>
            </Card>
            <Card>
@@ -285,11 +288,11 @@ export default function ImportExportPage() {
         </div>
 
         {importResult && (
-            <Alert variant={importResult.failed > 0 ? "destructive" : "default"} className={importResult.failed === 0 ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800" : ""}>
+            <Alert variant={importResult.failedCount > 0 ? "destructive" : "default"} className={importResult.failedCount === 0 ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800" : ""}>
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Import Result</AlertTitle>
                 <AlertDescription>
-                   Successfully imported {importResult.success} records. Failed to import {importResult.failed} records.
+                   {importResult.successCount} created, {importResult.updatedCount} updated, {importResult.failedCount} failed.
                    {failedRecords.length > 0 && (
                      <Button variant="link" size="sm" className="pl-1 h-auto py-0" onClick={handleExportFailed}>
                         <Download className="mr-1 h-3 w-3" />
