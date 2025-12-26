@@ -451,14 +451,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
 
         if (updated) {
-            const preBookedRtsNumbers = preBookings.filter(pb => updatedIds.includes(pb.originalNumberData.id));
-
+            const preBookedRtsNumbers = preBookings.filter(pb => {
+                const originalId = pb.originalNumberData && 'id' in pb.originalNumberData ? (pb.originalNumberData as any).id : null;
+                return updatedIds.includes(originalId);
+            });
+            
             preBookedRtsNumbers.forEach(pb => {
                 if (pb.originalNumberData.assignedTo) {
                     addReminder({
                         taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
                         assignedTo: pb.originalNumberData.assignedTo,
-                        dueDate: new Date(),
+                        dueDate: new Date(), // Due date is now
                     }, false);
                 }
             });
