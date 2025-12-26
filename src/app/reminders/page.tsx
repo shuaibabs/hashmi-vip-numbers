@@ -42,7 +42,8 @@ export default function RemindersPage() {
     if (role === 'admin') {
       return reminders;
     }
-    return reminders.filter(r => r.assignedTo.includes(user?.displayName || ''));
+    // Ensure r.assignedTo is an array before calling .includes()
+    return reminders.filter(r => Array.isArray(r.assignedTo) && r.assignedTo.includes(user?.displayName || ''));
   }, [reminders, role, user?.displayName]);
 
 
@@ -232,76 +233,79 @@ export default function RemindersPage() {
             {loading ? (
                 <TableSpinner colSpan={7} />
             ) : paginatedReminders.length > 0 ? (
-                paginatedReminders.map((reminder) => (
-                <TableRow key={reminder.id} data-state={selectedRows.includes(reminder.id) && "selected"}>
-                    <TableCell>
-                        <Checkbox
-                            checked={selectedRows.includes(reminder.id)}
-                            onCheckedChange={() => handleSelectRow(reminder.id)}
-                            aria-label="Select row"
-                        />
-                    </TableCell>
-                    <TableCell className="font-medium">{reminder.taskName}</TableCell>
-                    <TableCell>
-                        <div className="flex items-center space-x-2">
-                             <TooltipProvider>
-                                <div className="flex -space-x-2">
-                                    {reminder.assignedTo.slice(0, 3).map(name => (
-                                        <Tooltip key={name}>
-                                            <TooltipTrigger asChild>
-                                                <Avatar className="h-6 w-6 border-2 border-background">
-                                                    <AvatarFallback>{name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                                                </Avatar>
-                                            </TooltipTrigger>
-                                            <TooltipContent>{name}</TooltipContent>
-                                        </Tooltip>
-                                    ))}
+                paginatedReminders.map((reminder) => {
+                    const assignees = Array.isArray(reminder.assignedTo) ? reminder.assignedTo : [reminder.assignedTo].filter(Boolean);
+                    return (
+                        <TableRow key={reminder.id} data-state={selectedRows.includes(reminder.id) && "selected"}>
+                            <TableCell>
+                                <Checkbox
+                                    checked={selectedRows.includes(reminder.id)}
+                                    onCheckedChange={() => handleSelectRow(reminder.id)}
+                                    aria-label="Select row"
+                                />
+                            </TableCell>
+                            <TableCell className="font-medium">{reminder.taskName}</TableCell>
+                            <TableCell>
+                                <div className="flex items-center space-x-2">
+                                     <TooltipProvider>
+                                        <div className="flex -space-x-2">
+                                            {assignees.slice(0, 3).map(name => (
+                                                <Tooltip key={name}>
+                                                    <TooltipTrigger asChild>
+                                                        <Avatar className="h-6 w-6 border-2 border-background">
+                                                            <AvatarFallback>{name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                                                        </Avatar>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>{name}</TooltipContent>
+                                                </Tooltip>
+                                            ))}
+                                        </div>
+                                    </TooltipProvider>
+                                    {assignees.length > 3 && (
+                                        <span className="text-xs text-muted-foreground">+{assignees.length - 3} more</span>
+                                    )}
+                                    {assignees.length === 0 && <span className="text-xs text-muted-foreground">Unassigned</span>}
                                 </div>
-                            </TooltipProvider>
-                            {reminder.assignedTo.length > 3 && (
-                                <span className="text-xs text-muted-foreground">+{reminder.assignedTo.length - 3} more</span>
-                            )}
-                            {reminder.assignedTo.length === 0 && <span className="text-xs text-muted-foreground">Unassigned</span>}
-                        </div>
-                    </TableCell>
-                    <TableCell>{format(reminder.dueDate.toDate(), 'PPP')}</TableCell>
-                    <TableCell>
-                        <Badge variant={reminder.status === 'Done' ? 'secondary' : 'destructive'} className={reminder.status === 'Done' ? `bg-green-500/20 text-green-700` : `bg-yellow-500/20 text-yellow-700`}>
-                            {reminder.status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{reminder.notes || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
-                        {reminder.status === 'Pending' && (
-                            <Button size="sm" onClick={() => handleMarkDoneClick(reminder)}>
-                                <Check className="mr-2 h-4 w-4" />
-                                Mark as Done
-                            </Button>
-                        )}
-                        {role === 'admin' && reminder.status === 'Done' && (
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                        <Trash className="h-4 w-4" />
+                            </TableCell>
+                            <TableCell>{format(reminder.dueDate.toDate(), 'PPP')}</TableCell>
+                            <TableCell>
+                                <Badge variant={reminder.status === 'Done' ? 'secondary' : 'destructive'} className={reminder.status === 'Done' ? `bg-green-500/20 text-green-700` : `bg-yellow-500/20 text-yellow-700`}>
+                                    {reminder.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{reminder.notes || 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                                {reminder.status === 'Pending' && (
+                                    <Button size="sm" onClick={() => handleMarkDoneClick(reminder)}>
+                                        <Check className="mr-2 h-4 w-4" />
+                                        Mark as Done
                                     </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action will permanently delete the completed task "{reminder.taskName}".
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => deleteReminder(reminder.id)}>Delete</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        )}
-                    </TableCell>
-                </TableRow>
-                ))
+                                )}
+                                {role === 'admin' && reminder.status === 'Done' && (
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                                <Trash className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action will permanently delete the completed task "{reminder.taskName}".
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => deleteReminder(reminder.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                            </TableCell>
+                        </TableRow>
+                    )
+                })
             ) : (
                 <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">

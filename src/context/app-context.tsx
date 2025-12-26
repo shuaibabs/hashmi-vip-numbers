@@ -43,7 +43,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { calculateDigitalRoot } from '@/lib/utils';
+import { calculateDigitalRoot, cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -143,6 +143,7 @@ type AppContextType = {
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData, showToast?: boolean) => Promise<void>;
   deleteReminder: (id: string) => void;
+  assignRemindersToUsers: (reminderIds: string[], userNames: string[]) => void;
   deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
   bulkUpdatePortOutPaymentStatus: (portOutIds: string[], paymentStatus: 'Pending' | 'Done') => void;
@@ -261,7 +262,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             addActivity({
                 employeeName: user.displayName || user.email || 'User',
                 action: 'Added Reminder',
-                description: `Assigned task "${data.taskName}" to ${data.assignedTo}`
+                description: `Assigned task "${data.taskName}" to ${data.assignedTo.join(', ')}`
             });
         }
     } catch (serverError) {
@@ -457,11 +458,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             });
             
             preBookedRtsNumbers.forEach(pb => {
-                if (pb.originalNumberData.assignedTo) {
-                    addReminder({
+                const adminUsers = users.filter(u => u.role === 'admin').map(u => u.displayName);
+                if (adminUsers.length > 0) {
+                     addReminder({
                         taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
-                        assignedTo: pb.originalNumberData.assignedTo,
-                        dueDate: new Date(), // Due date is now
+                        assignedTo: adminUsers,
+                        dueDate: new Date(),
                     }, false);
                 }
             });
@@ -483,7 +485,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     checkRtsDates();
     const interval = setInterval(checkRtsDates, 60000);
     return () => clearInterval(interval);
-  }, [db, numbers, numbersLoading, preBookings, preBookingsLoading, authLoading, user, addActivity, addReminder]);
+  }, [db, numbers, numbersLoading, preBookings, preBookingsLoading, authLoading, user, users, addActivity, addReminder]);
   
   useEffect(() => {
     if (!db || numbersLoading) {
@@ -575,6 +577,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAndShowReminders = async () => {
         if (loading || !user) return;
+        const adminUsers = users.filter(u => u.role === 'admin').map(u => u.displayName);
 
         // System-generated reminders for Postpaid bills
         for (const num of numbers) {
@@ -582,11 +585,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const taskId = `postpaid-bill-${num.mobile}`;
                 const reminderExists = reminders.some(r => r.taskId === taskId);
 
-                if (!reminderExists && num.assignedTo) {
+                if (!reminderExists && adminUsers.length > 0) {
                     await addReminder({
                         taskId: taskId,
                         taskName: `Postpaid bill payment due for ${num.mobile}`,
-                        assignedTo: num.assignedTo,
+                        assignedTo: adminUsers,
                         dueDate: num.billDate.toDate(),
                     }, false);
                 }
@@ -595,11 +598,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const taskId = `cocp-safecustody-${num.mobile}`;
                 const reminderExists = reminders.some(r => r.taskId === taskId);
 
-                if (!reminderExists && num.assignedTo) {
+                if (!reminderExists && adminUsers.length > 0) {
                     await addReminder({
                         taskId: taskId,
                         taskName: `Safe Custody Date arrived for ${num.mobile}`,
-                        assignedTo: num.assignedTo,
+                        assignedTo: adminUsers,
                         dueDate: num.safeCustodyDate.toDate(),
                     }, false);
                 }
@@ -608,14 +611,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         // System-generated reminders for Pre-Booked numbers that are already RTS
         for (const pb of preBookings) {
-            if (pb.originalNumberData?.status === 'RTS' && pb.originalNumberData.assignedTo) {
+            if (pb.originalNumberData?.status === 'RTS') {
                  const taskId = `prebooked-rts-${pb.mobile}`;
                  const reminderExists = reminders.some(r => r.taskId === taskId);
-                if (!reminderExists) {
+                if (!reminderExists && adminUsers.length > 0) {
                     await addReminder({
                         taskId: taskId,
                         taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
-                        assignedTo: pb.originalNumberData.assignedTo,
+                        assignedTo: adminUsers,
                         dueDate: new Date(), // Due date is now, as it's already RTS
                     }, false);
                 }
@@ -650,7 +653,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const reminderInterval = setInterval(checkAndShowReminders, 15 * 60 * 1000); // Check every 15 minutes
 
     return () => clearInterval(reminderInterval);
-  }, [loading, user, numbers, reminders, preBookings, addReminder, remindersShownInPopup]);
+  }, [loading, user, users, numbers, reminders, preBookings, addReminder, remindersShownInPopup]);
 
 
   const updateNumber = async (id: string, data: NewNumberData) => {
@@ -1988,6 +1991,29 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   }
 
+  const assignRemindersToUsers = (reminderIds: string[], userNames: string[]) => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    reminderIds.forEach(id => {
+      const docRef = doc(db, 'reminders', id);
+      batch.update(docRef, { assignedTo: userNames });
+    });
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Assigned Reminders',
+            description: `Assigned ${reminderIds.length} reminder(s) to ${userNames.join(', ')}.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'reminders',
+            operation: 'update',
+            requestResourceData: { assignedTo: userNames },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
   const updatePostpaidDetails = (id: string, details: { billDate: Date, pdBill: 'Yes' | 'No' }) => {
     if (!db || !user) return;
     const num = numbers.find(n => n.id === id);
@@ -2049,7 +2075,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
-  const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => r.assignedTo === user?.displayName);
+  const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => Array.isArray(r.assignedTo) && r.assignedTo.includes(user?.displayName || ''));
   const roleFilteredPreBookings = role === 'admin' ? preBookings : (preBookings || []).filter(pb => pb.originalNumberData?.assignedTo === user?.displayName);
 
 
@@ -2098,6 +2124,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     bulkAddNumbers,
     addReminder,
     deleteReminder,
+    assignRemindersToUsers,
     deleteDealerPurchases,
     updatePortOutStatus,
     bulkUpdatePortOutPaymentStatus,
