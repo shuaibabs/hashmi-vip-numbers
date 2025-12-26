@@ -81,7 +81,7 @@ export type Reminder = {
   srNo: number;
   taskId?: string; // Unique ID to prevent duplicate reminders for the same event
   taskName: string;
-  assignedTo: string;
+  assignedTo: string[];
   status: 'Done' | 'Pending';
   dueDate: Timestamp;
   createdBy: string;

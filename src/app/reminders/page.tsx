@@ -3,49 +3,175 @@
 
 import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { User, Calendar, PlusCircle, Check, Trash } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { useState } from 'react';
+import { PlusCircle, Check, Trash, Users, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Spinner, TableSpinner } from '@/components/ui/spinner';
+import { useState, useMemo } from 'react';
 import { AddReminderModal } from '@/components/add-reminder-modal';
 import { useAuth } from '@/context/auth-context';
-import { Reminder } from '@/lib/data';
+import type { Reminder } from '@/lib/data';
 import { MarkReminderDoneModal } from '@/components/mark-reminder-done-modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Timestamp } from 'firebase/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AssignReminderModal } from '@/components/assign-reminder-modal';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
+type SortableColumn = keyof Reminder;
 
 export default function RemindersPage() {
-  const { reminders, loading, deleteReminder } = useApp();
-  const { role } = useAuth();
+  const { reminders, loading, deleteReminder, users: allUsers } = useApp();
+  const { role, user } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDoneModalOpen, setIsDoneModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
   const [reminderToDelete, setReminderToDelete] = useState<Reminder | null>(null);
-  
-  const sortedReminders = [...reminders].sort((a, b) => a.dueDate.toDate().getTime() - b.dueDate.toDate().getTime())
-                                        .sort((a, b) => (a.status === 'Pending' ? -1 : 1) - (b.status === 'Done' ? 1 : -1));
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'dueDate', direction: 'ascending' });
+
+  const roleFilteredReminders = useMemo(() => {
+    if (role === 'admin') {
+      return reminders;
+    }
+    return reminders.filter(r => r.assignedTo.includes(user?.displayName || ''));
+  }, [reminders, role, user?.displayName]);
+
+
+  const sortedReminders = useMemo(() => {
+    let sortableItems = [...roleFilteredReminders];
+
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof Reminder];
+        const bValue = b[sortConfig.key as keyof Reminder];
+        
+        if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+        if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        let comparison = 0;
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          comparison = aValue.localeCompare(bValue);
+        } else if (aValue instanceof Timestamp && bValue instanceof Timestamp) {
+            comparison = aValue.toMillis() - bValue.toMillis();
+        } else {
+             if (aValue < bValue) {
+                comparison = -1;
+            }
+            if (aValue > bValue) {
+                comparison = 1;
+            }
+        }
+        return sortConfig.direction === 'ascending' ? comparison : -comparison;
+      });
+    } else {
+      // Default sort: pending first, then by due date
+      sortableItems.sort((a, b) => {
+          if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+          if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+          return a.dueDate.toDate().getTime() - b.dueDate.toDate().getTime();
+      });
+    }
+    return sortableItems;
+  }, [roleFilteredReminders, sortConfig]);
+
+  const totalPages = Math.ceil(sortedReminders.length / itemsPerPage);
+  const paginatedReminders = sortedReminders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   if (loading) {
     return (
-        <div className="flex h-full w-full items-center justify-center">
-            <Spinner className="h-8 w-8" />
-        </div>
-    )
+      <div className="flex h-full w-full items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
   }
+  
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
+  };
+  
+  const handleSelectRow = (id: string) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
+  };
+  
+  const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    const pageIds = paginatedReminders.map(n => n.id);
+    if (checked) {
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
+    } else {
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const isAllOnPageSelected = paginatedReminders.length > 0 && paginatedReminders.every(n => selectedRows.includes(n.id));
 
   const handleMarkDoneClick = (reminder: Reminder) => {
     setSelectedReminder(reminder);
     setIsDoneModalOpen(true);
   };
-  
+
   const handleConfirmDelete = () => {
     if (reminderToDelete) {
-        deleteReminder(reminderToDelete.id);
-        setReminderToDelete(null);
+      deleteReminder(reminderToDelete.id);
+      setReminderToDelete(null);
     }
   };
+  
+  const requestSort = (key: SortableColumn) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (columnKey: SortableColumn) => {
+    if (!sortConfig || sortConfig.key !== columnKey) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUp className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
+  const SortableHeader = ({ column, label }: { column: SortableColumn, label: string }) => (
+    <TableHead>
+        <Button variant="ghost" onClick={() => requestSort(column)} className="px-0 hover:bg-transparent">
+            {label}
+            {getSortIcon(column)}
+        </Button>
+    </TableHead>
+  );
+
+  const selectedReminderRecords = reminders.filter(r => selectedRows.includes(r.id));
+  
+  const closeAssignModal = () => {
+    setIsAssignModalOpen(false);
+    setSelectedRows([]);
+  }
 
   return (
     <>
@@ -53,94 +179,142 @@ export default function RemindersPage() {
         title="Work Reminders"
         description="Manage and track your assigned tasks and reminders."
       >
-        {role === 'admin' && (
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4"/>
-            New Reminder
-          </Button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+            {selectedRows.length > 0 && (
+                <Button onClick={() => setIsAssignModalOpen(true)}>
+                    <Users className="mr-2 h-4 w-4" />
+                    Assign Users ({selectedRows.length})
+                </Button>
+            )}
+            {role === 'admin' && (
+            <Button onClick={() => setIsAddModalOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Reminder
+            </Button>
+            )}
+        </div>
       </PageHeader>
-      {sortedReminders.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">No reminders found.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {sortedReminders.map(reminder => (
-            <Card key={reminder.id} className="flex flex-col">
-                <CardHeader>
-                <div className="flex justify-between items-start">
-                    <CardTitle>{reminder.taskName}</CardTitle>
-                    <div className="flex items-center gap-2">
-                         <Badge variant={reminder.status === 'Done' ? 'secondary' : 'destructive'} className={reminder.status === 'Done' ? `bg-green-500/20 text-green-700` : `bg-yellow-500/20 text-yellow-700`}>
+      <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-4 flex-wrap">
+             <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Items per page" />
+              </SelectTrigger>
+              <SelectContent>
+                {ITEMS_PER_PAGE_OPTIONS.map(val => (
+                   <SelectItem key={val} value={String(val)}>{val} / page</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                   <Checkbox
+                        checked={isAllOnPageSelected}
+                        onCheckedChange={handleSelectAllOnPage}
+                        aria-label="Select all on this page"
+                    />
+                </TableHead>
+              <SortableHeader column="taskName" label="Task" />
+              <TableHead>Assigned To</TableHead>
+              <SortableHeader column="dueDate" label="Due Date" />
+              <SortableHeader column="status" label="Status" />
+              <TableHead>Completion Note</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+                <TableSpinner colSpan={7} />
+            ) : paginatedReminders.length > 0 ? (
+                paginatedReminders.map((reminder) => (
+                <TableRow key={reminder.id} data-state={selectedRows.includes(reminder.id) && "selected"}>
+                    <TableCell>
+                        <Checkbox
+                            checked={selectedRows.includes(reminder.id)}
+                            onCheckedChange={() => handleSelectRow(reminder.id)}
+                            aria-label="Select row"
+                        />
+                    </TableCell>
+                    <TableCell className="font-medium">{reminder.taskName}</TableCell>
+                    <TableCell>
+                        <div className="flex items-center space-x-2">
+                             <TooltipProvider>
+                                <div className="flex -space-x-2">
+                                    {reminder.assignedTo.slice(0, 3).map(name => (
+                                        <Tooltip key={name}>
+                                            <TooltipTrigger asChild>
+                                                <Avatar className="h-6 w-6 border-2 border-background">
+                                                    <AvatarFallback>{name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                                                </Avatar>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{name}</TooltipContent>
+                                        </Tooltip>
+                                    ))}
+                                </div>
+                            </TooltipProvider>
+                            {reminder.assignedTo.length > 3 && (
+                                <span className="text-xs text-muted-foreground">+{reminder.assignedTo.length - 3} more</span>
+                            )}
+                            {reminder.assignedTo.length === 0 && <span className="text-xs text-muted-foreground">Unassigned</span>}
+                        </div>
+                    </TableCell>
+                    <TableCell>{format(reminder.dueDate.toDate(), 'PPP')}</TableCell>
+                    <TableCell>
+                        <Badge variant={reminder.status === 'Done' ? 'secondary' : 'destructive'} className={reminder.status === 'Done' ? `bg-green-500/20 text-green-700` : `bg-yellow-500/20 text-yellow-700`}>
                             {reminder.status}
                         </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{reminder.notes || 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                        {reminder.status === 'Pending' && (
+                            <Button size="sm" onClick={() => handleMarkDoneClick(reminder)}>
+                                <Check className="mr-2 h-4 w-4" />
+                                Mark as Done
+                            </Button>
+                        )}
                         {role === 'admin' && reminder.status === 'Done' && (
-                            <AlertDialog>
+                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setReminderToDelete(reminder)}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                                         <Trash className="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>
-                                {reminderToDelete?.id === reminder.id && (
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This action will permanently delete the completed task "{reminderToDelete.taskName}".
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel onClick={() => setReminderToDelete(null)}>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                )}
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action will permanently delete the completed task "{reminder.taskName}".
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => deleteReminder(reminder.id)}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
                             </AlertDialog>
                         )}
-                    </div>
-                </div>
-                <CardDescription className="pt-2">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                        <User className="mr-2 h-4 w-4" /> Assigned to: <span className="font-medium ml-1">{reminder.assignedTo}</span>
-                    </div>
-                </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow space-y-2">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="mr-2 h-4 w-4" /> Due: <span className="font-medium ml-1">{format(reminder.dueDate.toDate(), 'PPP')}</span>
-                    </div>
-                    {reminder.notes && (
-                        <div className="text-sm">
-                            <p className="font-medium">Completion Note:</p>
-                            <p className="text-muted-foreground whitespace-pre-wrap">{reminder.notes}</p>
-                        </div>
-                    )}
-                </CardContent>
-                <CardFooter>
-                {reminder.status === 'Pending' && (
-                    <Button className="w-full" onClick={() => handleMarkDoneClick(reminder)}>
-                        <Check className="mr-2 h-4 w-4" />
-                        Mark as Done
-                    </Button>
-                )}
-                {reminder.status === 'Done' && (
-                     <div className="text-sm text-muted-foreground w-full text-center">
-                        {reminder.completionDate ? (
-                            `Completed on ${format(reminder.completionDate.toDate(), 'PPP')}`
-                        ) : (
-                            "Task Completed"
-                        )}
-                    </div>
-                )}
-                </CardFooter>
-            </Card>
-            ))}
-        </div>
-      )}
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                        No reminders found.
+                    </TableCell>
+                </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
       <AddReminderModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      
       {selectedReminder && (
         <MarkReminderDoneModal
             isOpen={isDoneModalOpen}
@@ -148,6 +322,11 @@ export default function RemindersPage() {
             reminder={selectedReminder}
         />
       )}
+       <AssignReminderModal
+        isOpen={isAssignModalOpen}
+        onClose={closeAssignModal}
+        selectedReminders={selectedReminderRecords}
+      />
     </>
   );
 }

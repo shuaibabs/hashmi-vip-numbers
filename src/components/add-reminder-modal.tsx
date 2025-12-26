@@ -10,17 +10,18 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/app-context';
 import { NewReminderData } from '@/lib/data';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from './ui/calendar';
 import { useState } from 'react';
+import { MultiSelect } from './ui/multi-select';
+import { useAuth } from '@/context/auth-context';
 
 const formSchema = z.object({
   taskName: z.string().min(1, 'Task name is required.'),
-  assignedTo: z.string().min(1, 'Please select an employee.'),
+  assignedTo: z.array(z.string()).min(1, 'Please select at least one employee.'),
   dueDate: z.date({ required_error: 'Due date is required.'}),
 });
 
@@ -30,14 +31,17 @@ type AddReminderModalProps = {
 };
 
 export function AddReminderModal({ isOpen, onClose }: AddReminderModalProps) {
-  const { addReminder, employees } = useApp();
+  const { addReminder, employees, users } = useApp();
+  const { role } = useAuth();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
+  const employeeOptions = users.map(u => ({ label: u.displayName, value: u.displayName }));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       taskName: '',
-      assignedTo: '',
+      assignedTo: [],
       dueDate: new Date(),
     },
   });
@@ -59,7 +63,7 @@ export function AddReminderModal({ isOpen, onClose }: AddReminderModalProps) {
         <DialogHeader>
           <DialogTitle>Add New Reminder</DialogTitle>
           <DialogDescription>
-            Assign a new task to an employee.
+            Assign a new task to one or more employees.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -82,20 +86,14 @@ export function AddReminderModal({ isOpen, onClose }: AddReminderModalProps) {
               name="assignedTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assign To</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an employee" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {employees.map(employee => (
-                        <SelectItem key={employee} value={employee}>{employee}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
+                    <FormLabel>Assign To</FormLabel>
+                    <MultiSelect
+                        options={employeeOptions}
+                        selected={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select employees..."
+                    />
+                    <FormMessage />
                 </FormItem>
               )}
             />
@@ -129,7 +127,7 @@ export function AddReminderModal({ isOpen, onClose }: AddReminderModalProps) {
                         mode="single"
                         selected={field.value}
                         onSelect={(date) => {
-                          field.onChange(date);
+                          if(date) field.onChange(date);
                           setIsDatePickerOpen(false);
                         }}
                         initialFocus
