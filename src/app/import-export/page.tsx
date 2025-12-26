@@ -58,6 +58,7 @@ export default function ImportExportPage() {
         "LocationType": n.locationType,
         "Status": n.status,
         "OwnershipType": n.ownershipType,
+        "AssignedTo": n.assignedTo,
         "SalePrice": n.salePrice || '',
         "Notes": n.notes || '',
         "UploadStatus": n.uploadStatus,
@@ -262,7 +263,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, OwnershipType. Optional: SalePrice, Notes, UploadStatus, PartnerName (required if OwnershipType is Partnership). Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP').</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, OwnershipType. Optional: AssignedTo, SalePrice, Notes, UploadStatus, PartnerName (required if OwnershipType is Partnership). Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP').</p>
              </CardContent>
            </Card>
            <Card>

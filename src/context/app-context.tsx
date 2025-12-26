@@ -1679,7 +1679,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     let currentSrNo = getNextSrNo(numbers);
     const validRecords: any[] = [];
     const failedRecords: { record: any, reason: string }[] = [];
-    const assignedToUser = user.displayName || user.email || 'User';
 
     const existingMobiles = new Set([
         ...numbers.map(n => n.mobile),
@@ -1776,10 +1775,13 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         
         const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
         
+        const assignedTo = record.AssignedTo?.trim() || 'Unassigned';
+        const assignedUser = employees.includes(assignedTo) ? assignedTo : 'Unassigned';
+
         const newRecord: any = {
             mobile: mobile,
-            name: assignedToUser,
-            assignedTo: assignedToUser,
+            name: assignedUser,
+            assignedTo: assignedUser,
             numberType: numberType,
             status: status,
             uploadStatus: uploadStatus,
