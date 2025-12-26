@@ -43,6 +43,8 @@ const formSchema = z.object({
   accountName: z.string().optional(),
   ownershipType: z.enum(['Individual', 'Partnership']),
   partnerName: z.string().optional(),
+  billDate: z.date().optional(),
+  pdBill: z.enum(['Yes', 'No']).default('No'),
 }).refine(data => {
   if (data.status === 'Non-RTS') {
     return !!data.rtsDate;
@@ -75,6 +77,14 @@ const formSchema = z.object({
 }, {
     message: 'Partner Name is required for Partnership ownership.',
     path: ['partnerName'],
+}).refine(data => {
+    if (data.numberType === 'Postpaid') {
+        return !!data.billDate;
+    }
+    return true;
+}, {
+    message: 'Bill Date is required for Postpaid numbers.',
+    path: ['billDate'],
 });
 
 export default function NewNumberPage() {
@@ -83,6 +93,7 @@ export default function NewNumberPage() {
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
   const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
+  const [isBillDatePickerOpen, setIsBillDatePickerOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [formData, setFormData] = useState<NewNumberData | null>(null);
 
@@ -103,6 +114,7 @@ export default function NewNumberPage() {
       accountName: '',
       ownershipType: 'Individual',
       partnerName: '',
+      pdBill: 'No',
     },
   });
 
@@ -461,6 +473,49 @@ export default function NewNumberPage() {
                             onSelect={(date) => {
                                 if(date) field.onChange(date);
                                 setIsSafeCustodyDatePickerOpen(false);
+                            }}
+                            initialFocus
+                            />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                )}
+                {numberType === 'Postpaid' && (
+                <FormField
+                    control={form.control}
+                    name="billDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Bill Date</FormLabel>
+                        <Popover open={isBillDatePickerOpen} onOpenChange={setIsBillDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                                )}
+                            >
+                                {field.value ? (
+                                format(field.value, "PPP")
+                                ) : (
+                                <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                                if(date) field.onChange(date);
+                                setIsBillDatePickerOpen(false);
                             }}
                             initialFocus
                             />

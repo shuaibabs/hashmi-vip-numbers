@@ -37,13 +37,15 @@ export type NumberRecord = {
   accountName?: string;
   ownershipType: 'Individual' | 'Partnership';
   partnerName?: string;
+  billDate?: Timestamp | null;
+  pdBill?: 'Yes' | 'No';
 };
 
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'safeCustodyNotificationSent'
-> & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date };
+  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'safeCustodyNotificationSent' | 'billDate'
+> & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date, billDate?: Date };
 
 
 export type SaleRecord = {

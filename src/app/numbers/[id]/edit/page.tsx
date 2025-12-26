@@ -42,6 +42,8 @@ const formSchema = z.object({
   accountName: z.string().optional(),
   ownershipType: z.enum(['Individual', 'Partnership']),
   partnerName: z.string().optional(),
+  billDate: z.date().optional(),
+  pdBill: z.enum(['Yes', 'No']).default('No'),
 }).refine(data => {
   if (data.status === 'Non-RTS') return !!data.rtsDate;
   return true;
@@ -57,7 +59,11 @@ const formSchema = z.object({
 .refine(data => {
   if (data.ownershipType === 'Partnership') return !!data.partnerName && data.partnerName.length > 0;
   return true;
-}, { message: 'Partner Name is required for Partnership ownership.', path: ['partnerName'] });
+}, { message: 'Partner Name is required for Partnership ownership.', path: ['partnerName'] })
+.refine(data => {
+  if (data.numberType === 'Postpaid') return !!data.billDate;
+  return true;
+}, { message: 'Bill Date is required for Postpaid numbers.', path: ['billDate'] });
 
 export default function EditNumberPage() {
   const { id } = useParams();
@@ -69,6 +75,7 @@ export default function EditNumberPage() {
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
   const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
   const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
+  const [isBillDatePickerOpen, setIsBillDatePickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [number, setNumber] = useState<NumberRecord | undefined>(undefined);
 
@@ -85,6 +92,7 @@ export default function EditNumberPage() {
         purchaseDate: foundNumber.purchaseDate?.toDate(),
         rtsDate: foundNumber.rtsDate?.toDate(),
         safeCustodyDate: foundNumber.safeCustodyDate?.toDate(),
+        billDate: foundNumber.billDate?.toDate(),
         salePrice: foundNumber.salePrice ? Number(foundNumber.salePrice) : undefined,
       });
     }
@@ -313,6 +321,49 @@ export default function EditNumberPage() {
                         <FormMessage />
                     </FormItem>
                 )}/>
+                )}
+                {numberType === 'Postpaid' && (
+                <FormField
+                    control={form.control}
+                    name="billDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Bill Date</FormLabel>
+                        <Popover open={isBillDatePickerOpen} onOpenChange={setIsBillDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                                )}
+                            >
+                                {field.value ? (
+                                format(field.value, "PPP")
+                                ) : (
+                                <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                                if(date) field.onChange(date);
+                                setIsBillDatePickerOpen(false);
+                            }}
+                            initialFocus
+                            />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                 )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="currentLocation" render={({ field }) => (
