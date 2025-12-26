@@ -79,6 +79,7 @@ export type PortOutRecord = Omit<SaleRecord, 'portOutStatus'> & { portOutDate: T
 export type Reminder = {
   id: string; // Firestore document ID
   srNo: number;
+  taskId?: string; // Unique ID to prevent duplicate reminders for the same event
   taskName: string;
   assignedTo: string;
   status: 'Done' | 'Pending';

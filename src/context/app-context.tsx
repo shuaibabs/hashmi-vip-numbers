@@ -579,12 +579,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // System-generated reminders for Postpaid bills
         for (const num of numbers) {
             if (num.numberType === 'Postpaid' && num.billDate && (isToday(num.billDate.toDate()) || isPast(num.billDate.toDate()))) {
-                const reminderExists = reminders.some(r => r.taskName.includes(num.mobile) && r.taskName.includes("Postpaid bill payment"));
+                const taskId = `postpaid-bill-${num.mobile}`;
+                const reminderExists = reminders.some(r => r.taskId === taskId);
+
                 if (!reminderExists && num.assignedTo) {
                     await addReminder({
+                        taskId: taskId,
                         taskName: `Postpaid bill payment due for ${num.mobile}`,
                         assignedTo: num.assignedTo,
                         dueDate: num.billDate.toDate(),
+                    }, false);
+                }
+            }
+            if (num.numberType === 'COCP' && num.safeCustodyDate && (isToday(num.safeCustodyDate.toDate()) || isPast(num.safeCustodyDate.toDate()))) {
+                const taskId = `cocp-safecustody-${num.mobile}`;
+                const reminderExists = reminders.some(r => r.taskId === taskId);
+
+                if (!reminderExists && num.assignedTo) {
+                    await addReminder({
+                        taskId: taskId,
+                        taskName: `Safe Custody Date arrived for ${num.mobile}`,
+                        assignedTo: num.assignedTo,
+                        dueDate: num.safeCustodyDate.toDate(),
                     }, false);
                 }
             }
@@ -593,9 +609,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // System-generated reminders for Pre-Booked numbers that are already RTS
         for (const pb of preBookings) {
             if (pb.originalNumberData?.status === 'RTS' && pb.originalNumberData.assignedTo) {
-                const reminderExists = reminders.some(r => r.taskName.includes(pb.mobile) && r.taskName.includes("Pre-Booked Number is now RTS"));
+                 const taskId = `prebooked-rts-${pb.mobile}`;
+                 const reminderExists = reminders.some(r => r.taskId === taskId);
                 if (!reminderExists) {
                     await addReminder({
+                        taskId: taskId,
                         taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
                         assignedTo: pb.originalNumberData.assignedTo,
                         dueDate: new Date(), // Due date is now, as it's already RTS
