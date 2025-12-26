@@ -337,6 +337,15 @@ export default function AllNumbersPage() {
     setSelectedRows([]);
   }
 
+  const handleRowClick = (e: React.MouseEvent, numId: string) => {
+    const target = e.target as HTMLElement;
+    // Prevent navigation if the click was on a checkbox or inside a dropdown menu button
+    if (target.closest('[role="checkbox"]') || target.closest('[data-radix-dropdown-menu-trigger]')) {
+      return;
+    }
+    navigate(`/numbers/${numId}`, pathname);
+  };
+
   return (
     <>
       <PageHeader
@@ -498,7 +507,11 @@ export default function AllNumbersPage() {
                     <TableRow 
                         key={num.srNo}
                         data-state={selectedRows.includes(num.id) && "selected"}
-                        className={cn(recentlyAutoRtsIds.includes(num.id) && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50")}
+                        className={cn(
+                            "cursor-pointer",
+                            recentlyAutoRtsIds.includes(num.id) && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50"
+                        )}
+                        onClick={(e) => handleRowClick(e, num.id)}
                     >
                     <TableCell>
                         {num.id && (
@@ -542,18 +555,18 @@ export default function AllNumbersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => navigate(`/numbers/${num.id}`, pathname)}>View Details</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleMarkRTS(num)}>Update RTS Status</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditUpload(num)}>Edit Upload Status</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditLocation(num)}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Update RTS Status</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditUpload(num); }}>Edit Upload Status</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditLocation(num); }}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Location
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                             <DropdownMenuItem onClick={() => handlePreBook(num)}>
+                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handlePreBook(num); }}>
                               <Bookmark className="mr-2 h-4 w-4" />
                               Pre-Book Number
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={() => handleSellNumber(num)}>
+                            <DropdownMenuItem className="text-green-600 focus:text-green-700" onClick={(e) => { e.stopPropagation(); handleSellNumber(num); }}>
                             <DollarSign className="mr-2 h-4 w-4" />
                             Mark as Sold
                             </DropdownMenuItem>
