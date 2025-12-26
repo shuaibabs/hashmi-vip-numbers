@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NumberRecord } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
@@ -28,7 +28,7 @@ function DetailItem({ label, value }: { label: string; value: React.ReactNode })
 export default function NumberDetailsPage() {
   const { id } = useParams();
   const { numbers, loading } = useApp();
-  const { back } = useNavigation();
+  const { back, navigate } = useNavigation();
   const pathname = usePathname();
 
   const numberId = Array.isArray(id) ? id[0] : id;
@@ -61,10 +61,16 @@ export default function NumberDetailsPage() {
         title="Number Details"
         description={`Viewing full details for ${number.mobile}`}
       >
-        <Button variant="outline" onClick={() => back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to List
-        </Button>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={() => back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+            </Button>
+            <Button onClick={() => navigate(`/numbers/${number.id}/edit`, pathname)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+            </Button>
+        </div>
       </PageHeader>
       
       <Card>

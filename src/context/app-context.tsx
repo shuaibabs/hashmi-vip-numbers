@@ -117,6 +117,7 @@ type AppContextType = {
   recentlyAutoRtsIds: string[];
   markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
+  updateNumber: (id: string, data: NewNumberData) => void;
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
   bulkUpdateUploadStatus: (numberIds: string[], uploadStatus: 'Pending' | 'Done') => void;
@@ -523,6 +524,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   }, [db, reminders, remindersLoading, role, addActivity]);
 
+  const updateNumber = async (id: string, data: NewNumberData) => {
+    if (!db || !user) return;
+    const numDocRef = doc(db, 'numbers', id);
+    const existingNumber = numbers.find(n => n.id === id);
+    if (!existingNumber) return;
+  
+    const updateData: Partial<NumberRecord> = {
+      ...data,
+      sum: calculateDigitalRoot(data.mobile),
+      purchaseDate: Timestamp.fromDate(data.purchaseDate),
+      rtsDate: data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+      safeCustodyDate: data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
+      salePrice: data.salePrice || 0,
+    };
+  
+    await updateDoc(numDocRef, sanitizeObjectForFirestore(updateData))
+      .then(() => {
+        addActivity({
+          employeeName: user.displayName || user.email || 'User',
+          action: 'Updated Number',
+          description: `Updated details for number ${data.mobile}`,
+        });
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: numDocRef.path,
+          operation: 'update',
+          requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
+  };
 
   const updateNumberStatus = (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
     if (!db || !user) return;
@@ -1926,6 +1959,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     recentlyAutoRtsIds,
     markActivitiesAsSeen,
     isMobileNumberDuplicate,
+    updateNumber,
     updateNumberStatus,
     updateUploadStatus,
     bulkUpdateUploadStatus,
