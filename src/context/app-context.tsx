@@ -577,7 +577,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (loading || !user) return;
 
         // System-generated reminders for Postpaid bills
-        const newPostpaidReminderIds = new Set<string>();
         for (const num of numbers) {
             if (num.numberType === 'Postpaid' && num.billDate && (isToday(num.billDate.toDate()) || isPast(num.billDate.toDate()))) {
                 const reminderExists = reminders.some(r => r.taskName.includes(num.mobile) && r.taskName.includes("Postpaid bill payment"));
@@ -587,11 +586,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
                         assignedTo: num.assignedTo,
                         dueDate: num.billDate.toDate(),
                     }, false);
-                    newPostpaidReminderIds.add(num.id);
                 }
             }
         }
         
+        // System-generated reminders for Pre-Booked numbers that are already RTS
+        for (const pb of preBookings) {
+            if (pb.originalNumberData?.status === 'RTS' && pb.originalNumberData.assignedTo) {
+                const reminderExists = reminders.some(r => r.taskName.includes(pb.mobile) && r.taskName.includes("Pre-Booked Number is now RTS"));
+                if (!reminderExists) {
+                    await addReminder({
+                        taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
+                        assignedTo: pb.originalNumberData.assignedTo,
+                        dueDate: new Date(), // Due date is now, as it's already RTS
+                    }, false);
+                }
+            }
+        }
+
         // Find all pending reminders that are due
         const dueReminders = reminders.filter(r => {
             const dueDate = r.dueDate.toDate();
@@ -620,7 +632,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const reminderInterval = setInterval(checkAndShowReminders, 15 * 60 * 1000); // Check every 15 minutes
 
     return () => clearInterval(reminderInterval);
-  }, [loading, user, numbers, reminders, addReminder, remindersShownInPopup]);
+  }, [loading, user, numbers, reminders, preBookings, addReminder, remindersShownInPopup]);
 
 
   const updateNumber = async (id: string, data: NewNumberData) => {
