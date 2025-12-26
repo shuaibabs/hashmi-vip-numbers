@@ -160,6 +160,8 @@ type AppContextType = {
   addPayment: (data: NewPaymentData) => void;
   updatePostpaidDetails: (id: string, details: { billDate: Date, pdBill: 'Yes' | 'No' }) => void;
   bulkUpdatePostpaidDetails: (numberIds: string[], details: { billDate: Date, pdBill: 'Yes' | 'No' }) => void;
+  bulkMarkRemindersDone: (reminderIds: string[], note?: string) => void;
+  bulkDeleteReminders: (reminderIds: string[]) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -2073,6 +2075,75 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
+  const bulkMarkRemindersDone = (reminderIds: string[], note?: string) => {
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    const updateData: { status: 'Done'; notes?: string; completionDate: Timestamp } = { 
+        status: 'Done',
+        completionDate: Timestamp.now(),
+    };
+    if (note) {
+      updateData.notes = note;
+    }
+
+    const affectedTasks = reminders.filter(r => reminderIds.includes(r.id)).map(r => r.taskName);
+
+    reminderIds.forEach(id => {
+      const docRef = doc(db, 'reminders', id);
+      batch.update(docRef, updateData);
+    });
+
+    batch.commit().then(() => {
+      addActivity({
+        employeeName: user.displayName || user.email || 'User',
+        action: 'Bulk Marked Tasks Done',
+        description: `Completed ${reminderIds.length} task(s).`
+      });
+      toast({
+        title: 'Update Successful',
+        description: `${reminderIds.length} reminder(s) marked as done.`
+      });
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'reminders',
+        operation: 'update',
+        requestResourceData: { info: `Bulk mark done for ${reminderIds.length} reminders.` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const bulkDeleteReminders = (reminderIds: string[]) => {
+    if (!db || !user || role !== 'admin') return;
+
+    const batch = writeBatch(db);
+    const affectedTasks = reminders.filter(r => reminderIds.includes(r.id)).map(r => r.taskName);
+
+    reminderIds.forEach(id => {
+      const docRef = doc(db, 'reminders', id);
+      batch.delete(docRef);
+    });
+
+    batch.commit().then(() => {
+      addActivity({
+        employeeName: user.displayName || user.email || 'User',
+        action: 'Bulk Deleted Reminders',
+        description: `Deleted ${reminderIds.length} reminder(s).`
+      });
+      toast({
+        title: 'Deletion Successful',
+        description: `${reminderIds.length} reminder(s) have been deleted.`
+      });
+    }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'reminders',
+        operation: 'delete',
+        requestResourceData: { info: `Bulk delete of ${reminderIds.length} reminders.` },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
   // Filter data based on role
   const roleFilteredNumbers = role === 'admin' ? numbers : (numbers || []).filter(n => n.assignedTo === user?.displayName);
   const roleFilteredReminders = role === 'admin' ? reminders : (reminders || []).filter(r => Array.isArray(r.assignedTo) && r.assignedTo.includes(user?.displayName || ''));
@@ -2141,6 +2212,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     addPayment,
     updatePostpaidDetails,
     bulkUpdatePostpaidDetails,
+    bulkMarkRemindersDone,
+    bulkDeleteReminders,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

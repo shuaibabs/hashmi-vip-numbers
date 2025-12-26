@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -21,15 +22,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AssignReminderModal } from '@/components/assign-reminder-modal';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { BulkMarkRemindersDoneModal } from '@/components/bulk-mark-reminders-done-modal';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 type SortableColumn = keyof Reminder;
 
 export default function RemindersPage() {
-  const { reminders, loading, deleteReminder, users: allUsers } = useApp();
+  const { reminders, loading, deleteReminder, users: allUsers, bulkMarkRemindersDone, bulkDeleteReminders } = useApp();
   const { role, user } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDoneModalOpen, setIsDoneModalOpen] = useState(false);
+  const [isBulkDoneModalOpen, setIsBulkDoneModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
   const [reminderToDelete, setReminderToDelete] = useState<Reminder | null>(null);
@@ -173,6 +176,16 @@ export default function RemindersPage() {
     setIsAssignModalOpen(false);
     setSelectedRows([]);
   }
+  
+  const closeBulkDoneModal = () => {
+    setIsBulkDoneModalOpen(false);
+    setSelectedRows([]);
+  }
+
+  const handleBulkDelete = () => {
+    bulkDeleteReminders(selectedRows);
+    setSelectedRows([]);
+  };
 
   return (
     <>
@@ -181,12 +194,6 @@ export default function RemindersPage() {
         description="Manage and track your assigned tasks and reminders."
       >
         <div className="flex gap-2 flex-wrap">
-            {selectedRows.length > 0 && (
-                <Button onClick={() => setIsAssignModalOpen(true)}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Assign Users ({selectedRows.length})
-                </Button>
-            )}
             {role === 'admin' && (
             <Button onClick={() => setIsAddModalOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -207,6 +214,42 @@ export default function RemindersPage() {
                 ))}
               </SelectContent>
             </Select>
+             {selectedRows.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Button onClick={() => setIsAssignModalOpen(true)}>
+                        <Users className="mr-2 h-4 w-4" />
+                        Assign Users ({selectedRows.length})
+                    </Button>
+                     <Button onClick={() => setIsBulkDoneModalOpen(true)}>
+                        <Check className="mr-2 h-4 w-4" />
+                        Mark as Done ({selectedRows.length})
+                    </Button>
+                    {role === 'admin' && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete ({selectedRows.length})
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This action will permanently delete {selectedRows.length} reminder(s).
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleBulkDelete}>
+                                Yes, delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
+            )}
           </div>
         </div>
 
@@ -329,6 +372,11 @@ export default function RemindersPage() {
        <AssignReminderModal
         isOpen={isAssignModalOpen}
         onClose={closeAssignModal}
+        selectedReminders={selectedReminderRecords}
+      />
+      <BulkMarkRemindersDoneModal 
+        isOpen={isBulkDoneModalOpen}
+        onClose={closeBulkDoneModal}
         selectedReminders={selectedReminderRecords}
       />
     </>
