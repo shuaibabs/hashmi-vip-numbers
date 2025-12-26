@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -115,6 +116,9 @@ type AppContextType = {
   payments: PaymentRecord[];
   seenActivitiesCount: number;
   recentlyAutoRtsIds: string[];
+  showReminderPopup: boolean;
+  pendingRemindersForPopup: Reminder[];
+  closeReminderPopup: () => void;
   markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumber: (id: string, data: NewNumberData) => void;
@@ -137,7 +141,7 @@ type AppContextType = {
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; }) => void;
   deletePortOuts: (records: PortOutRecord[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
-  addReminder: (data: NewReminderData) => void;
+  addReminder: (data: NewReminderData, showToast?: boolean) => Promise<void>;
   deleteReminder: (id: string) => void;
   deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
   updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
@@ -179,6 +183,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [roleFilteredActivities, setRoleFilteredActivities] = useState<Activity[]>([]);
   const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
   const [recentlyAutoRtsIds, setRecentlyAutoRtsIds] = useState<string[]>([]);
+  const [showReminderPopup, setShowReminderPopup] = useState(false);
+  const [pendingRemindersForPopup, setPendingRemindersForPopup] = useState<Reminder[]>([]);
+  const [remindersShownInPopup, setRemindersShownInPopup] = useState<Set<string>>(new Set());
 
   const [numbersLoading, setNumbersLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(true);
@@ -209,33 +216,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return user ? `seenActivitiesCount_${user.uid}` : null;
   }, [user?.uid]);
 
-
-  useEffect(() => {
-    if (activitiesLoading || !user) return; 
-
-    const seenCountKey = getSeenCountKey();
-    if (seenCountKey) {
-        let storedCount = Number(localStorage.getItem(seenCountKey) || 0);
-        if (storedCount > activities.length) {
-            storedCount = activities.length;
-            localStorage.setItem(seenCountKey, String(storedCount));
-        }
-        setSeenActivitiesCount(storedCount);
-    } else {
-        setSeenActivitiesCount(0);
-    }
-  }, [activities.length, activitiesLoading, user, getSeenCountKey]);
-
-
-  const markActivitiesAsSeen = useCallback(() => {
-    const total = activities.length;
-    const seenCountKey = getSeenCountKey();
-    if (seenCountKey) {
-        setSeenActivitiesCount(total);
-        localStorage.setItem(seenCountKey, String(total));
-    }
-  }, [activities.length, getSeenCountKey]);
-
   const addActivity = useCallback((activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast = true) => {
     if (!db || !user) return;
     const newActivity = { 
@@ -262,6 +242,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
           errorEmitter.emit('permission-error', permissionError);
       });
   }, [db, user, activities, toast]);
+
+  const addReminder = useCallback(async (data: NewReminderData, showToast = true) => {
+    if (!db || !user) return;
+
+    const newReminder: Omit<Reminder, 'id'> = {
+      ...data,
+      srNo: getNextSrNo(reminders),
+      status: 'Pending',
+      dueDate: Timestamp.fromDate(data.dueDate),
+      createdBy: user.uid,
+    };
+    
+    const remindersCollection = collection(db, 'reminders');
+    try {
+        await addDoc(remindersCollection, newReminder);
+        if (showToast) {
+            addActivity({
+                employeeName: user.displayName || user.email || 'User',
+                action: 'Added Reminder',
+                description: `Assigned task "${data.taskName}" to ${data.assignedTo}`
+            });
+        }
+    } catch (serverError) {
+        const permissionError = new FirestorePermissionError({
+            path: 'reminders',
+            operation: 'create',
+            requestResourceData: newReminder,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    }
+  }, [db, user, reminders, addActivity]);
+
+  useEffect(() => {
+    if (activitiesLoading || !user) return; 
+
+    const seenCountKey = getSeenCountKey();
+    if (seenCountKey) {
+        let storedCount = Number(localStorage.getItem(seenCountKey) || 0);
+        if (storedCount > activities.length) {
+            storedCount = activities.length;
+            localStorage.setItem(seenCountKey, String(storedCount));
+        }
+        setSeenActivitiesCount(storedCount);
+    } else {
+        setSeenActivitiesCount(0);
+    }
+  }, [activities.length, activitiesLoading, user, getSeenCountKey]);
+
+
+  const markActivitiesAsSeen = useCallback(() => {
+    const total = activities.length;
+    const seenCountKey = getSeenCountKey();
+    if (seenCountKey) {
+        setSeenActivitiesCount(total);
+        localStorage.setItem(seenCountKey, String(total));
+    }
+  }, [activities.length, getSeenCountKey]);
   
 
   useEffect(() => {
@@ -385,58 +422,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    if (!db || numbersLoading) {
+    if (!db || numbersLoading || preBookingsLoading || authLoading || !user) {
       return;
     }
+
     const checkRtsDates = async () => {
-      if (!db) {
-        return;
-      }
+        if (!db) return;
 
-      const batch = writeBatch(db);
-      let updated = false;
-      const updatedIds: string[] = [];
-      
-      numbers.forEach(num => {
-        if (num.status === 'Non-RTS' && num.rtsDate) {
-           const rtsDateObj = num.rtsDate.toDate();
-          if (isValid(rtsDateObj) && (isToday(rtsDateObj) || isPast(rtsDateObj))) {
-            const docRef = doc(db, 'numbers', num.id);
-            batch.update(docRef, {
-                status: 'RTS',
-                rtsDate: null,
-            });
-            addActivity({
-                employeeName: 'System',
-                action: 'Auto-updated to RTS',
-                description: `Number ${num.mobile} automatically became RTS.`
-            }, false);
-            updated = true;
-            updatedIds.push(num.id);
-          }
-        }
-      });
-
-      if (updated) {
-        setRecentlyAutoRtsIds(updatedIds);
-        setTimeout(() => setRecentlyAutoRtsIds([]), 5 * 60 * 1000); // Clear after 5 minutes
-        await batch.commit().catch(async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: 'numbers',
-                operation: 'update',
-                requestResourceData: {info: 'Batch update for RTS status'},
-            });
-            errorEmitter.emit('permission-error', permissionError);
+        const batch = writeBatch(db);
+        let updated = false;
+        const updatedIds: string[] = [];
+        
+        numbers.forEach(num => {
+            if (num.status === 'Non-RTS' && num.rtsDate) {
+                const rtsDateObj = num.rtsDate.toDate();
+                if (isValid(rtsDateObj) && (isToday(rtsDateObj) || isPast(rtsDateObj))) {
+                    const docRef = doc(db, 'numbers', num.id);
+                    batch.update(docRef, { status: 'RTS', rtsDate: null });
+                    addActivity({
+                        employeeName: 'System',
+                        action: 'Auto-updated to RTS',
+                        description: `Number ${num.mobile} automatically became RTS.`
+                    }, false);
+                    updated = true;
+                    updatedIds.push(num.id);
+                }
+            }
         });
-      }
+
+        if (updated) {
+            const preBookedRtsNumbers = preBookings.filter(pb => updatedIds.includes(pb.originalNumberData.id));
+
+            preBookedRtsNumbers.forEach(pb => {
+                if (pb.originalNumberData.assignedTo) {
+                    addReminder({
+                        taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
+                        assignedTo: pb.originalNumberData.assignedTo,
+                        dueDate: new Date(),
+                    }, false);
+                }
+            });
+
+            setRecentlyAutoRtsIds(updatedIds);
+            setTimeout(() => setRecentlyAutoRtsIds([]), 5 * 60 * 1000); // Clear after 5 minutes
+            
+            await batch.commit().catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: 'numbers',
+                    operation: 'update',
+                    requestResourceData: {info: 'Batch update for RTS status'},
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
+        }
     };
 
-    // Run once on load, then set an interval
     checkRtsDates();
-    const interval = setInterval(checkRtsDates, 60000); // Check every minute
-    
+    const interval = setInterval(checkRtsDates, 60000);
     return () => clearInterval(interval);
-  }, [db, numbers, numbersLoading, addActivity]);
+  }, [db, numbers, numbersLoading, preBookings, preBookingsLoading, authLoading, user, addActivity, addReminder]);
   
   useEffect(() => {
     if (!db || numbersLoading) {
@@ -524,6 +568,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(intervalId);
 
   }, [db, reminders, remindersLoading, role, addActivity]);
+
+  useEffect(() => {
+    const checkAndShowReminders = async () => {
+        if (loading || !user) return;
+
+        // System-generated reminders for Postpaid bills
+        const newPostpaidReminderIds = new Set<string>();
+        for (const num of numbers) {
+            if (num.numberType === 'Postpaid' && num.billDate && (isToday(num.billDate.toDate()) || isPast(num.billDate.toDate()))) {
+                const reminderExists = reminders.some(r => r.taskName.includes(num.mobile) && r.taskName.includes("Postpaid bill payment"));
+                if (!reminderExists && num.assignedTo) {
+                    await addReminder({
+                        taskName: `Postpaid bill payment due for ${num.mobile}`,
+                        assignedTo: num.assignedTo,
+                        dueDate: num.billDate.toDate(),
+                    }, false);
+                    newPostpaidReminderIds.add(num.id);
+                }
+            }
+        }
+        
+        // Find all pending reminders that are due
+        const dueReminders = reminders.filter(r => {
+            const dueDate = r.dueDate.toDate();
+            return r.status === 'Pending' && isValid(dueDate) && (isToday(dueDate) || isPast(dueDate));
+        });
+
+        // Filter out reminders already shown in the popup during this session
+        const newDueReminders = dueReminders.filter(r => !remindersShownInPopup.has(r.id));
+        
+        if (newDueReminders.length > 0) {
+            setPendingRemindersForPopup(prev => {
+                const existingIds = new Set(prev.map(p => p.id));
+                const combined = [...prev, ...newDueReminders.filter(r => !existingIds.has(r.id))];
+                return combined;
+            });
+            setShowReminderPopup(true);
+            
+            // Add new reminders to the set of shown reminders
+            const newShownSet = new Set(remindersShownInPopup);
+            newDueReminders.forEach(r => newShownSet.add(r.id));
+            setRemindersShownInPopup(newShownSet);
+        }
+    };
+
+    checkAndShowReminders(); // Initial check
+    const reminderInterval = setInterval(checkAndShowReminders, 15 * 60 * 1000); // Check every 15 minutes
+
+    return () => clearInterval(reminderInterval);
+  }, [loading, user, numbers, reminders, addReminder, remindersShownInPopup]);
+
 
   const updateNumber = async (id: string, data: NewNumberData) => {
     if (!db || !user) return;
@@ -1022,8 +1117,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
         safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
         billDate: data.numberType === 'Postpaid' && data.billDate ? Timestamp.fromDate(data.billDate) : null,
-        assignedTo: data.assignedTo || assignedToUser,
-        name: data.assignedTo || assignedToUser,
+        assignedTo: data.assignedTo || 'Unassigned',
+        name: data.assignedTo || 'Unassigned',
         checkInDate: null,
         createdBy: user.uid,
         purchaseDate: Timestamp.fromDate(data.purchaseDate),
@@ -1082,8 +1177,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
           rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
           safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
           billDate: data.numberType === 'Postpaid' && data.billDate ? Timestamp.fromDate(data.billDate) : null,
-          assignedTo: data.assignedTo || assignedToUser,
-          name: data.assignedTo || assignedToUser,
+          assignedTo: data.assignedTo || 'Unassigned',
+          name: data.assignedTo || 'Unassigned',
           checkInDate: null,
           createdBy: user.uid,
           purchaseDate: Timestamp.fromDate(data.purchaseDate),
@@ -1780,7 +1875,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         }
         
         const salePrice = record.SalePrice ? parseFloat(record.SalePrice) : 0;
-        const assignedTo = record.AssignedTo?.trim() || 'Unassigned';
+        const assignedTo = record.AssignedTo?.trim();
         const assignedUser = employees.includes(assignedTo) ? assignedTo : 'Unassigned';
 
         const recordData: Partial<NumberRecord> = {
@@ -1838,34 +1933,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     }
     
     return { successCount: creations.length, updatedCount: 0, failedRecords };
-  };
-
-  const addReminder = (data: NewReminderData) => {
-    if (!db || !user) return;
-
-    const newReminder: Omit<Reminder, 'id'> = {
-      ...data,
-      srNo: getNextSrNo(reminders),
-      status: 'Pending',
-      dueDate: Timestamp.fromDate(data.dueDate),
-      createdBy: user.uid,
-    };
-    
-    const remindersCollection = collection(db, 'reminders');
-    addDoc(remindersCollection, newReminder).then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Added Reminder',
-            description: `Assigned task "${data.taskName}" to ${data.assignedTo}`
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'reminders',
-            operation: 'create',
-            requestResourceData: newReminder,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
   };
 
   const deleteReminder = (id: string) => {
@@ -1968,6 +2035,12 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     payments,
     seenActivitiesCount,
     recentlyAutoRtsIds,
+    showReminderPopup,
+    pendingRemindersForPopup,
+    closeReminderPopup: () => {
+        setShowReminderPopup(false);
+        setPendingRemindersForPopup([]);
+    },
     markActivitiesAsSeen,
     isMobileNumberDuplicate,
     updateNumber,

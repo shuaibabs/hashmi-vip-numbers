@@ -11,6 +11,7 @@ import { Spinner } from '../ui/spinner';
 import { useNavigationSpinner } from '@/hooks/use-navigation-spinner';
 import { useNavigation } from '@/context/navigation-context';
 import { useIdleTimeout } from '@/hooks/use-idle-timeout';
+import { WorkReminderPopup } from '../work-reminder-popup';
 
 const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
@@ -45,6 +46,7 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
                 </main>
             </div>
         </div>
+        <WorkReminderPopup />
     </SidebarProvider>
   );
 }
