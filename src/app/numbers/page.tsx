@@ -32,8 +32,22 @@ import { EditLocationModal } from '@/components/edit-location-modal';
 import { BulkEditUploadStatusModal } from '@/components/bulk-edit-upload-status-modal';
 import { BulkDeleteNumbersModal } from '@/components/bulk-delete-numbers-modal';
 import { cn } from '@/lib/utils';
+import { AdvancedSearch, type AdvancedSearchState } from '@/components/advanced-search';
 
 type SortableColumn = keyof NumberRecord | 'id';
+
+const initialAdvancedSearchState: AdvancedSearchState = {
+    startWith: '',
+    anywhere: '',
+    endWith: '',
+    mustContain: '',
+    notContain: '',
+    total: '',
+    sum: '',
+    maxContain: '',
+    mostContains: false,
+};
+
 
 export default function AllNumbersPage() {
   const { numbers, loading, isMobileNumberDuplicate, deleteNumbers, markAsPreBooked, recentlyAutoRtsIds } = useApp();
@@ -58,6 +72,8 @@ export default function AllNumbersPage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'srNo', direction: 'ascending'});
   const [isPreBookConfirmationOpen, setIsPreBookConfirmationOpen] = useState(false);
+  const [advancedSearch, setAdvancedSearch] = useState<AdvancedSearchState>(initialAdvancedSearchState);
+
 
   const sortedAndFilteredNumbers = useMemo(() => {
     let sortableItems = [...numbers]
@@ -69,6 +85,44 @@ export default function AllNumbersPage() {
         num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
+    // Advanced search filtering
+    if (Object.values(advancedSearch).some(v => v)) {
+        sortableItems = sortableItems.filter(num => {
+            const { startWith, endWith, anywhere, mustContain, notContain, total, sum, maxContain } = advancedSearch;
+
+            if (startWith && !num.mobile.startsWith(startWith)) return false;
+            if (endWith && !num.mobile.endsWith(endWith)) return false;
+            if (anywhere && !num.mobile.includes(anywhere)) return false;
+
+            if (mustContain) {
+                const mustContainDigits = mustContain.split(',').map(d => d.trim()).filter(Boolean);
+                if (!mustContainDigits.every(digit => num.mobile.includes(digit))) return false;
+            }
+
+            if (notContain) {
+                const notContainDigits = notContain.split(',').map(d => d.trim()).filter(Boolean);
+                if (notContainDigits.some(digit => num.mobile.includes(digit))) return false;
+            }
+
+            if (total) {
+                const digitSum = num.mobile.split('').reduce((acc, digit) => acc + parseInt(digit, 10), 0);
+                if (digitSum.toString() !== total) return false;
+            }
+            
+            if (sum && num.sum.toString() !== sum) return false;
+
+            if (maxContain) {
+                const digitCounts = num.mobile.split('').reduce((acc, digit) => {
+                    acc[digit] = (acc[digit] || 0) + 1;
+                    return acc;
+                }, {} as Record<string, number>);
+                if (Math.max(...Object.values(digitCounts)) > parseInt(maxContain, 10)) return false;
+            }
+
+            return true;
+        });
+    }
+
     // Prioritize recently auto-RTS'd numbers
     sortableItems.sort((a, b) => {
         const aIsRecent = recentlyAutoRtsIds.includes(a.id);
@@ -113,7 +167,7 @@ export default function AllNumbersPage() {
     }
 
     return sortableItems;
-  }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig, recentlyAutoRtsIds]);
+  }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig, recentlyAutoRtsIds, advancedSearch]);
 
   const totalPages = Math.ceil(sortedAndFilteredNumbers.length / itemsPerPage);
   const paginatedNumbers = sortedAndFilteredNumbers.slice(
@@ -306,6 +360,11 @@ export default function AllNumbersPage() {
             )}
         </div>
       </PageHeader>
+      <AdvancedSearch
+        onSearchChange={setAdvancedSearch}
+        initialState={initialAdvancedSearchState}
+        onClear={() => setAdvancedSearch(initialAdvancedSearchState)}
+      />
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap w-full">
@@ -417,6 +476,7 @@ export default function AllNumbersPage() {
                 <SortableHeader column="srNo" label="Sr.No" />
                 <SortableHeader column="mobile" label="Mobile" />
                 <SortableHeader column="sum" label="Sum" />
+                <SortableHeader column="purchasePrice" label="Purchase Price" />
                 <SortableHeader column="numberType" label="Number Type" />
                 <SortableHeader column="ownershipType" label="Ownership Type" />
                 <SortableHeader column="partnerName" label="Partner Name" />
@@ -426,7 +486,6 @@ export default function AllNumbersPage() {
                 <SortableHeader column="currentLocation" label="Current Location" />
                 <SortableHeader column="status" label="Status" />
                 <SortableHeader column="purchaseFrom" label="Purchase From" />
-                <SortableHeader column="purchasePrice" label="Purchase Price" />
                 <SortableHeader column="rtsDate" label="RTS Date" />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -455,6 +514,7 @@ export default function AllNumbersPage() {
                     </TableCell>
                     <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                     <TableCell>{num.sum}</TableCell>
+                    <TableCell>₹{num.purchasePrice.toLocaleString()}</TableCell>
                     <TableCell>{num.numberType}</TableCell>
                     <TableCell>{num.ownershipType}</TableCell>
                     <TableCell>{num.partnerName || 'N/A'}</TableCell>
@@ -470,7 +530,6 @@ export default function AllNumbersPage() {
                         <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
                     </TableCell>
                     <TableCell>{num.purchaseFrom}</TableCell>
-                    <TableCell>₹{num.purchasePrice.toLocaleString()}</TableCell>
                     <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                     {(role === 'admin' || role === 'employee') && (
