@@ -21,8 +21,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AssignReminderModal } from '@/components/assign-reminder-modal';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { BulkMarkRemindersDoneModal } from '@/components/bulk-mark-reminders-done-modal';
+import { Pagination } from '@/components/pagination';
+import { useToast } from '@/hooks/use-toast';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 type SortableColumn = keyof Reminder;
@@ -30,6 +32,7 @@ type SortableColumn = keyof Reminder;
 export default function RemindersPage() {
   const { reminders, loading, deleteReminder, users: allUsers, bulkMarkRemindersDone, bulkDeleteReminders } = useApp();
   const { role, user } = useAuth();
+  const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDoneModalOpen, setIsDoneModalOpen] = useState(false);
   const [isBulkDoneModalOpen, setIsBulkDoneModalOpen] = useState(false);
@@ -183,7 +186,22 @@ export default function RemindersPage() {
   }
 
   const handleBulkDelete = () => {
-    bulkDeleteReminders(selectedRows);
+    const remindersToDelete = selectedReminderRecords.filter(r => r.status === 'Done');
+    const pendingReminders = selectedReminderRecords.filter(r => r.status === 'Pending');
+
+    if (pendingReminders.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Deletion Skipped",
+        description: `${pendingReminders.length} pending reminder(s) were not deleted. Only completed reminders can be deleted.`
+      });
+    }
+
+    if (remindersToDelete.length > 0) {
+      const idsToDelete = remindersToDelete.map(r => r.id);
+      bulkDeleteReminders(idsToDelete);
+    }
+    
     setSelectedRows([]);
   };
 
@@ -236,7 +254,7 @@ export default function RemindersPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                This action will permanently delete {selectedRows.length} reminder(s).
+                                This action will permanently delete {selectedRows.length} selected reminder(s). Only completed reminders will be deleted.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -359,6 +377,14 @@ export default function RemindersPage() {
           </TableBody>
         </Table>
       </div>
+
+       <Pagination 
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        itemsPerPage={itemsPerPage}
+        totalItems={sortedReminders.length}
+      />
 
       <AddReminderModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       
