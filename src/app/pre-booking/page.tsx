@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 
-const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 
 export default function PreBookingPage() {
   const { preBookings, loading, addActivity, cancelPreBooking, sellPreBookedNumber } = useApp();

@@ -26,7 +26,7 @@ import { BulkMarkRemindersDoneModal } from '@/components/bulk-mark-reminders-don
 import { Pagination } from '@/components/pagination';
 import { useToast } from '@/hooks/use-toast';
 
-const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 type SortableColumn = keyof Reminder;
 
 export default function RemindersPage() {

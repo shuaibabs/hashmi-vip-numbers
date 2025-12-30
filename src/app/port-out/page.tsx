@@ -26,7 +26,7 @@ import { BulkEditPortOutPaymentModal } from '@/components/bulk-edit-port-out-pay
 import { Input } from '@/components/ui/input';
 
 
-const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 type SortableColumn = keyof PortOutRecord;
 
 export default function PortOutPage() {

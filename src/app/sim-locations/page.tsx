@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EditLocationModal } from '@/components/edit-location-modal';
 import { Input } from '@/components/ui/input';
 
-const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 
 export default function SimLocationsPage() {
   const { numbers, checkInNumber, loading } = useApp();

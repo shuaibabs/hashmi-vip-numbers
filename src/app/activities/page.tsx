@@ -15,7 +15,7 @@ import { Trash } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 1000];
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 
 export default function ActivitiesPage() {
   const { activities, loading, deleteActivities, markActivitiesAsSeen } = useApp();

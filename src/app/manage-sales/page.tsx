@@ -29,7 +29,7 @@ type CombinedSaleRecord = SaleRecord & {
   status: 'Active Sale' | 'Ported Out';
 };
 
-const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 
 export default function ManageSalesPage() {
   const { sales, portOuts, loading, addActivity, payments } = useApp();

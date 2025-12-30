@@ -26,7 +26,7 @@ type FailedRecord = {
   reason: string;
 };
 
-const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 const REQUIRED_HEADERS = ['Mobile', 'NumberType', 'PurchaseFrom', 'PurchasePrice', 'PurchaseDate', 'CurrentLocation', 'LocationType', 'Status', 'OwnershipType'];
 
 
