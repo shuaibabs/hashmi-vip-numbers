@@ -138,7 +138,7 @@ export default function ImportExportPage() {
     addActivity({
         employeeName: user?.displayName || 'User',
         action: 'Imported Data',
-        description: `Attempted to import ${data.length} records from ${fileName}.`
+        description: `CSV Import from ${fileName}: ${data.length} attempted, ${successCount} created, ${updatedCount} updated, ${newFailedRecords.length} failed.`
     });
   }
   
