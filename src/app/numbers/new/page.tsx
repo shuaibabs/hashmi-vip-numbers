@@ -594,7 +594,6 @@ export default function NewNumberPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Unassigned</SelectItem>
                           {employees.map(employee => (
                             <SelectItem key={employee} value={employee}>{employee}</SelectItem>
                           ))}
