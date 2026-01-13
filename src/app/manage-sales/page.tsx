@@ -144,35 +144,41 @@ export default function ManageSalesPage() {
         });
         return;
     }
+    
+    const summaryData = [
+        ['Sales Report For', soldToFilter === 'all' ? 'All Vendors' : soldToFilter],
+        [''], // Empty row for spacing
+        ['Total Billed', totalSaleAmount],
+        ['Total Purchase Amount', totalPurchaseAmount],
+        ['Profit / Loss', totalProfitLoss],
+        ['Total Paid', totalPaid],
+        ['Amount Remaining', totalRemaining],
+        [''], // Empty row for spacing
+    ];
 
-    const formattedData = filteredSales.map(s => ({
-      "Sr.No": s.srNo,
-      "Mobile": s.mobile,
-      "Sum": s.sum,
-      "Purchase From": s.originalNumberData?.purchaseFrom || 'N/A',
-      "Purchase Price": s.originalNumberData?.purchasePrice || 0,
-      "Purchase Date": s.originalNumberData?.purchaseDate ? format(s.originalNumberData.purchaseDate.toDate(), 'PPP') : 'N/A',
-      "Sold To": s.soldTo,
-      "Sale Price": s.salePrice,
-      "Sale Date": format(s.saleDate.toDate(), 'PPP'),
-      "Status": s.status,
-    }));
+    const recordsHeader = [
+      "Sr.No", "Mobile", "Sum", "Purchase From", "Purchase Price", "Purchase Date", "Sold To", "Sale Price", "Sale Date", "Status"
+    ];
     
-    // Add summary row
-    const summary = {
-        "Sr.No": "TOTAL",
-        "Mobile": "",
-        "Sum": "",
-        "Purchase From": "",
-        "Purchase Price": totalPurchaseAmount,
-        "Purchase Date": "",
-        "Sold To": "",
-        "Sale Price": totalSaleAmount,
-        "Sale Date": "",
-        "Status": "",
-    };
+    const recordsData = filteredSales.map(s => ([
+      s.srNo,
+      s.mobile,
+      s.sum,
+      s.originalNumberData?.purchaseFrom || 'N/A',
+      s.originalNumberData?.purchasePrice || 0,
+      s.originalNumberData?.purchaseDate ? format(s.originalNumberData.purchaseDate.toDate(), 'PPP') : 'N/A',
+      s.soldTo,
+      s.salePrice,
+      format(s.saleDate.toDate(), 'PPP'),
+      s.status,
+    ]));
+
+    const csvData = [...summaryData, recordsHeader, ...recordsData];
     
-    const csv = Papa.unparse([...formattedData, summary]);
+    const csv = Papa.unparse(csvData, {
+        header: false // We are providing our own headers
+    });
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
