@@ -87,7 +87,7 @@ export default function ManageSalesPage() {
     return { ...totals, totalPaid, totalRemaining: totals.totalSaleAmount - totalPaid };
   }, [filteredSales, payments, soldToFilter]);
   
-  const totalProfitLoss = totalSaleAmount - totalPurchaseAmount;
+  const totalProfitLoss = totalSaleAmount - totalSaleAmount;
   
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const paginatedSales = filteredSales.slice(
@@ -160,16 +160,20 @@ export default function ManageSalesPage() {
       "Sr.No", "Mobile", "Sum", "Purchase From", "Purchase Price", "Purchase Date", "Sold To", "Sale Price", "Sale Date", "Status"
     ];
     
-    const recordsData = filteredSales.map(s => ([
+    const sortedRecordsForExport = [...filteredSales].sort((a, b) => 
+        b.saleDate.toDate().getTime() - a.saleDate.toDate().getTime()
+    );
+
+    const recordsData = sortedRecordsForExport.map(s => ([
       s.srNo,
       s.mobile,
       s.sum,
       s.originalNumberData?.purchaseFrom || 'N/A',
       s.originalNumberData?.purchasePrice || 0,
-      s.originalNumberData?.purchaseDate ? format(s.originalNumberData.purchaseDate.toDate(), 'PPP') : 'N/A',
+      s.originalNumberData?.purchaseDate ? format(s.originalNumberData.purchaseDate.toDate(), 'dd-MM-yyyy') : 'N/A',
       s.soldTo,
       s.salePrice,
-      format(s.saleDate.toDate(), 'PPP'),
+      format(s.saleDate.toDate(), 'dd-MM-yyyy'),
       s.status,
     ]));
 
