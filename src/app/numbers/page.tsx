@@ -33,6 +33,7 @@ import { BulkEditUploadStatusModal } from '@/components/bulk-edit-upload-status-
 import { BulkDeleteNumbersModal } from '@/components/bulk-delete-numbers-modal';
 import { cn } from '@/lib/utils';
 import { AdvancedSearch, type AdvancedSearchState } from '@/components/advanced-search';
+import { BulkUploadStatusChangeModal } from '@/components/bulk-upload-status-change-modal';
 
 type SortableColumn = keyof NumberRecord | 'id';
 
@@ -66,6 +67,7 @@ export default function AllNumbersPage() {
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkUploadStatusChangeModalOpen, setIsBulkUploadStatusChangeModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -361,6 +363,10 @@ export default function AllNumbersPage() {
                 <FileInput className="mr-2 h-4 w-4"/>
                 Import / Export
             </Button>
+            <Button variant="outline" onClick={() => setIsBulkUploadStatusChangeModalOpen(true)} className="w-full sm:w-auto">
+                <UploadCloud className="mr-2 h-4 w-4"/>
+                Bulk Upload Status
+            </Button>
             {role === 'admin' && (
               <Button variant="destructive" onClick={() => setIsBulkDeleteModalOpen(true)} className="w-full sm:w-auto">
                   <Trash className="mr-2 h-4 w-4"/>
@@ -637,6 +643,10 @@ export default function AllNumbersPage() {
       <BulkDeleteNumbersModal
         isOpen={isBulkDeleteModalOpen}
         onClose={() => setIsBulkDeleteModalOpen(false)}
+      />
+      <BulkUploadStatusChangeModal
+        isOpen={isBulkUploadStatusChangeModalOpen}
+        onClose={() => setIsBulkUploadStatusChangeModalOpen(false)}
       />
       {role === 'admin' && (
         <AssignNumbersModal
