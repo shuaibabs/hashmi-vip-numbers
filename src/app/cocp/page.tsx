@@ -10,7 +10,7 @@ import { format, isPast, isToday } from 'date-fns';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, Download, MoreHorizontal, ArrowUp, ArrowDown, Edit } from 'lucide-react';
+import { ArrowUpDown, Download, MoreHorizontal, ArrowUp, ArrowDown, Edit, Calendar } from 'lucide-react';
 import { NumberRecord } from '@/lib/data';
 import { Timestamp } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Input } from '@/components/ui/input';
 import { BulkEditCocpDateModal } from '@/components/bulk-edit-cocp-date-modal';
+import { BulkChangeCocpDateModal } from '@/components/bulk-change-cocp-date-modal';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
@@ -39,6 +40,7 @@ export default function CocpPage() {
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [isBulkChangeDateModalOpen, setIsBulkChangeDateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const cocpNumbers = useMemo(() => {
@@ -236,7 +238,12 @@ export default function CocpPage() {
       <PageHeader
         title="COCP Numbers"
         description="List of all COCP (Customer Owned Customer Premise) numbers."
-      />
+      >
+        <Button onClick={() => setIsBulkChangeDateModalOpen(true)} variant="outline">
+            <Calendar className="mr-2 h-4 w-4" />
+            Bulk Change Date
+        </Button>
+      </PageHeader>
        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-wrap">
              <Input 
@@ -371,6 +378,10 @@ export default function CocpPage() {
             setSelectedRows([]);
         }}
         selectedNumbers={selectedNumberRecords}
+      />
+      <BulkChangeCocpDateModal
+        isOpen={isBulkChangeDateModalOpen}
+        onClose={() => setIsBulkChangeDateModalOpen(false)}
       />
     </>
   );
