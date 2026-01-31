@@ -425,7 +425,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    if (!db || numbersLoading || preBookingsLoading || authLoading || !user) {
+    if (!db || numbersLoading || authLoading || !user) {
       return;
     }
 
@@ -454,22 +454,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
 
         if (updated) {
-            const preBookedRtsNumbers = preBookings.filter(pb => {
-                const originalId = pb.originalNumberData && 'id' in pb.originalNumberData ? (pb.originalNumberData as any).id : null;
-                return updatedIds.includes(originalId);
-            });
-            
-            preBookedRtsNumbers.forEach(pb => {
-                const adminUsers = users.filter(u => u.role === 'admin').map(u => u.displayName);
-                if (adminUsers.length > 0) {
-                     addReminder({
-                        taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
-                        assignedTo: adminUsers,
-                        dueDate: new Date(),
-                    }, false);
-                }
-            });
-
             setRecentlyAutoRtsIds(updatedIds);
             setTimeout(() => setRecentlyAutoRtsIds([]), 5 * 60 * 1000); // Clear after 5 minutes
             
@@ -487,51 +471,111 @@ export function AppProvider({ children }: { children: ReactNode }) {
     checkRtsDates();
     const interval = setInterval(checkRtsDates, 60000);
     return () => clearInterval(interval);
-  }, [db, numbers, numbersLoading, preBookings, preBookingsLoading, authLoading, user, users, addActivity, addReminder]);
+  }, [db, numbers, numbersLoading, authLoading, user, addActivity]);
   
   useEffect(() => {
-    if (!db || numbersLoading) {
-      return;
-    }
-    const checkSafeCustodyDates = async () => {
-        if (!db) return;
+    // This effect handles the idempotent creation of system-generated reminders
+    const createSystemReminders = async () => {
+      if (loading || !user || !db || !users.length) return;
+      const adminUsers = users.filter(u => u.role === 'admin').map(u => u.displayName);
+      if (adminUsers.length === 0) return;
 
-        const batch = writeBatch(db);
-        let updated = false;
+      const batch = writeBatch(db);
+      let operationsExist = false;
+      let currentReminderSrNo = getNextSrNo(reminders);
+      const remindersCollection = collection(db, 'reminders');
 
-        numbers.forEach(num => {
-            if (num.numberType === 'COCP' && num.safeCustodyDate && !num.safeCustodyNotificationSent) {
-                const custodyDate = num.safeCustodyDate.toDate();
-                if (isValid(custodyDate) && (isToday(custodyDate) || isPast(custodyDate))) {
-                    const docRef = doc(db, 'numbers', num.id);
-                    batch.update(docRef, { safeCustodyNotificationSent: true });
-                    addActivity({
-                        employeeName: 'System',
-                        action: 'Safe Custody Date Arrived',
-                        description: `Safe Custody Date for COCP number ${num.mobile} has arrived.`,
-                    }, false);
-                    updated = true;
-                }
-            }
-        });
-
-        if (updated) {
-            await batch.commit().catch(async (serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: 'numbers',
-                    operation: 'update',
-                    requestResourceData: { info: 'Batch update for safe custody notifications' },
-                });
-                errorEmitter.emit('permission-error', permissionError);
+      for (const num of numbers) {
+        const numberRef = doc(db, 'numbers', num.id);
+        
+        if (num.numberType === 'Postpaid' && num.billDate && (isToday(num.billDate.toDate()) || isPast(num.billDate.toDate()))) {
+          const billDateMatches = num.billReminderSentFor?.toMillis() === num.billDate?.toMillis();
+          if (!billDateMatches) {
+            batch.set(doc(remindersCollection), {
+              taskId: `postpaid-bill-${num.mobile}-${num.billDate.toMillis()}`,
+              taskName: `Postpaid bill payment due for ${num.mobile}`,
+              assignedTo: adminUsers,
+              dueDate: num.billDate,
+              status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
             });
+            batch.update(numberRef, { billReminderSentFor: num.billDate });
+            operationsExist = true;
+          }
         }
-    };
-    
-    checkSafeCustodyDates();
-    const interval = setInterval(checkSafeCustodyDates, 60 * 60 * 1000); // Check every hour
-    return () => clearInterval(interval);
 
-  }, [db, numbers, numbersLoading, addActivity]);
+        if (num.numberType === 'COCP' && num.safeCustodyDate && !num.safeCustodyNotificationSent) {
+          if (isToday(num.safeCustodyDate.toDate()) || isPast(num.safeCustodyDate.toDate())) {
+            batch.set(doc(remindersCollection), {
+              taskId: `cocp-safecustody-${num.mobile}`,
+              taskName: `Safe Custody Date arrived for ${num.mobile}`,
+              assignedTo: adminUsers,
+              dueDate: num.safeCustodyDate,
+              status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
+            });
+            batch.update(numberRef, { safeCustodyNotificationSent: true });
+            addActivity({
+                employeeName: 'System',
+                action: 'Safe Custody Date Arrived',
+                description: `Safe Custody Date for COCP number ${num.mobile} has arrived.`,
+            }, false);
+            operationsExist = true;
+          }
+        }
+      }
+
+      for (const pb of preBookings) {
+        if (pb.originalNumberData?.status === 'RTS' && !pb.rtsReminderSent) {
+          const preBookingRef = doc(db, 'prebookings', pb.id);
+          batch.set(doc(remindersCollection), {
+            taskId: `prebooked-rts-${pb.mobile}`,
+            taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
+            assignedTo: adminUsers,
+            dueDate: Timestamp.now(),
+            status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
+          });
+          batch.update(preBookingRef, { rtsReminderSent: true });
+          operationsExist = true;
+        }
+      }
+
+      if (operationsExist) {
+        await batch.commit().catch(e => console.error("Error in system reminder creation batch:", e));
+      }
+    };
+
+    createSystemReminders();
+  }, [loading, user, users, numbers, reminders, preBookings, db, addActivity]);
+
+
+  useEffect(() => {
+    // This effect solely handles displaying the popup for due, pending reminders
+    const checkAndShowPopup = () => {
+      if (loading || !user) return;
+      const dueReminders = reminders.filter(r => {
+        if (r.status !== 'Pending') return false;
+        const dueDate = r.dueDate.toDate();
+        return isValid(dueDate) && (isToday(dueDate) || isPast(dueDate));
+      });
+      const newDueReminders = dueReminders.filter(r => !remindersShownInPopup.has(r.id));
+      if (newDueReminders.length > 0) {
+        setPendingRemindersForPopup(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const combined = [...prev, ...newDueReminders.filter(r => !existingIds.has(r.id))];
+          return combined;
+        });
+        setShowReminderPopup(true);
+        const newShownSet = new Set(remindersShownInPopup);
+        newDueReminders.forEach(r => newShownSet.add(r.id));
+        setRemindersShownInPopup(newShownSet);
+      }
+    };
+    const timeoutId = setTimeout(checkAndShowPopup, 2000); 
+    const intervalId = setInterval(checkAndShowPopup, 15 * 60 * 1000);
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, [loading, user, reminders, remindersShownInPopup]);
 
   useEffect(() => {
     if (!db || remindersLoading || role !== 'admin') {
@@ -575,88 +619,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(intervalId);
 
   }, [db, reminders, remindersLoading, role, addActivity]);
-
-  useEffect(() => {
-    const checkAndShowReminders = async () => {
-        if (loading || !user) return;
-        const adminUsers = users.filter(u => u.role === 'admin').map(u => u.displayName);
-
-        // System-generated reminders for Postpaid bills
-        for (const num of numbers) {
-            if (num.numberType === 'Postpaid' && num.billDate && (isToday(num.billDate.toDate()) || isPast(num.billDate.toDate()))) {
-                const taskId = `postpaid-bill-${num.mobile}`;
-                const reminderExists = reminders.some(r => r.taskId === taskId);
-
-                if (!reminderExists && adminUsers.length > 0) {
-                    await addReminder({
-                        taskId: taskId,
-                        taskName: `Postpaid bill payment due for ${num.mobile}`,
-                        assignedTo: adminUsers,
-                        dueDate: num.billDate.toDate(),
-                    }, false);
-                }
-            }
-            if (num.numberType === 'COCP' && num.safeCustodyDate && (isToday(num.safeCustodyDate.toDate()) || isPast(num.safeCustodyDate.toDate()))) {
-                const taskId = `cocp-safecustody-${num.mobile}`;
-                const reminderExists = reminders.some(r => r.taskId === taskId);
-
-                if (!reminderExists && adminUsers.length > 0) {
-                    await addReminder({
-                        taskId: taskId,
-                        taskName: `Safe Custody Date arrived for ${num.mobile}`,
-                        assignedTo: adminUsers,
-                        dueDate: num.safeCustodyDate.toDate(),
-                    }, false);
-                }
-            }
-        }
-        
-        // System-generated reminders for Pre-Booked numbers that are already RTS
-        for (const pb of preBookings) {
-            if (pb.originalNumberData?.status === 'RTS') {
-                 const taskId = `prebooked-rts-${pb.mobile}`;
-                 const reminderExists = reminders.some(r => r.taskId === taskId);
-                if (!reminderExists && adminUsers.length > 0) {
-                    await addReminder({
-                        taskId: taskId,
-                        taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
-                        assignedTo: adminUsers,
-                        dueDate: new Date(), // Due date is now, as it's already RTS
-                    }, false);
-                }
-            }
-        }
-
-        // Find all pending reminders that are due
-        const dueReminders = reminders.filter(r => {
-            const dueDate = r.dueDate.toDate();
-            return r.status === 'Pending' && isValid(dueDate) && (isToday(dueDate) || isPast(dueDate));
-        });
-
-        // Filter out reminders already shown in the popup during this session
-        const newDueReminders = dueReminders.filter(r => !remindersShownInPopup.has(r.id));
-        
-        if (newDueReminders.length > 0) {
-            setPendingRemindersForPopup(prev => {
-                const existingIds = new Set(prev.map(p => p.id));
-                const combined = [...prev, ...newDueReminders.filter(r => !existingIds.has(r.id))];
-                return combined;
-            });
-            setShowReminderPopup(true);
-            
-            // Add new reminders to the set of shown reminders
-            const newShownSet = new Set(remindersShownInPopup);
-            newDueReminders.forEach(r => newShownSet.add(r.id));
-            setRemindersShownInPopup(newShownSet);
-        }
-    };
-
-    checkAndShowReminders(); // Initial check
-    const reminderInterval = setInterval(checkAndShowReminders, 15 * 60 * 1000); // Check every 15 minutes
-
-    return () => clearInterval(reminderInterval);
-  }, [loading, user, users, numbers, reminders, preBookings, addReminder, remindersShownInPopup]);
-
 
   const updateNumber = async (id: string, data: NewNumberData) => {
     if (!db || !user) return;

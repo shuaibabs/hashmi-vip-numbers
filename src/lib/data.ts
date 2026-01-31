@@ -39,12 +39,13 @@ export type NumberRecord = {
   partnerName?: string;
   billDate?: Timestamp | null;
   pdBill?: 'Yes' | 'No';
+  billReminderSentFor?: Timestamp | null;
 };
 
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'safeCustodyNotificationSent' | 'billDate'
+  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'safeCustodyNotificationSent' | 'billDate' | 'billReminderSentFor'
 > & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date, billDate?: Date };
 
 
@@ -72,6 +73,7 @@ export type PreBookingRecord = {
   preBookingDate: Timestamp;
   createdBy: string;
   originalNumberData: Omit<NumberRecord, 'id'>;
+  rtsReminderSent?: boolean;
 }
 
 export type PortOutRecord = Omit<SaleRecord, 'portOutStatus'> & { portOutDate: Timestamp };
