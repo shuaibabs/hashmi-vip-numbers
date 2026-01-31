@@ -20,9 +20,8 @@ type TabContextType = {
   openTab: (href: string) => void;
   closeTab: (tabId: string) => void;
   isNavigating: boolean;
-  // For compatibility with old useNavigation hook
   setIsNavigating: (isNavigating: boolean) => void;
-  navigate: (href: string, currentPathname: string, options?: { replace?: boolean }) => void;
+  navigate: (href: string, options?: { replace?: boolean }) => void;
   back: () => void;
 };
 
@@ -31,107 +30,85 @@ const TabContext = createContext<TabContextType | undefined>(undefined);
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isNavigating, setIsNavigating] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
     const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
-    const initialPath = isTabbable ? pathname : '/dashboard';
-    const component = routeComponentMap[initialPath as keyof typeof routeComponentMap];
-    
-     return [{
-        id: initialPath,
-        href: initialPath,
-        label: getLabelForRoute(initialPath),
-        component: component,
-      }];
-  });
-  
-  const [activeTabId, setActiveTabId] = useState<string | null>(() => {
-     const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
-     return isTabbable ? pathname : '/dashboard';
-  });
-  
-  const [tabHistory, setTabHistory] = useState<string[]>(() => {
-      const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
-      return isTabbable ? [pathname] : ['/dashboard'];
+    if (!isTabbable || PUBLIC_PATHS.includes(pathname)) return [];
+    return [{
+      id: pathname,
+      href: pathname,
+      label: getLabelForRoute(pathname),
+      component: routeComponentMap[pathname as keyof typeof routeComponentMap],
+    }];
   });
 
+  const [activeTabId, setActiveTabId] = useState<string | null>(pathname);
+  const [tabHistory, setTabHistory] = useState<string[]>(tabs.length > 0 ? [pathname] : []);
 
-  const openTab = useCallback((href: string) => {
-    if (href === activeTabId) return;
+  // This is the core logic. It syncs the tab state with the URL.
+  useEffect(() => {
+    const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
 
-    setIsNavigating(true);
+    if (isTabbable) {
+      const tabExists = tabs.some(tab => tab.id === pathname);
+      
+      if (!tabExists) {
+        const component = routeComponentMap[pathname as keyof typeof routeComponentMap];
+        const newTab: Tab = {
+          id: pathname,
+          href: pathname,
+          label: getLabelForRoute(pathname),
+          component,
+        };
+        setTabs(prev => [...prev, newTab]);
+      }
+      
+      setActiveTabId(pathname);
 
-    if (!routeComponentMap[href as keyof typeof routeComponentMap]) {
-        router.push(href);
-        return;
-    }
-    
-    if (tabs.some(tab => tab.id === href)) {
-      setActiveTabId(href);
-      setTabHistory(prev => [...prev.filter(id => id !== href), href]);
-      router.push(href);
-    } else {
-      const component = routeComponentMap[href as keyof typeof routeComponentMap];
-      if (component) {
-          const newTab: Tab = {
-              id: href,
-              href: href,
-              label: getLabelForRoute(href),
-              component: component,
-          };
-          setTabs(prevTabs => [...prevTabs, newTab]);
-          setActiveTabId(href);
-          setTabHistory(prev => [...prev, href]);
-          router.push(href);
-      } else {
-         setIsNavigating(false);
+      if (!tabHistory.includes(pathname)) {
+        setTabHistory(prev => [...prev, pathname]);
       }
     }
-  }, [activeTabId, tabs, router]);
+    
+    setIsNavigating(false);
+  }, [pathname]);
+
+
+  const navigate = useCallback((href: string, options?: { replace?: boolean }) => {
+    if (href === pathname) {
+      setIsNavigating(false);
+      return;
+    }
+    setIsNavigating(true);
+
+    if (options?.replace) {
+      router.replace(href);
+    } else {
+      router.push(href);
+    }
+  }, [pathname, router]);
+
+  const openTab = useCallback((href: string) => {
+    navigate(href);
+  }, [navigate]);
 
   const closeTab = useCallback((tabId: string) => {
     if (tabs.length <= 1) return;
 
-    setIsNavigating(true);
-
-    const newTabs = tabs.filter(tab => tab.id !== tabId);
-    setTabs(newTabs);
-
     const newHistory = tabHistory.filter(id => id !== tabId);
     setTabHistory(newHistory);
+    setTabs(tabs.filter(tab => tab.id !== tabId));
 
     if (activeTabId === tabId) {
-      const newActiveId = newHistory[newHistory.length - 1] || newTabs[0]?.id;
+      const newActiveId = newHistory[newHistory.length - 1];
       if (newActiveId) {
-        setActiveTabId(newActiveId);
-        router.push(newActiveId);
+        navigate(newActiveId);
       } else {
-        setIsNavigating(false);
+        navigate('/dashboard');
       }
-    } else {
-      setIsNavigating(false);
     }
-  }, [tabs, activeTabId, router, tabHistory]);
-  
-  useEffect(() => {
-    setIsNavigating(false);
-  }, [pathname]);
-
-  const navigate = useCallback((href: string, currentPathname: string, options?: { replace?: boolean }) => {
-    const isTargetPublic = PUBLIC_PATHS.some(p => href.startsWith(p));
-    setIsNavigating(true);
-
-    if (isTargetPublic) {
-        if (options?.replace) {
-            router.replace(href);
-        } else {
-            router.push(href);
-        }
-    } else {
-        openTab(href);
-    }
-  }, [openTab, router]);
+  }, [tabs, activeTabId, tabHistory, navigate]);
 
   const back = useCallback(() => {
     router.back();
@@ -146,7 +123,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setIsNavigating,
     navigate,
     back
-  }
+  };
 
   return (
     <TabContext.Provider value={contextValue}>
@@ -173,5 +150,5 @@ export function useNavigation() {
         setIsNavigating: context.setIsNavigating,
         navigate: context.navigate,
         back: context.back,
-    }
+    };
 }

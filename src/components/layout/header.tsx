@@ -56,16 +56,16 @@ export function AppHeader() {
         if (!app) return;
         const auth = getAuth(app);
         await signOut(auth);
-        navigate('/login', pathname);
+        navigate('/login', { replace: true });
     };
 
     const handleViewAllActivities = () => {
-        navigate('/activities', pathname);
+        navigate('/activities');
         setIsNotificationsOpen(false);
     }
 
     const handleAdminNavigation = (path: string) => {
-        navigate(path, pathname);
+        navigate(path);
     }
 
     return (

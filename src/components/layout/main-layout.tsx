@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -26,9 +25,9 @@ export function MainLayout({ children }: { children: ReactNode }) {
     const isUserLoggedIn = !!user;
 
     if (isUserLoggedIn && pathIsPublic) {
-      navigate('/dashboard', pathname, { replace: true });
+      navigate('/dashboard', { replace: true });
     } else if (!isUserLoggedIn && !pathIsPublic) {
-      navigate('/login', pathname, { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [user, loading, pathname, navigate]);
 
