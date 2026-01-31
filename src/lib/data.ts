@@ -32,20 +32,18 @@ export type NumberRecord = {
   notes?: string;
   checkInDate: Timestamp | null;
   safeCustodyDate: Timestamp | null;
-  safeCustodyNotificationSent?: boolean;
   createdBy: string; // UID of user who created it
   accountName?: string;
   ownershipType: 'Individual' | 'Partnership';
   partnerName?: string;
   billDate?: Timestamp | null;
   pdBill?: 'Yes' | 'No';
-  billReminderSentFor?: Timestamp | null;
 };
 
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'safeCustodyNotificationSent' | 'billDate' | 'billReminderSentFor'
+  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'billDate'
 > & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date, billDate?: Date };
 
 
@@ -73,7 +71,6 @@ export type PreBookingRecord = {
   preBookingDate: Timestamp;
   createdBy: string;
   originalNumberData: Omit<NumberRecord, 'id'>;
-  rtsReminderSent?: boolean;
 }
 
 export type PortOutRecord = Omit<SaleRecord, 'portOutStatus'> & { portOutDate: Timestamp };
@@ -91,7 +88,7 @@ export type Reminder = {
   notes?: string;
 };
 
-export type NewReminderData = Omit<Reminder, 'id' | 'srNo' | 'createdBy' | 'status' | 'dueDate' | 'notes' | 'completionDate'> & { dueDate: Date };
+export type NewReminderData = Omit<Reminder, 'id' | 'srNo' | 'createdBy' | 'status' | 'dueDate' | 'notes' | 'completionDate' | 'taskId'> & { dueDate: Date };
 
 
 export type Activity = {

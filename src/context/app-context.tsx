@@ -474,72 +474,74 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [db, numbers, numbersLoading, authLoading, user, addActivity]);
   
   useEffect(() => {
-    // This effect handles the idempotent creation of system-generated reminders
     const createSystemReminders = async () => {
       if (loading || !user || !db || !users.length) return;
+
       const adminUsers = users.filter(u => u.role === 'admin').map(u => u.displayName);
       if (adminUsers.length === 0) return;
 
       const batch = writeBatch(db);
-      let operationsExist = false;
       let currentReminderSrNo = getNextSrNo(reminders);
       const remindersCollection = collection(db, 'reminders');
+      let operationsExist = false;
+      
+      const existingTaskIds = new Set(reminders.map(r => r.taskId).filter(Boolean));
 
-      for (const num of numbers) {
-        const numberRef = doc(db, 'numbers', num.id);
-        
-        if (num.numberType === 'Postpaid' && num.billDate && (isToday(num.billDate.toDate()) || isPast(num.billDate.toDate()))) {
-          const billDateMatches = num.billReminderSentFor?.toMillis() === num.billDate?.toMillis();
-          if (!billDateMatches) {
-            batch.set(doc(remindersCollection), {
-              taskId: `postpaid-bill-${num.mobile}-${num.billDate.toMillis()}`,
-              taskName: `Postpaid bill payment due for ${num.mobile}`,
-              assignedTo: adminUsers,
-              dueDate: num.billDate,
-              status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
-            });
-            batch.update(numberRef, { billReminderSentFor: num.billDate });
-            operationsExist = true;
-          }
+      // Postpaid Bill Date Reminders
+      const postpaidNumbers = numbers.filter(n => n.numberType === 'Postpaid' && n.billDate && (isToday(n.billDate.toDate()) || isPast(n.billDate.toDate())));
+      for (const num of postpaidNumbers) {
+        const taskId = `postpaid-bill-${num.id}-${num.billDate!.toMillis()}`;
+        if (!existingTaskIds.has(taskId)) {
+          batch.set(doc(remindersCollection), {
+            taskId: taskId,
+            taskName: `Postpaid bill payment due for ${num.mobile}`,
+            assignedTo: adminUsers,
+            dueDate: num.billDate,
+            status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
+          });
+          operationsExist = true;
         }
+      }
 
-        if (num.numberType === 'COCP' && num.safeCustodyDate && !num.safeCustodyNotificationSent) {
-          if (isToday(num.safeCustodyDate.toDate()) || isPast(num.safeCustodyDate.toDate())) {
+      // COCP Safe Custody Date Reminders
+      const cocpNumbers = numbers.filter(n => n.numberType === 'COCP' && n.safeCustodyDate && (isToday(n.safeCustodyDate.toDate()) || isPast(n.safeCustodyDate.toDate())));
+      for (const num of cocpNumbers) {
+        const taskId = `cocp-safecustody-${num.id}`;
+         if (!existingTaskIds.has(taskId)) {
             batch.set(doc(remindersCollection), {
-              taskId: `cocp-safecustody-${num.mobile}`,
+              taskId: taskId,
               taskName: `Safe Custody Date arrived for ${num.mobile}`,
               assignedTo: adminUsers,
               dueDate: num.safeCustodyDate,
               status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
             });
-            batch.update(numberRef, { safeCustodyNotificationSent: true });
+            operationsExist = true;
             addActivity({
                 employeeName: 'System',
                 action: 'Safe Custody Date Arrived',
                 description: `Safe Custody Date for COCP number ${num.mobile} has arrived.`,
             }, false);
-            operationsExist = true;
+         }
+      }
+      
+      // Pre-Booked RTS Reminders
+      const rtsPreBookings = preBookings.filter(pb => pb.originalNumberData?.status === 'RTS');
+      for (const pb of rtsPreBookings) {
+          const taskId = `prebooked-rts-${pb.id}`;
+          if (!existingTaskIds.has(taskId)) {
+             batch.set(doc(remindersCollection), {
+                taskId: taskId,
+                taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
+                assignedTo: adminUsers,
+                dueDate: Timestamp.now(),
+                status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
+             });
+             operationsExist = true;
           }
-        }
       }
-
-      for (const pb of preBookings) {
-        if (pb.originalNumberData?.status === 'RTS' && !pb.rtsReminderSent) {
-          const preBookingRef = doc(db, 'prebookings', pb.id);
-          batch.set(doc(remindersCollection), {
-            taskId: `prebooked-rts-${pb.mobile}`,
-            taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
-            assignedTo: adminUsers,
-            dueDate: Timestamp.now(),
-            status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
-          });
-          batch.update(preBookingRef, { rtsReminderSent: true });
-          operationsExist = true;
-        }
-      }
-
+      
       if (operationsExist) {
-        await batch.commit().catch(e => console.error("Error in system reminder creation batch:", e));
+         await batch.commit().catch(e => console.error("Error in system reminder creation batch:", e));
       }
     };
 
@@ -1953,7 +1955,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         });
         errorEmitter.emit('permission-error', permissionError);
     });
-  }
+  };
 
   const assignRemindersToUsers = (reminderIds: string[], userNames: string[]) => {
     if (!db || !user) return;
