@@ -13,7 +13,7 @@ import { useTabs } from '@/context/navigation-context';
 import { TabBar } from './tab-bar';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
-import { routeComponentMap } from '@/lib/route-component-map';
+import { getRouteInfo } from '@/lib/route-component-map';
 
 const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
@@ -32,7 +32,7 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  const isTabbableRoute = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
+  const isTabbableRoute = !!getRouteInfo(pathname);
 
   return (
     <SidebarProvider>

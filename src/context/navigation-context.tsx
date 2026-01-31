@@ -3,7 +3,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { createContext, useContext, useState, type ReactNode, useCallback, useEffect } from 'react';
-import { routeComponentMap, getLabelForRoute } from '@/lib/route-component-map';
+import { getRouteInfo } from '@/lib/route-component-map';
 
 const PUBLIC_PATHS = ['/login', '/'];
 
@@ -33,42 +33,46 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [isNavigating, setIsNavigating] = useState(false);
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
-    const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
-    if (!isTabbable || PUBLIC_PATHS.includes(pathname)) return [];
+    const routeInfo = getRouteInfo(pathname);
+    if (!routeInfo || PUBLIC_PATHS.includes(pathname)) return [];
     return [{
       id: pathname,
       href: pathname,
-      label: getLabelForRoute(pathname),
-      component: routeComponentMap[pathname as keyof typeof routeComponentMap],
+      label: routeInfo.label,
+      component: routeInfo.component,
     }];
   });
 
   const [activeTabId, setActiveTabId] = useState<string | null>(pathname);
   const [tabHistory, setTabHistory] = useState<string[]>(tabs.length > 0 ? [pathname] : []);
 
-  // This is the core logic. It syncs the tab state with the URL.
   useEffect(() => {
-    const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
+    // This effect is the source of truth for syncing the URL with the tab state.
+    const routeInfo = getRouteInfo(pathname);
 
-    if (isTabbable) {
-      const tabExists = tabs.some(tab => tab.id === pathname);
-      
-      if (!tabExists) {
-        const component = routeComponentMap[pathname as keyof typeof routeComponentMap];
+    if (routeInfo) {
+      setTabs(prevTabs => {
+        const tabExists = prevTabs.some(tab => tab.id === pathname);
+        if (tabExists) {
+          return prevTabs;
+        }
         const newTab: Tab = {
           id: pathname,
           href: pathname,
-          label: getLabelForRoute(pathname),
-          component,
+          label: routeInfo.label,
+          component: routeInfo.component,
         };
-        setTabs(prev => [...prev, newTab]);
-      }
-      
+        return [...prevTabs, newTab];
+      });
+
       setActiveTabId(pathname);
 
-      if (!tabHistory.includes(pathname)) {
-        setTabHistory(prev => [...prev, pathname]);
-      }
+      setTabHistory(prevHistory => {
+        if (prevHistory[prevHistory.length - 1] !== pathname) {
+          return [...prevHistory, pathname];
+        }
+        return prevHistory;
+      });
     }
     
     setIsNavigating(false);
@@ -96,19 +100,20 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const closeTab = useCallback((tabId: string) => {
     if (tabs.length <= 1) return;
 
+    // Determine the next tab to navigate to
     const newHistory = tabHistory.filter(id => id !== tabId);
-    setTabHistory(newHistory);
-    setTabs(tabs.filter(tab => tab.id !== tabId));
-
+    const newActiveId = newHistory[newHistory.length - 1] || '/dashboard';
+    
+    // Perform navigation first
     if (activeTabId === tabId) {
-      const newActiveId = newHistory[newHistory.length - 1];
-      if (newActiveId) {
-        navigate(newActiveId);
-      } else {
-        navigate('/dashboard');
-      }
+      navigate(newActiveId);
     }
-  }, [tabs, activeTabId, tabHistory, navigate]);
+
+    // Then update the state
+    setTabHistory(newHistory);
+    setTabs(prevTabs => prevTabs.filter(tab => tab.id !== tabId));
+
+  }, [tabs.length, tabHistory, activeTabId, navigate]);
 
   const back = useCallback(() => {
     router.back();
