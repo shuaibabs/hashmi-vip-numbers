@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useRouter, usePathname } from 'next/navigation';
@@ -35,54 +34,66 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [isNavigating, setIsNavigating] = useState(true);
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
-    const component = routeComponentMap[pathname as keyof typeof routeComponentMap] || routeComponentMap['/dashboard'];
-    const initialPath = component ? pathname : '/dashboard';
+    const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
+    const initialPath = isTabbable ? pathname : '/dashboard';
+    const component = routeComponentMap[initialPath as keyof typeof routeComponentMap];
+    
      return [{
         id: initialPath,
         href: initialPath,
         label: getLabelForRoute(initialPath),
-        component: component || routeComponentMap['/dashboard'],
+        component: component,
       }];
   });
   
-  const [activeTabId, setActiveTabId] = useState<string | null>(pathname);
-  const [tabHistory, setTabHistory] = useState<string[]>([pathname]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(() => {
+     const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
+     return isTabbable ? pathname : '/dashboard';
+  });
+  
+  const [tabHistory, setTabHistory] = useState<string[]>(() => {
+      const isTabbable = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
+      return isTabbable ? [pathname] : ['/dashboard'];
+  });
+
 
   const openTab = useCallback((href: string) => {
     if (href === activeTabId) return;
 
+    setIsNavigating(true);
+
     if (!routeComponentMap[href as keyof typeof routeComponentMap]) {
-        setIsNavigating(true);
         router.push(href);
         return;
     }
     
-    // If the tab is already open, just switch to it
     if (tabs.some(tab => tab.id === href)) {
       setActiveTabId(href);
       setTabHistory(prev => [...prev.filter(id => id !== href), href]);
       router.push(href);
-      return;
-    }
-
-    // If it's a new tab, add it
-    const component = routeComponentMap[href as keyof typeof routeComponentMap];
-    if (component) {
-        const newTab: Tab = {
-            id: href,
-            href: href,
-            label: getLabelForRoute(href),
-            component: component,
-        };
-        setTabs(prevTabs => [...prevTabs, newTab]);
-        setActiveTabId(href);
-        setTabHistory(prev => [...prev, href]);
-        router.push(href);
+    } else {
+      const component = routeComponentMap[href as keyof typeof routeComponentMap];
+      if (component) {
+          const newTab: Tab = {
+              id: href,
+              href: href,
+              label: getLabelForRoute(href),
+              component: component,
+          };
+          setTabs(prevTabs => [...prevTabs, newTab]);
+          setActiveTabId(href);
+          setTabHistory(prev => [...prev, href]);
+          router.push(href);
+      } else {
+         setIsNavigating(false);
+      }
     }
   }, [activeTabId, tabs, router]);
 
   const closeTab = useCallback((tabId: string) => {
     if (tabs.length <= 1) return;
+
+    setIsNavigating(true);
 
     const newTabs = tabs.filter(tab => tab.id !== tabId);
     setTabs(newTabs);
@@ -95,7 +106,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (newActiveId) {
         setActiveTabId(newActiveId);
         router.push(newActiveId);
+      } else {
+        setIsNavigating(false);
       }
+    } else {
+      setIsNavigating(false);
     }
   }, [tabs, activeTabId, router, tabHistory]);
   
@@ -105,9 +120,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const navigate = useCallback((href: string, currentPathname: string, options?: { replace?: boolean }) => {
     const isTargetPublic = PUBLIC_PATHS.some(p => href.startsWith(p));
+    setIsNavigating(true);
 
     if (isTargetPublic) {
-        setIsNavigating(true);
         if (options?.replace) {
             router.replace(href);
         } else {

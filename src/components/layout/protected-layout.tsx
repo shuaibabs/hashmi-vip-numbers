@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { type ReactNode } from 'react';
@@ -33,7 +32,6 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // Check if the current URL corresponds to a main tab
   const isTabbableRoute = !!routeComponentMap[pathname as keyof typeof routeComponentMap];
 
   return (
@@ -48,30 +46,30 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
             <div className="flex flex-col flex-1 min-w-0">
                 <AppHeader />
                 <TabBar />
-                <main className="flex-1 overflow-auto relative bg-muted/20">
-                    {/* Render all tab components to preserve their state, but hide the inactive ones */}
-                    {tabs.map((tab) => {
-                        const PageComponent = tab.component;
-                        const isActive = tab.id === activeTabId;
-                        return (
-                            <div
-                                key={tab.id}
-                                style={{ display: isActive ? 'block' : 'none' }}
-                                className="absolute inset-0 focus:outline-none"
-                                role="tabpanel"
-                                aria-hidden={!isActive}
-                            >
-                               {/* We only render the "transient" children on top of the active tab */}
-                               {isActive && !isTabbableRoute ? (
-                                    <div className="p-4 md:p-6 lg:p-8">{children}</div>
-                               ) : (
+                 <main className="flex-1 overflow-auto relative bg-muted/20">
+                    {/* Non-tabbable routes take precedence and are rendered directly */}
+                    {!isTabbableRoute ? (
+                        <div className="p-4 md:p-6 lg:p-8">{children}</div>
+                    ) : (
+                        // Otherwise, render the stateful tab container
+                        tabs.map((tab) => {
+                            const PageComponent = tab.component;
+                            const isActive = tab.id === activeTabId;
+                            return (
+                                <div
+                                    key={tab.id}
+                                    style={{ display: isActive ? 'block' : 'none' }}
+                                    className="absolute inset-0 focus:outline-none"
+                                    role="tabpanel"
+                                    aria-hidden={!isActive}
+                                >
                                     <div className="p-4 md:p-6 lg:p-8">
                                         <PageComponent />
                                     </div>
-                               )}
-                            </div>
-                        )
-                    })}
+                                </div>
+                            )
+                        })
+                    )}
                 </main>
             </div>
         </div>
