@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { FirebaseApp, initializeApp } from 'firebase/app';
+import { FirebaseApp, initializeApp, getApps } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
 import { firebaseConfig } from './config';
@@ -18,20 +19,13 @@ let app: FirebaseApp;
 let auth: Auth;
 let firestore: Firestore;
 
-try {
+if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  firestore = getFirestore(app);
-} catch (e) {
-  console.error("Error initializing Firebase", e);
-  // @ts-ignore
-  app = app || null;
-  // @ts-ignore
-  auth = auth || null;
-  // @ts-ignore
-  firestore = firestore || null;
+} else {
+  app = getApps()[0];
 }
-
+auth = getAuth(app);
+firestore = getFirestore(app);
 
 export function FirebaseProvider({ children }: { children: ReactNode }) {
   if (!app) {
