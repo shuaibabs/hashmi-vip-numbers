@@ -475,7 +475,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   useEffect(() => {
     const createSystemReminders = async () => {
-      if (loading || !user || !db || !users.length) return;
+      if (loading || !user || !db || !users.length || !reminders) return;
 
       const adminUsers = users.filter(u => u.role === 'admin').map(u => u.displayName);
       if (adminUsers.length === 0) return;
@@ -879,10 +879,58 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     });
   };
 
-  const markReminderDone = (id: string, note?: string) => {
+  const canReminderBeMarkedDone = (reminder: Reminder): { canBeDone: boolean; message: string } => {
+    if (!reminder.taskId) {
+      // If it's a manual reminder with no taskId, allow it to be marked done.
+      return { canBeDone: true, message: "" };
+    }
+
+    if (reminder.taskId.startsWith('cocp-safecustody-')) {
+      const numberId = reminder.taskId.replace('cocp-safecustody-', '');
+      const number = numbers.find(n => n.id === numberId);
+      if (number && number.safeCustodyDate) {
+        const custodyDate = number.safeCustodyDate.toDate();
+        if (isToday(custodyDate) || isPast(custodyDate)) {
+          return { canBeDone: false, message: `The Safe Custody Date for ${number.mobile} has not been updated to a future date.` };
+        }
+      }
+    } else if (reminder.taskId.startsWith('postpaid-bill-')) {
+      const numberId = reminder.taskId.split('-')[2];
+      const number = numbers.find(n => n.id === numberId);
+      if (number && number.billDate) {
+        const billDate = number.billDate.toDate();
+        if (isToday(billDate) || isPast(billDate)) {
+          return { canBeDone: false, message: `The Bill Date for ${number.mobile} has not been updated to the next cycle.` };
+        }
+      }
+    } else if (reminder.taskId.startsWith('prebooked-rts-')) {
+      const preBookingId = reminder.taskId.replace('prebooked-rts-', '');
+      const preBooking = preBookings.find(pb => pb.id === preBookingId);
+      if (preBooking) {
+        return { canBeDone: false, message: `The Pre-Booked number ${preBooking.mobile} has not been marked as sold yet.` };
+      }
+    }
+
+    return { canBeDone: true, message: "" };
+  };
+
+  const markReminderDone = async (id: string, note?: string) => {
     if (!db || !user) return;
     const reminder = reminders.find(r => r.id === id);
     if (!reminder) return;
+
+    const { canBeDone, message } = canReminderBeMarkedDone(reminder);
+
+    if (!canBeDone) {
+        toast({
+            variant: "destructive",
+            title: "Action Required",
+            description: message,
+            duration: 7000,
+        });
+        return;
+    }
+
     const reminderDocRef = doc(db, 'reminders', id);
 
     const updateData: { status: 'Done'; notes?: string; completionDate: Timestamp } = { 
@@ -2041,6 +2089,35 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
 
   const bulkMarkRemindersDone = (reminderIds: string[], note?: string) => {
     if (!db || !user) return;
+    
+    const remindersToUpdate = reminderIds.map(id => reminders.find(r => r.id === id)).filter(Boolean) as Reminder[];
+    
+    const remindersThatCanBeDone: Reminder[] = [];
+    const remindersThatCannotBeDone: { reminder: Reminder, reason: string }[] = [];
+
+    for (const reminder of remindersToUpdate) {
+        const { canBeDone, message } = canReminderBeMarkedDone(reminder);
+        if (canBeDone) {
+            remindersThatCanBeDone.push(reminder);
+        } else {
+            remindersThatCannotBeDone.push({ reminder, reason: message });
+        }
+    }
+
+    if (remindersThatCannotBeDone.length > 0) {
+        const errorMessages = remindersThatCannotBeDone.map(item => `- ${item.reminder.taskName}: ${item.reason}`).join('\n');
+        toast({
+            variant: "destructive",
+            title: `${remindersThatCannotBeDone.length} reminder(s) could not be marked as done`,
+            description: <pre className="mt-2 w-full rounded-md bg-slate-950 p-4"><code className="text-white whitespace-pre-wrap">{errorMessages}</code></pre>,
+            duration: 10000,
+        });
+    }
+
+    if (remindersThatCanBeDone.length === 0) {
+        return;
+    }
+    
     const batch = writeBatch(db);
     const updateData: { status: 'Done'; notes?: string; completionDate: Timestamp } = { 
         status: 'Done',
@@ -2050,10 +2127,8 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       updateData.notes = note;
     }
 
-    const affectedTasks = reminders.filter(r => reminderIds.includes(r.id)).map(r => r.taskName);
-
-    reminderIds.forEach(id => {
-      const docRef = doc(db, 'reminders', id);
+    remindersThatCanBeDone.forEach(reminder => {
+      const docRef = doc(db, 'reminders', reminder.id);
       batch.update(docRef, updateData);
     });
 
@@ -2061,17 +2136,17 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       addActivity({
         employeeName: user.displayName || user.email || 'User',
         action: 'Bulk Marked Tasks Done',
-        description: `Completed ${reminderIds.length} task(s).`
+        description: `Completed ${remindersThatCanBeDone.length} task(s).`
       });
       toast({
         title: 'Update Successful',
-        description: `${reminderIds.length} reminder(s) marked as done.`
+        description: `${remindersThatCanBeDone.length} reminder(s) marked as done.`
       });
     }).catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
         path: 'reminders',
         operation: 'update',
-        requestResourceData: { info: `Bulk mark done for ${reminderIds.length} reminders.` },
+        requestResourceData: { info: `Bulk mark done for ${remindersThatCanBeDone.length} reminders.` },
       });
       errorEmitter.emit('permission-error', permissionError);
     });
