@@ -28,7 +28,9 @@ export function LatestActivities() {
   const { activities } = useApp();
   const { role } = useAuth();
 
-  const sortedActivities = [...activities].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+  const sortedActivities = [...activities]
+    .filter(activity => activity.timestamp) // Ensure timestamp is not null
+    .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
   
   const cardTitle = role === 'admin' ? "Latest Activities" : "My Recent Activities";
 
