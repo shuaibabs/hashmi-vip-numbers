@@ -43,6 +43,7 @@ const initialAdvancedSearchState: AdvancedSearchState = {
     endWith: '',
     mustContain: '',
     notContain: '',
+    onlyContain: '',
     total: '',
     sum: '',
     maxContain: '',
@@ -96,7 +97,7 @@ export default function AllNumbersPage() {
     // Advanced search filtering
     if (Object.values(advancedSearch).some(v => v)) {
         sortableItems = sortableItems.filter(num => {
-            const { startWith, endWith, anywhere, mustContain, notContain, total, sum, maxContain } = advancedSearch;
+            const { startWith, endWith, anywhere, mustContain, notContain, onlyContain, total, sum, maxContain } = advancedSearch;
 
             if (startWith && !num.mobile.startsWith(startWith)) return false;
             if (endWith && !num.mobile.endsWith(endWith)) return false;
@@ -110,6 +111,13 @@ export default function AllNumbersPage() {
             if (notContain) {
                 const notContainDigits = notContain.split(',').map(d => d.trim()).filter(Boolean);
                 if (notContainDigits.some(digit => num.mobile.includes(digit))) return false;
+            }
+
+            if (onlyContain) {
+                const allowedDigits = new Set(onlyContain.split(''));
+                if (!num.mobile.split('').every(digit => allowedDigits.has(digit))) {
+                    return false;
+                }
             }
 
             if (total) {

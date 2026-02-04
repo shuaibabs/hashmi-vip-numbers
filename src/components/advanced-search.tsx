@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -17,6 +16,7 @@ export type AdvancedSearchState = {
   endWith: string;
   mustContain: string;
   notContain: string;
+  onlyContain: string;
   total: string;
   sum: string;
   maxContain: string;
@@ -102,6 +102,10 @@ export function AdvancedSearch({ onSearchChange, initialState, onClear }: Advanc
                   <Label htmlFor="notContain">Not Contain</Label>
                   <Input id="notContain" name="notContain" placeholder="e.g: 4,69" value={searchState.notContain} onChange={handleInputChange} />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="onlyContain">Only Contain</Label>
+                  <Input id="onlyContain" name="onlyContain" placeholder="e.g: 123" value={searchState.onlyContain} onChange={handleInputChange} />
+                </div>
               </div>
                <p className="text-xs text-muted-foreground">For multiple values in Must/Not Contain, use a comma (e.g. 14,18).</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -135,4 +139,3 @@ export function AdvancedSearch({ onSearchChange, initialState, onClear }: Advanc
     </Collapsible>
   );
 }
-
