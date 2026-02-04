@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud, ArrowUp, ArrowDown, Bookmark } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud, ArrowUp, ArrowDown, Bookmark, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { RtsStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 import { AdvancedSearch, type AdvancedSearchState } from '@/components/advanced-search';
 import { BulkUploadStatusChangeModal } from '@/components/bulk-upload-status-change-modal';
 
-type SortableColumn = keyof NumberRecord | 'id';
+type SortableColumn = keyof NumberRecord | 'id' | 'twoDigitSum';
 
 const initialAdvancedSearchState: AdvancedSearchState = {
     startWith: '',
@@ -76,6 +76,12 @@ export default function AllNumbersPage() {
   const [isPreBookConfirmationOpen, setIsPreBookConfirmationOpen] = useState(false);
   const [advancedSearch, setAdvancedSearch] = useState<AdvancedSearchState>(initialAdvancedSearchState);
 
+  const calculateSimpleSum = (mobile: string): number => {
+    return mobile
+        .split('')
+        .map(Number)
+        .reduce((acc, digit) => acc + digit, 0);
+  };
 
   const sortedAndFilteredNumbers = useMemo(() => {
     let sortableItems = [...numbers]
@@ -142,8 +148,9 @@ export default function AllNumbersPage() {
         if (aIsRecent && !bIsRecent) return -1;
         if (!aIsRecent && bIsRecent) return 1;
         
-        const aValue = a[sortConfig.key as keyof NumberRecord];
-        const bValue = b[sortConfig.key as keyof NumberRecord];
+        const aValue = sortConfig.key === 'twoDigitSum' ? calculateSimpleSum(a.mobile) : a[sortConfig.key as keyof NumberRecord];
+        const bValue = sortConfig.key === 'twoDigitSum' ? calculateSimpleSum(b.mobile) : b[sortConfig.key as keyof NumberRecord];
+
 
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
@@ -277,6 +284,37 @@ export default function AllNumbersPage() {
   };
 
   const selectedNumberRecords = numbers.filter(n => selectedRows.includes(n.id));
+
+  const handleCopySelected = () => {
+    if (selectedNumberRecords.length === 0) {
+      toast({
+        title: "Nothing to copy",
+        description: "Please select at least one row to copy.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const textToCopy = selectedNumberRecords.map(num => {
+        const twoDigitSum = calculateSimpleSum(num.mobile);
+        const rtsDate = num.rtsDate ? format(num.rtsDate.toDate(), 'yyyy-MM-dd') : 'N/A';
+        return [num.mobile, num.sum, twoDigitSum, num.status, rtsDate].join(',\t');
+    }).join('\n');
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      toast({
+        title: "Copied to clipboard!",
+        description: `${selectedNumberRecords.length} record(s) have been copied.`,
+      });
+    }).catch(err => {
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy text to clipboard.",
+        variant: "destructive"
+      });
+      console.error('Failed to copy: ', err);
+    });
+  };
 
   const SortableHeader = ({ column, label }: { column: SortableColumn, label: string }) => (
     <TableHead>
@@ -463,6 +501,10 @@ export default function AllNumbersPage() {
                       Assign ({selectedRows.length})
                   </Button>
               )}
+              <Button onClick={handleCopySelected} variant="outline">
+                <Copy className="mr-2 h-4 w-4" />
+                Copy ({selectedRows.length})
+              </Button>
               <Button onClick={() => setIsBulkUploadModalOpen(true)} variant="outline">
                   <UploadCloud className="mr-2 h-4 w-4" />
                   Edit Upload Status ({selectedRows.length})
@@ -491,6 +533,7 @@ export default function AllNumbersPage() {
                 <SortableHeader column="srNo" label="Sr.No" />
                 <SortableHeader column="mobile" label="Mobile" />
                 <SortableHeader column="sum" label="Sum" />
+                <SortableHeader column="twoDigitSum" label="2-Digit Sum" />
                 <SortableHeader column="purchasePrice" label="Purchase Price" />
                 <SortableHeader column="numberType" label="Number Type" />
                 <SortableHeader column="ownershipType" label="Ownership Type" />
@@ -507,7 +550,7 @@ export default function AllNumbersPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                  <TableSpinner colSpan={16} />
+                  <TableSpinner colSpan={17} />
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num) => (
                     <TableRow 
@@ -533,6 +576,7 @@ export default function AllNumbersPage() {
                     </TableCell>
                     <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                     <TableCell>{num.sum}</TableCell>
+                    <TableCell>{calculateSimpleSum(num.mobile)}</TableCell>
                     <TableCell>₹{num.purchasePrice.toLocaleString()}</TableCell>
                     <TableCell>{num.numberType}</TableCell>
                     <TableCell>{num.ownershipType}</TableCell>
@@ -584,7 +628,7 @@ export default function AllNumbersPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={16} className="h-24 text-center">
+                    <TableCell colSpan={17} className="h-24 text-center">
                         {searchTerm && `No number found for "${searchTerm}".`}
                         {!searchTerm && "No numbers found for the current filters."}
                         {searchTerm && (
