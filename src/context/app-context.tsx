@@ -423,6 +423,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saleInfo: {
         soldTo: sale.soldTo,
         saleDate: sale.saleDate,
+        salePrice: sale.salePrice,
       },
     }));
 

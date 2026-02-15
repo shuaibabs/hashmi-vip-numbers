@@ -14,9 +14,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { Separator } from './ui/separator';
-import { Avatar, AvatarFallback } from './ui/avatar';
 import { TableSpinner } from './ui/spinner';
+import {
+  FilePlus2,
+  Package,
+  FilePen,
+  Trash2,
+  UserCog,
+  DollarSign,
+  Bookmark,
+  LogIn,
+  FileClock,
+  History,
+} from 'lucide-react';
+
 
 type LifecycleHistoryModalProps = {
   isOpen: boolean;
@@ -24,13 +35,28 @@ type LifecycleHistoryModalProps = {
   mobileNumber: string;
 };
 
+const getActionIcon = (action: string) => {
+  const lowerAction = action.toLowerCase();
+  if (lowerAction.includes('added') || lowerAction.includes('created') || lowerAction.includes('imported')) return <FilePlus2 className="h-4 w-4" />;
+  if (lowerAction.includes('sold')) return <DollarSign className="h-4 w-4 text-green-500" />;
+  if (lowerAction.includes('updated')) return <FilePen className="h-4 w-4 text-blue-500" />;
+  if (lowerAction.includes('deleted') || lowerAction.includes('cancelled')) return <Trash2 className="h-4 w-4 text-red-500" />;
+  if (lowerAction.includes('assigned')) return <UserCog className="h-4 w-4" />;
+  if (lowerAction.includes('pre-booked')) return <Bookmark className="h-4 w-4 text-amber-500" />;
+  if (lowerAction.includes('checked in')) return <LogIn className="h-4 w-4" />;
+  if (lowerAction.includes('rts')) return <FileClock className="h-4 w-4" />;
+  return <History className="h-4 w-4" />;
+};
+
 export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: LifecycleHistoryModalProps) {
   const { activities, loading } = useApp();
 
   const lifecycle = useMemo(() => {
     if (!mobileNumber || loading) return [];
+    // Use a regex to match the whole number to avoid partial matches
+    const mobileRegex = new RegExp(`\\b${mobileNumber}\\b`);
     return activities
-      .filter(activity => activity.description.includes(mobileNumber))
+      .filter(activity => mobileRegex.test(activity.description))
       .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
   }, [activities, mobileNumber, loading]);
 
@@ -43,35 +69,46 @@ export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: Lifecyc
             A chronological log of all actions performed on this number.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="py-4 space-y-6">
-            {loading && <TableSpinner colSpan={1} />}
+        <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
+          <div className="relative py-4 pr-4">
+             {/* The main timeline vertical bar */}
+            {lifecycle.length > 0 && <div className="absolute left-5 top-2 h-full w-0.5 bg-border" />}
+
+            {loading && <div className="flex justify-center items-center h-48"><TableSpinner colSpan={1} /></div>}
+            
             {!loading && lifecycle.length === 0 && (
-                 <div className="text-center text-muted-foreground py-8">
-                    No activity history found for this number.
+                 <div className="text-center text-muted-foreground py-16">
+                    <Package className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium">No History Found</h3>
+                    <p className="mt-1 text-sm text-gray-500">No activities have been logged for this number yet.</p>
                 </div>
             )}
-            {lifecycle.map((activity, index) => (
-              <div key={activity.id}>
-                <div className="flex items-start gap-4">
-                    <Avatar className="h-9 w-9 border">
-                        <AvatarFallback>{activity.employeeName?.[0].toUpperCase() || 'S'}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid gap-1 flex-1">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium leading-none">
-                                <span className="font-semibold">{activity.employeeName}</span> {activity.action.toLowerCase()}
-                            </p>
-                             <p className="text-xs text-muted-foreground">
-                                {format(activity.timestamp.toDate(), 'PPP p')}
-                            </p>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+            
+            <div className="space-y-8">
+              {lifecycle.map((activity, index) => (
+                <div key={activity.id} className="relative flex items-start gap-4">
+                  <div className="absolute left-5 top-2.5 -translate-x-1/2 h-full">
+                     <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-secondary">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/20">
+                            {getActionIcon(activity.action)}
+                        </span>
+                    </span>
+                  </div>
+                  <div className="pl-12 w-full">
+                    <div className="flex justify-between items-center">
+                        <p className="text-sm font-semibold">
+                            {activity.action}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {format(activity.timestamp.toDate(), 'PPP p')}
+                        </p>
                     </div>
+                    <p className="text-sm text-muted-foreground">{activity.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">by <span className="font-medium">{activity.employeeName}</span></p>
+                  </div>
                 </div>
-                {index < lifecycle.length - 1 && <Separator className="mt-4" />}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </ScrollArea>
         <DialogFooter>

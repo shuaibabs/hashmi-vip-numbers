@@ -71,19 +71,6 @@ export default function HistoryPage() {
     );
   };
   
-  const formatPurchaseInfo = (record: GlobalHistoryRecord) => {
-    if (!record.purchaseInfo) return 'N/A';
-    const { purchaseFrom, purchaseDate, purchasePrice } = record.purchaseInfo;
-    const dateStr = purchaseDate ? format(purchaseDate.toDate(), 'PPP') : 'N/A';
-    return `${purchaseFrom} on ${dateStr} for ₹${purchasePrice.toLocaleString()}`;
-  };
-
-  const formatSaleInfo = (record: GlobalHistoryRecord) => {
-    if (!record.saleInfo) return 'N/A';
-    const { soldTo, saleDate } = record.saleInfo;
-    return `${soldTo} on ${format(saleDate.toDate(), 'PPP')}`;
-  };
-
   return (
     <>
       <PageHeader
@@ -120,17 +107,21 @@ export default function HistoryPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Phone Number</TableHead>
-              <TableHead>Current Stage</TableHead>
-              <TableHead>Number Type</TableHead>
-              <TableHead>RTS Status</TableHead>
-              <TableHead>Purchase Data</TableHead>
-              <TableHead>Sales Data</TableHead>
+                <TableHead>Phone Number</TableHead>
+                <TableHead>Current Stage</TableHead>
+                <TableHead>Number Type</TableHead>
+                <TableHead>RTS Status</TableHead>
+                <TableHead>Purchase From</TableHead>
+                <TableHead>Purchase Price</TableHead>
+                <TableHead>Purchase Date</TableHead>
+                <TableHead>Sold To</TableHead>
+                <TableHead>Sale Price</TableHead>
+                <TableHead>Sale Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={6} />
+                <TableSpinner colSpan={10} />
             ) : paginatedHistory.length > 0 ? (
                 paginatedHistory.map((record) => (
                 <TableRow key={record.id} onClick={() => handleRowClick(record.mobile)} className="cursor-pointer">
@@ -142,13 +133,17 @@ export default function HistoryPage() {
                              <Badge variant={record.rtsStatus === 'RTS' ? 'default' : 'destructive'} className={record.rtsStatus === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{record.rtsStatus}</Badge>
                         ) : 'N/A'}
                     </TableCell>
-                    <TableCell>{formatPurchaseInfo(record)}</TableCell>
-                    <TableCell>{formatSaleInfo(record)}</TableCell>
+                    <TableCell>{record.purchaseInfo?.purchaseFrom || 'N/A'}</TableCell>
+                    <TableCell>{record.purchaseInfo ? `₹${record.purchaseInfo.purchasePrice.toLocaleString()}` : 'N/A'}</TableCell>
+                    <TableCell>{record.purchaseInfo?.purchaseDate ? format(record.purchaseInfo.purchaseDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{record.saleInfo?.soldTo || 'N/A'}</TableCell>
+                    <TableCell>{record.saleInfo ? `₹${record.saleInfo.salePrice.toLocaleString()}` : 'N/A'}</TableCell>
+                    <TableCell>{record.saleInfo?.saleDate ? format(record.saleInfo.saleDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                 </TableRow>
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                         {searchTerm ? `No history found for "${searchTerm}".` : "No number history found."}
                     </TableCell>
                 </TableRow>
