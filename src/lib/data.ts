@@ -10,6 +10,15 @@ export type User = {
   id: string; // Firestore document ID is the same as uid
 };
 
+// New type for individual history events on a number
+export type LifecycleEvent = {
+  id: string; // A unique ID for the event
+  action: string;
+  description: string;
+  timestamp: Timestamp;
+  performedBy: string; // Name of the user or 'System'
+};
+
 // Raw record from Firestore
 export type NumberRecord = {
   id: string; // Firestore document ID
@@ -37,12 +46,13 @@ export type NumberRecord = {
   partnerName?: string;
   billDate?: Timestamp | null;
   pdBill?: 'Yes' | 'No';
+  history?: LifecycleEvent[]; // Array to store the number's entire history
 };
 
 // Type for creating a new number, omitting Firestore-generated fields
 export type NewNumberData = Omit<
   NumberRecord,
-  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'billDate'
+  'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'billDate' | 'history'
 > & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date, billDate?: Date };
 
 
@@ -136,4 +146,5 @@ export type GlobalHistoryRecord = {
     purchaseDate: Timestamp | null;
     purchasePrice: number;
   };
+  history?: LifecycleEvent[];
 };

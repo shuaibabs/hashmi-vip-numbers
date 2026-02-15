@@ -17,6 +17,7 @@ import {
   NewPaymentData,
   PaymentRecord,
   GlobalHistoryRecord,
+  LifecycleEvent,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast, isValid, parse, subDays } from 'date-fns';
@@ -38,6 +39,7 @@ import {
   Unsubscribe,
   QuerySnapshot,
   QueryDocumentSnapshot,
+  arrayUnion,
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -204,6 +206,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       usersLoading ||
       paymentsLoading
     ));
+
+  const createLifecycleEvent = useCallback((action: string, description: string, performedBy: string): LifecycleEvent => ({
+    id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    action,
+    description,
+    timestamp: Timestamp.now(),
+    performedBy,
+  }), []);
     
   const getSeenCountKey = useCallback(() => {
     return user ? `seenActivitiesCount_${user.uid}` : null;
@@ -407,6 +417,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         purchaseDate: num.purchaseDate,
         purchasePrice: num.purchasePrice,
       },
+      history: num.history,
     }));
 
     const salesHistory: GlobalHistoryRecord[] = sales.map(sale => ({
@@ -425,6 +436,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         saleDate: sale.saleDate,
         salePrice: sale.salePrice,
       },
+      history: sale.originalNumberData?.history,
     }));
 
     const preBookingHistory: GlobalHistoryRecord[] = preBookings.map(pb => ({
@@ -438,6 +450,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             purchaseDate: pb.originalNumberData.purchaseDate,
             purchasePrice: pb.originalNumberData.purchasePrice,
         } : undefined,
+        history: pb.originalNumberData?.history,
     }));
     
     const dealerPurchaseHistory: GlobalHistoryRecord[] = dealerPurchases.map(dp => ({
@@ -488,7 +501,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!db) return;
 
         const batch = writeBatch(db);
-        let updated = false;
         const updatedIds: string[] = [];
         
         numbers.forEach(num => {
@@ -496,19 +508,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const rtsDateObj = num.rtsDate.toDate();
                 if (isValid(rtsDateObj) && (isToday(rtsDateObj) || isPast(rtsDateObj))) {
                     const docRef = doc(db, 'numbers', num.id);
-                    batch.update(docRef, { status: 'RTS', rtsDate: null });
+                    const historyEvent = createLifecycleEvent('RTS Status Changed', 'Number automatically became RTS as per schedule.', 'System');
+                    batch.update(docRef, { status: 'RTS', rtsDate: null, history: arrayUnion(historyEvent) });
                     addActivity({
                         employeeName: 'System',
                         action: 'Auto-updated to RTS',
                         description: `Number ${num.mobile} automatically became RTS.`
                     }, false);
-                    updated = true;
                     updatedIds.push(num.id);
                 }
             }
         });
 
-        if (updated) {
+        if (updatedIds.length > 0) {
             setRecentlyAutoRtsIds(updatedIds);
             setTimeout(() => setRecentlyAutoRtsIds([]), 5 * 60 * 1000); // Clear after 5 minutes
             
@@ -526,7 +538,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     checkRtsDates();
     const interval = setInterval(checkRtsDates, 60000);
     return () => clearInterval(interval);
-  }, [db, numbers, numbersLoading, authLoading, user, addActivity]);
+  }, [db, numbers, numbersLoading, authLoading, user, addActivity, createLifecycleEvent]);
   
   useEffect(() => {
     const createSystemReminders = async () => {
@@ -666,6 +678,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const numDocRef = doc(db, 'numbers', id);
     const existingNumber = numbers.find(n => n.id === id);
     if (!existingNumber) return;
+
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Details Updated', `Number details updated by ${performedBy}.`, performedBy);
   
     const updateData: Partial<NumberRecord> = {
       ...data,
@@ -677,7 +692,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       salePrice: data.salePrice || 0,
     };
   
-    await updateDoc(numDocRef, sanitizeObjectForFirestore(updateData))
+    await updateDoc(numDocRef, {...sanitizeObjectForFirestore(updateData), history: arrayUnion(historyEvent) })
       .then(() => {
         addActivity({
           employeeName: user.displayName || user.email || 'User',
@@ -701,6 +716,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const num = numbers.find(n => n.id === id);
     if (!num) return;
 
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent(
+      'RTS Status Changed',
+      `Status changed to ${status}${rtsDate ? ` with RTS date ${rtsDate.toLocaleDateString()}` : ''}. ${note || ''}`.trim(),
+      performedBy
+    );
+
     const updateData: any = {
         status: status,
         rtsDate: status === 'RTS' ? null : (rtsDate ? Timestamp.fromDate(rtsDate) : null)
@@ -708,9 +730,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (note) {
         updateData.notes = `${num.notes || ''}\n${note}`.trim();
     }
-    updateDoc(numDocRef, updateData).then(() => {
+    updateDoc(numDocRef, {...updateData, history: arrayUnion(historyEvent)}).then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Updated RTS Status',
             description: `Marked ${num.mobile} as ${status}`
         });
@@ -849,6 +871,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const assignNumbersToEmployee = (numberIds: string[], employeeName: string, location: { locationType: 'Store' | 'Employee' | 'Dealer'; currentLocation: string; }) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
+    const performedBy = user.displayName || user.email || 'User';
+
+    const historyEvent = createLifecycleEvent('Assigned', `Assigned to ${employeeName} and moved to ${location.currentLocation}.`, performedBy);
+    
     const updateData = {
         assignedTo: employeeName,
         name: employeeName,
@@ -859,11 +885,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
-      batch.update(docRef, updateData);
+      batch.update(docRef, {...updateData, history: arrayUnion(historyEvent)});
     });
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Assigned Numbers',
             description: createDetailedDescription(`Assigned to ${employeeName}:`, affectedNumbers)
         });
@@ -882,9 +908,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const num = numbers.find(n => n.id === id);
     if (!num) return;
     const numDocRef = doc(db, 'numbers', id);
-    updateDoc(numDocRef, { checkInDate: Timestamp.now() }).then(() => {
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Checked In', `SIM Checked In at ${num.currentLocation}.`, performedBy);
+
+    updateDoc(numDocRef, { checkInDate: Timestamp.now(), history: arrayUnion(historyEvent) }).then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Checked In Number',
             description: `Checked in SIM number ${num.mobile}.`
         });
@@ -904,8 +933,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!soldNumber) return;
 
     const { id: numberId, ...originalDataWithoutId } = soldNumber;
+    
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Sold', `Sold to ${details.soldTo} for ₹${details.salePrice}.`, performedBy);
+    
+    const history = [...(originalDataWithoutId.history || []), historyEvent];
 
-    const sanitizedOriginalData = sanitizeObjectForFirestore(originalDataWithoutId);
+    const sanitizedOriginalData = sanitizeObjectForFirestore({...originalDataWithoutId, history });
 
     const newSale: Omit<SaleRecord, 'id'> = {
       srNo: getNextSrNo(sales),
@@ -945,10 +979,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let currentSaleSrNo = getNextSrNo(sales);
     const batch = writeBatch(db);
     const affectedNumbers = numbersToSell.map(n => n.mobile);
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Sold', `Sold to ${details.soldTo} for ₹${details.salePrice}.`, performedBy);
 
     numbersToSell.forEach(soldNumber => {
       const { id: numberId, ...originalDataWithoutId } = soldNumber;
-      const sanitizedOriginalData = sanitizeObjectForFirestore(originalDataWithoutId);
+      
+      const history = [...(originalDataWithoutId.history || []), historyEvent];
+      const sanitizedOriginalData = sanitizeObjectForFirestore({...originalDataWithoutId, history });
 
       const newSale: Omit<SaleRecord, 'id'> = {
         srNo: currentSaleSrNo++,
@@ -1003,8 +1041,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         return;
     }
+    
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Sale Cancelled', `Sale cancelled and number returned to inventory.`, performedBy);
 
-    const restoredNumberData = sanitizeObjectForFirestore(saleToCancel.originalNumberData);
+    const restoredNumberData = sanitizeObjectForFirestore({
+        ...saleToCancel.originalNumberData,
+        history: [...(saleToCancel.originalNumberData.history || []), historyEvent]
+    });
 
     const restoredNumber: Omit<NumberRecord, 'id'> = {
         ...(restoredNumberData as Omit<NumberRecord, 'id'>),
@@ -1017,7 +1061,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     batch.delete(doc(db, 'sales', saleId));
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Cancelled Sale',
             description: `Sale of number ${saleToCancel.mobile} was cancelled and it was returned to inventory.`
         });
@@ -1043,7 +1087,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    const assignedToUser = user.displayName || user.email || 'User';
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Created', `Number added to inventory by ${performedBy}.`, performedBy);
 
     const newNumber: Partial<NumberRecord> = {
         ...data,
@@ -1057,6 +1102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         checkInDate: null,
         createdBy: user.uid,
         purchaseDate: Timestamp.fromDate(data.purchaseDate),
+        history: [historyEvent]
     };
 
     if (data.ownershipType !== 'Partnership') {
@@ -1080,7 +1126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const numbersCollection = collection(db, 'numbers');
     addDoc(numbersCollection, sanitizeObjectForFirestore(newNumber)).then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Added Number',
             description: `Manually added new number ${data.mobile}`
         });
@@ -1097,7 +1143,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addMultipleNumbers = async (data: NewNumberData, validNumbers: string[]) => {
     if (!db || !user || validNumbers.length === 0) return;
     
-    const assignedToUser = user.displayName || user.email || 'User';
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Created', `Number added to inventory via bulk add by ${performedBy}.`, performedBy);
     let currentSrNo = getNextSrNo(numbers);
     const batch = writeBatch(db);
     const numbersCollection = collection(db, 'numbers');
@@ -1117,6 +1164,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           checkInDate: null,
           createdBy: user.uid,
           purchaseDate: Timestamp.fromDate(data.purchaseDate),
+          history: [historyEvent]
       };
 
       if (data.ownershipType !== 'Partnership') newNumber.partnerName = '';
@@ -1271,12 +1319,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const num = numbers.find(n => n.id === numberId);
     if (!num) return;
 
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('COCP Date Changed', `Safe Custody Date changed to ${newDate.toLocaleDateString()}.`, performedBy);
     const numDocRef = doc(db, 'numbers', numberId);
     const updateData = { safeCustodyDate: Timestamp.fromDate(newDate) };
     
-    updateDoc(numDocRef, updateData).then(() => {
+    updateDoc(numDocRef, {...updateData, history: arrayUnion(historyEvent)}).then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Updated Safe Custody Date',
             description: `Updated Safe Custody Date for ${num.mobile} to ${newDate.toLocaleDateString()}`
         });
@@ -1293,16 +1343,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const bulkUpdateSafeCustodyDate = (numberIds: string[], newDate: Date) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('COCP Date Changed', `Safe Custody Date changed to ${newDate.toLocaleDateString()}.`, performedBy);
     const updateData = { safeCustodyDate: Timestamp.fromDate(newDate) };
     const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
 
     numberIds.forEach(id => {
         const docRef = doc(db, 'numbers', id);
-        batch.update(docRef, updateData);
+        batch.update(docRef, {...updateData, history: arrayUnion(historyEvent)});
     });
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Bulk Updated Safe Custody Date',
             description: createDetailedDescription(`Updated Safe Custody Date to ${newDate.toLocaleDateString()} for`, affectedNumbers)
         });
@@ -1392,15 +1444,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateNumberLocation = (numberIds: string[], location: { locationType: 'Store' | 'Employee' | 'Dealer', currentLocation: string }) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Location Updated', `Location changed to ${location.currentLocation}.`, performedBy);
     const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
     
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
-      batch.update(docRef, location);
+      batch.update(docRef, {...location, history: arrayUnion(historyEvent)});
     });
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Updated Number Location',
             description: createDetailedDescription(`Updated location to ${location.currentLocation} for`, affectedNumbers)
         });
@@ -1420,9 +1474,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const batch = writeBatch(db);
     const numbersToPreBook = numbers.filter(n => numberIds.includes(n.id));
     const affectedNumbers = numbersToPreBook.map(n => n.mobile);
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Pre-Booked', 'Number moved to pre-booking list.', performedBy);
 
     numbersToPreBook.forEach(num => {
       const { id, ...originalData } = num;
+      const history = [...(originalData.history || []), historyEvent];
       const newPreBooking: Omit<PreBookingRecord, 'id'> = {
         srNo: currentPreBookingSrNo++,
         mobile: originalData.mobile,
@@ -1430,7 +1487,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         uploadStatus: originalData.uploadStatus,
         preBookingDate: Timestamp.now(),
         createdBy: user.uid,
-        originalNumberData: sanitizeObjectForFirestore(originalData),
+        originalNumberData: sanitizeObjectForFirestore({...originalData, history}),
       };
       batch.set(doc(collection(db, 'prebookings')), newPreBooking);
       batch.delete(doc(db, 'numbers', num.id));
@@ -1438,7 +1495,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     batch.commit().then(() => {
       addActivity({
-        employeeName: user.displayName || user.email || 'User',
+        employeeName: performedBy,
         action: 'Pre-Booked Numbers',
         description: createDetailedDescription('Moved to Pre-Booking:', affectedNumbers),
       });
@@ -1464,7 +1521,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    const restoredNumberData = sanitizeObjectForFirestore(preBookingToCancel.originalNumberData);
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Pre-booking Cancelled', `Pre-booking was cancelled.`, performedBy);
+    
+    const restoredNumberData = sanitizeObjectForFirestore({
+        ...preBookingToCancel.originalNumberData,
+        history: [...(preBookingToCancel.originalNumberData.history || []), historyEvent]
+    });
     const restoredNumber: Omit<NumberRecord, 'id'> = {
       ...(restoredNumberData as Omit<NumberRecord, 'id'>),
     };
@@ -1475,7 +1538,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     batch.commit().then(() => {
       addActivity({
-        employeeName: user.displayName || user.email || 'User',
+        employeeName: performedBy,
         action: 'Cancelled Pre-Booking',
         description: `Cancelled pre-booking for ${preBookingToCancel.mobile} and returned it to inventory.`,
       });
@@ -1497,6 +1560,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Sold', `Sold from pre-booking to ${details.soldTo} for ₹${details.salePrice}.`, performedBy);
+
+    const history = [...(preBookingToSell.originalNumberData.history || []), historyEvent];
+
     const newSale: Omit<SaleRecord, 'id'> = {
       srNo: getNextSrNo(sales),
       mobile: preBookingToSell.mobile,
@@ -1506,7 +1574,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       uploadStatus: preBookingToSell.uploadStatus || 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
-      originalNumberData: sanitizeObjectForFirestore(preBookingToSell.originalNumberData),
+      originalNumberData: sanitizeObjectForFirestore({...preBookingToSell.originalNumberData, history}),
     };
 
     const batch = writeBatch(db);
@@ -1535,11 +1603,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let currentSaleSrNo = getNextSrNo(sales);
     const batch = writeBatch(db);
     const affectedNumbers = preBookedNumbersToSell.map(n => n.mobile);
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Sold', `Sold from pre-booking to ${details.soldTo} for ₹${details.salePrice}.`, performedBy);
 
     preBookedNumbersToSell.forEach(pb => {
       const preBookingToSell = preBookings.find(pre => pre.id === pb.id);
       if (!preBookingToSell || !preBookingToSell.originalNumberData) return;
-
+      
+      const history = [...(preBookingToSell.originalNumberData.history || []), historyEvent];
+      
       const newSale: Omit<SaleRecord, 'id'> = {
         srNo: currentSaleSrNo++,
         mobile: preBookingToSell.mobile,
@@ -1549,7 +1621,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         uploadStatus: preBookingToSell.uploadStatus || 'Pending',
         saleDate: Timestamp.fromDate(details.saleDate),
         createdBy: user.uid,
-        originalNumberData: sanitizeObjectForFirestore(preBookingToSell.originalNumberData),
+        originalNumberData: sanitizeObjectForFirestore({...preBookingToSell.originalNumberData, history}),
       };
       
       batch.set(doc(collection(db, 'sales')), newSale);
@@ -1722,7 +1794,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             recordData.pdBill = ['Yes', 'No'].includes(record.PDBill) ? record.PDBill : 'No';
         }
 
-        creations.push({ ...recordData, srNo: currentSrNo++, createdBy: user.uid, checkInDate: null });
+        const performedBy = user.displayName || user.email || 'User';
+        const historyEvent = createLifecycleEvent('Created', `Number imported from CSV file.`, performedBy);
+
+        creations.push({ ...recordData, srNo: currentSrNo++, createdBy: user.uid, checkInDate: null, history: [historyEvent] });
         processedMobiles.add(mobile);
     }
     
@@ -1797,14 +1872,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!db || !user) return;
     const num = numbers.find(n => n.id === id);
     if (!num) return;
+    
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Postpaid Details Updated', `Bill Date set to ${details.billDate.toLocaleDateString()}, PD Bill set to ${details.pdBill}.`, performedBy);
+    
     const numDocRef = doc(db, 'numbers', id);
     const updateData = {
         billDate: Timestamp.fromDate(details.billDate),
         pdBill: details.pdBill
     };
-    updateDoc(numDocRef, updateData).then(() => {
+    updateDoc(numDocRef, {...updateData, history: arrayUnion(historyEvent)}).then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Updated Postpaid Details',
             description: `Updated bill details for ${num.mobile}.`
         });
@@ -1821,6 +1900,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const bulkUpdatePostpaidDetails = (numberIds: string[], details: { billDate: Date, pdBill: 'Yes' | 'No' }) => {
     if (!db || !user) return;
     const batch = writeBatch(db);
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Postpaid Details Updated', `Bulk updated: Bill Date to ${details.billDate.toLocaleDateString()}, PD Bill to ${details.pdBill}.`, performedBy);
     const updateData = {
         billDate: Timestamp.fromDate(details.billDate),
         pdBill: details.pdBill
@@ -1829,12 +1910,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     numberIds.forEach(id => {
         const docRef = doc(db, 'numbers', id);
-        batch.update(docRef, updateData);
+        batch.update(docRef, {...updateData, history: arrayUnion(historyEvent)});
     });
 
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Bulk Updated Postpaid Details',
             description: createDetailedDescription(`Updated bill details for`, affectedNumbers)
         });

@@ -26,7 +26,10 @@ import {
   LogIn,
   FileClock,
   History,
+  MapPin,
+  FileText,
 } from 'lucide-react';
+import { LifecycleEvent } from '@/lib/data';
 
 
 type LifecycleHistoryModalProps = {
@@ -37,41 +40,32 @@ type LifecycleHistoryModalProps = {
 
 const getActionIcon = (action: string) => {
   const lowerAction = action.toLowerCase();
-  if (lowerAction.includes('added') || lowerAction.includes('created') || lowerAction.includes('imported')) return <FilePlus2 className="h-4 w-4" />;
+  if (lowerAction.includes('created')) return <FilePlus2 className="h-4 w-4 text-green-500" />;
   if (lowerAction.includes('sold')) return <DollarSign className="h-4 w-4 text-green-500" />;
-  if (lowerAction.includes('updated')) return <FilePen className="h-4 w-4 text-blue-500" />;
+  if (lowerAction.includes('updated') || lowerAction.includes('changed')) return <FilePen className="h-4 w-4 text-blue-500" />;
   if (lowerAction.includes('deleted') || lowerAction.includes('cancelled')) return <Trash2 className="h-4 w-4 text-red-500" />;
-  if (lowerAction.includes('assigned')) return <UserCog className="h-4 w-4" />;
+  if (lowerAction.includes('assigned')) return <UserCog className="h-4 w-4 text-purple-500" />;
   if (lowerAction.includes('pre-booked')) return <Bookmark className="h-4 w-4 text-amber-500" />;
-  if (lowerAction.includes('checked in')) return <LogIn className="h-4 w-4" />;
-  if (lowerAction.includes('rts')) return <FileClock className="h-4 w-4" />;
+  if (lowerAction.includes('checked in')) return <LogIn className="h-4 w-4 text-cyan-500" />;
+  if (lowerAction.includes('rts')) return <FileClock className="h-4 w-4 text-orange-500" />;
+  if (lowerAction.includes('location')) return <MapPin className="h-4 w-4 text-teal-500" />;
+  if (lowerAction.includes('postpaid')) return <FileText className="h-4 w-4 text-indigo-500" />;
   return <History className="h-4 w-4" />;
 };
 
 export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: LifecycleHistoryModalProps) {
-  const { activities, loading } = useApp();
+  const { globalHistory, loading } = useApp();
 
   const lifecycle = useMemo(() => {
     if (!mobileNumber || loading) return [];
-    // Use a regex to match the whole number to avoid partial matches
-    const mobileRegex = new RegExp(`\\b${mobileNumber}\\b`);
-    return activities
-      .filter(activity => mobileRegex.test(activity.description))
-      .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
-  }, [activities, mobileNumber, loading]);
+    
+    const historyRecord = globalHistory.find(record => record.mobile === mobileNumber);
+    
+    if (!historyRecord || !historyRecord.history) return [];
 
-  const processDescription = (description: string) => {
-    // This pattern looks for descriptions of bulk actions, e.g., ": 10 numbers:"
-    const bulkPattern = /: \d+ numbers?:/;
-    const matchIndex = description.search(bulkPattern);
+    return [...historyRecord.history].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
     
-    // If it's a bulk action, truncate the description to keep it clean.
-    if (matchIndex !== -1) {
-      return description.substring(0, matchIndex);
-    }
-    
-    return description;
-  };
+  }, [globalHistory, mobileNumber, loading]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -84,8 +78,7 @@ export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: Lifecyc
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
           <div className="relative py-4 pr-4">
-             {/* The main timeline vertical bar */}
-            {lifecycle.length > 0 && <div className="absolute left-5 top-2 h-full w-0.5 bg-border" />}
+             {lifecycle.length > 0 && <div className="absolute left-5 top-2 h-full w-0.5 bg-border" />}
 
             {loading && <div className="flex justify-center items-center h-48"><TableSpinner colSpan={1} /></div>}
             
@@ -93,31 +86,31 @@ export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: Lifecyc
                  <div className="text-center text-muted-foreground py-16">
                     <Package className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium">No History Found</h3>
-                    <p className="mt-1 text-sm text-gray-500">No activities have been logged for this number yet.</p>
+                    <p className="mt-1 text-sm text-gray-500">No lifecycle events have been logged for this number yet.</p>
                 </div>
             )}
             
             <div className="space-y-8">
-              {lifecycle.map((activity, index) => (
-                <div key={activity.id} className="relative flex items-start gap-4">
+              {lifecycle.map((event: LifecycleEvent) => (
+                <div key={event.id} className="relative flex items-start gap-4">
                   <div className="absolute left-5 top-2.5 -translate-x-1/2 h-full">
                      <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-secondary">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/20">
-                            {getActionIcon(activity.action)}
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-background">
+                            {getActionIcon(event.action)}
                         </span>
                     </span>
                   </div>
                   <div className="pl-12 w-full">
                     <div className="flex justify-between items-center">
                         <p className="text-sm font-semibold">
-                            {activity.action}
+                            {event.action}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            {activity.timestamp ? format(activity.timestamp.toDate(), 'PPP p') : 'Syncing...'}
+                            {event.timestamp ? format(event.timestamp.toDate(), 'PPP p') : 'Syncing...'}
                         </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{processDescription(activity.description)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">by <span className="font-medium">{activity.employeeName}</span></p>
+                    <p className="text-sm text-muted-foreground">{event.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">by <span className="font-medium">{event.performedBy}</span></p>
                   </div>
                 </div>
               ))}
