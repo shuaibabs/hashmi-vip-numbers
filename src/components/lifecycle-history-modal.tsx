@@ -60,6 +60,19 @@ export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: Lifecyc
       .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
   }, [activities, mobileNumber, loading]);
 
+  const processDescription = (description: string) => {
+    // This pattern looks for descriptions of bulk actions, e.g., ": 10 numbers:"
+    const bulkPattern = /: \d+ numbers?:/;
+    const matchIndex = description.search(bulkPattern);
+    
+    // If it's a bulk action, truncate the description to keep it clean.
+    if (matchIndex !== -1) {
+      return description.substring(0, matchIndex);
+    }
+    
+    return description;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl">
@@ -100,10 +113,10 @@ export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: Lifecyc
                             {activity.action}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            {format(activity.timestamp.toDate(), 'PPP p')}
+                            {activity.timestamp ? format(activity.timestamp.toDate(), 'PPP p') : 'Syncing...'}
                         </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{activity.description}</p>
+                    <p className="text-sm text-muted-foreground">{processDescription(activity.description)}</p>
                     <p className="text-xs text-muted-foreground mt-1">by <span className="font-medium">{activity.employeeName}</span></p>
                   </div>
                 </div>
