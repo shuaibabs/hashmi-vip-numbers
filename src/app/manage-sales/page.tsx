@@ -11,7 +11,7 @@ import { Download, Search, DollarSign } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SaleRecord, PortOutRecord, NumberRecord, PaymentRecord } from '@/lib/data';
+import { SaleRecord } from '@/lib/data';
 import { format } from 'date-fns';
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
@@ -22,72 +22,50 @@ import { SaleDetailsModal } from '@/components/sale-details-modal';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
-import { ReceivePaymentModal } from '@/components/receive-payment-modal';
 
-
-type CombinedSaleRecord = SaleRecord & {
-  status: 'Active Sale' | 'Ported Out';
-};
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
 
 export default function ManageSalesPage() {
-  const { sales, portOuts, loading, addActivity, payments } = useApp();
+  const { sales, loading, addActivity, payments } = useApp();
   const { role, user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [soldToFilter, setSoldToFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSale, setSelectedSale] = useState<CombinedSaleRecord | null>(null);
+  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  const combinedSales = useMemo(() => {
-    const activeSales: CombinedSaleRecord[] = sales.map(s => ({ ...s, status: 'Active Sale' }));
-    
-    const portedOutSales: CombinedSaleRecord[] = portOuts.map(p => ({
-        ...p,
-        status: 'Ported Out',
-        portOutStatus: 'Done', // Implicitly done
-    } as CombinedSaleRecord));
-
-    const allSales = [...activeSales, ...portedOutSales];
-
-    // Filter based on user role
+  const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
-      return allSales;
+      return sales;
     }
-    return allSales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
-  }, [sales, portOuts, role, user?.displayName]);
+    return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
+  }, [sales, role, user?.displayName]);
 
 
   const soldToOptions = useMemo(() => {
-    const allVendors = combinedSales.map(s => s.soldTo);
+    const allVendors = roleFilteredSales.map(s => s.soldTo);
     return ['all', ...Array.from(new Set(allVendors))];
-  }, [combinedSales]);
+  }, [roleFilteredSales]);
 
   const filteredSales = useMemo(() => {
-    return combinedSales.filter(sale => 
+    return roleFilteredSales.filter(sale => 
       (soldToFilter === 'all' || sale.soldTo === soldToFilter) &&
       (sale.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [combinedSales, soldToFilter, searchTerm]);
+  }, [roleFilteredSales, soldToFilter, searchTerm]);
 
-  const { totalPurchaseAmount, totalSaleAmount, totalPaid, totalRemaining } = useMemo(() => {
-    const totals = filteredSales.reduce((acc, sale) => {
+  const { totalPurchaseAmount, totalSaleAmount } = useMemo(() => {
+    return filteredSales.reduce((acc, sale) => {
       acc.totalPurchaseAmount += sale.originalNumberData?.purchasePrice || 0;
       acc.totalSaleAmount += sale.salePrice || 0;
       return acc;
     }, { totalPurchaseAmount: 0, totalSaleAmount: 0 });
-
-    const vendorPayments = (payments || []).filter(p => p.vendorName === soldToFilter);
-    const totalPaid = vendorPayments.reduce((acc, p) => acc + p.amount, 0);
-
-    return { ...totals, totalPaid, totalRemaining: totals.totalSaleAmount - totalPaid };
-  }, [filteredSales, payments, soldToFilter]);
+  }, [filteredSales]);
   
-  const totalProfitLoss = totalSaleAmount - totalSaleAmount;
+  const totalProfitLoss = totalSaleAmount - totalPurchaseAmount;
   
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const paginatedSales = filteredSales.slice(
@@ -109,7 +87,7 @@ export default function ManageSalesPage() {
     setCurrentPage(1);
   };
 
-  const handleRowClick = (sale: CombinedSaleRecord) => {
+  const handleRowClick = (sale: SaleRecord) => {
     setSelectedSale(sale);
     setIsDetailsModalOpen(true);
   };
@@ -151,13 +129,11 @@ export default function ManageSalesPage() {
         ['Total Billed', totalSaleAmount],
         ['Total Purchase Amount', totalPurchaseAmount],
         ['Profit / Loss', totalProfitLoss],
-        ['Total Paid', totalPaid],
-        ['Amount Remaining', totalRemaining],
         [''], // Empty row for spacing
     ];
 
     const recordsHeader = [
-      "Sr.No", "Mobile", "Sum", "Purchase From", "Purchase Price", "Purchase Date", "Sold To", "Sale Price", "Sale Date", "Status"
+      "Sr.No", "Mobile", "Sum", "Purchase From", "Purchase Price", "Purchase Date", "Sold To", "Sale Price", "Sale Date"
     ];
     
     const sortedRecordsForExport = [...filteredSales].sort((a, b) => 
@@ -174,7 +150,6 @@ export default function ManageSalesPage() {
       s.soldTo,
       s.salePrice,
       format(s.saleDate.toDate(), 'dd-MM-yyyy'),
-      s.status,
     ]));
 
     const csvData = [...summaryData, recordsHeader, ...recordsData];
@@ -212,12 +187,6 @@ export default function ManageSalesPage() {
         description="Review, filter, and export sales records with calculated totals."
       >
         <div className="flex flex-col sm:flex-row gap-2">
-            {soldToFilter !== 'all' && (
-                <Button onClick={() => setIsPaymentModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Receive Payment
-                </Button>
-            )}
             <Button onClick={exportToCsv} disabled={loading} variant="outline">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -225,7 +194,7 @@ export default function ManageSalesPage() {
         </div>
       </PageHeader>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
@@ -252,22 +221,6 @@ export default function ManageSalesPage() {
                     <div className={cn("text-2xl font-bold", totalProfitLoss >= 0 ? "text-green-600" : "text-red-600")}>
                         ₹{totalProfitLoss.toLocaleString()}
                     </div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</div>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Amount Remaining</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-red-600">₹{totalRemaining.toLocaleString()}</div>
                 </CardContent>
             </Card>
         </div>
@@ -320,31 +273,25 @@ export default function ManageSalesPage() {
               <TableHead>Sold To</TableHead>
               <TableHead>Sale Price</TableHead>
               <TableHead>Sale Date</TableHead>
-              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={7} />
+                <TableSpinner colSpan={6} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
-                <TableRow key={sale.id} onClick={() => handleRowClick(sale)} className={cn("cursor-pointer", sale.status === 'Ported Out' && "bg-muted/50 hover:bg-muted")}>
+                <TableRow key={sale.id} onClick={() => handleRowClick(sale)} className="cursor-pointer">
                     <TableCell>{sale.srNo}</TableCell>
                     <TableCell className="font-medium">{highlightMatch(sale.mobile, searchTerm)}</TableCell>
                     <TableCell>{sale.sum}</TableCell>
                     <TableCell>{sale.soldTo}</TableCell>
                     <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
                     <TableCell>{format(sale.saleDate.toDate(), 'PPP')}</TableCell>
-                     <TableCell>
-                        <Badge variant={sale.status === 'Active Sale' ? 'default' : 'secondary'} className={sale.status === 'Active Sale' ? 'bg-green-500/20 text-green-700' : ''}>
-                          {sale.status}
-                        </Badge>
-                    </TableCell>
                 </TableRow>
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                         {searchTerm ? `No sales records found for "${searchTerm}".` : "No sales records found for this filter."}
                     </TableCell>
                 </TableRow>
@@ -363,11 +310,6 @@ export default function ManageSalesPage() {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         sale={selectedSale}
-      />
-       <ReceivePaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        vendorName={soldToFilter}
       />
     </>
   );

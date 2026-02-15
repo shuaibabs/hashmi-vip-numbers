@@ -11,8 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, MoreHorizontal, ArrowUpDown, Trash, Download, ArrowUp, ArrowDown } from 'lucide-react';
 import { Pagination } from '@/components/pagination';
 import { AddDealerPurchaseModal } from '@/components/add-dealer-purchase-modal';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { EditDealerPurchaseModal } from '@/components/edit-dealer-purchase-modal';
 import { DealerPurchaseRecord } from '@/lib/data';
 import { TableSpinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +19,6 @@ import { useAuth } from '@/context/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Papa from 'papaparse';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 
 
@@ -35,8 +32,6 @@ export default function DealerPurchasesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<DealerPurchaseRecord | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'srNo', direction: 'descending' });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,11 +81,6 @@ export default function DealerPurchasesPage() {
     setCurrentPage(1);
   };
   
-  const handleEditClick = (purchase: DealerPurchaseRecord) => {
-    setSelectedPurchase(purchase);
-    setIsEditModalOpen(true);
-  };
-  
   const requestSort = (key: SortableColumn) => {
     let direction: 'ascending' | 'descending' = 'ascending';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -128,8 +118,6 @@ export default function DealerPurchasesPage() {
       "Dealer Name": p.dealerName,
       "Sum": p.sum,
       "Price": p.price,
-      "Payment Status": p.paymentStatus,
-      "Port Out Status": p.portOutStatus,
     }));
 
     const csv = Papa.unparse(formattedData);
@@ -257,7 +245,7 @@ export default function DealerPurchasesPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                This action cannot be undone. Only records where Payment Status is 'Done' AND Port Out Status is 'Done' will be permanently deleted.
+                                This action cannot be undone and will permanently delete {selectedRows.length} record(s).
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -295,14 +283,11 @@ export default function DealerPurchasesPage() {
               <SortableHeader column="dealerName" label="Dealer Name" />
               <SortableHeader column="sum" label="Sum" />
               <SortableHeader column="price" label="Price" />
-              <SortableHeader column="paymentStatus" label="Payment Status" />
-              <SortableHeader column="portOutStatus" label="Port Out Status" />
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={9} />
+                <TableSpinner colSpan={6} />
             ) : paginatedPurchases.length > 0 ? (
                 paginatedPurchases.map((purchase) => (
                 <TableRow key={purchase.srNo} data-state={selectedRows.includes(purchase.id) && "selected"}>
@@ -320,36 +305,11 @@ export default function DealerPurchasesPage() {
                     <TableCell>{purchase.dealerName}</TableCell>
                     <TableCell>{purchase.sum}</TableCell>
                     <TableCell>₹{purchase.price.toLocaleString()}</TableCell>
-                    <TableCell>
-                        <Badge variant={purchase.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
-                        {purchase.paymentStatus}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={purchase.portOutStatus === 'Done' ? 'secondary' : 'outline'}>
-                        {purchase.portOutStatus}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditClick(purchase)}>
-                            Edit Status
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
                 </TableRow>
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                         {searchTerm ? `No dealer purchases found for "${searchTerm}".` : "No dealer purchases found."}
                     </TableCell>
                 </TableRow>
@@ -365,15 +325,6 @@ export default function DealerPurchasesPage() {
         totalItems={sortedPurchases.length}
       />
       <AddDealerPurchaseModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
-      {selectedPurchase && (
-        <EditDealerPurchaseModal 
-            isOpen={isEditModalOpen} 
-            onClose={() => setIsEditModalOpen(false)} 
-            purchase={selectedPurchase}
-        />
-      )}
     </>
   );
 }
-
-    

@@ -9,7 +9,6 @@ import ManageUsersPage from '@/app/users/page';
 import SimLocationsPage from '@/app/sim-locations/page';
 import SalesPage from '@/app/sales/page';
 import ManageSalesPage from '@/app/manage-sales/page';
-import PortOutPage from '@/app/port-out/page';
 import DealerPurchasesPage from '@/app/dealer-purchases/page';
 import RemindersPage from '@/app/reminders/page';
 import CocpPage from '@/app/cocp/page';
@@ -31,7 +30,6 @@ const staticRouteComponentMap = {
   '/sim-locations': SimLocationsPage,
   '/sales': SalesPage,
   '/manage-sales': ManageSalesPage,
-  '/port-out': PortOutPage,
   '/dealer-purchases': DealerPurchasesPage,
   '/reminders': RemindersPage,
   '/cocp': CocpPage,
@@ -80,7 +78,6 @@ const routeLabels: { [key: string]: string } = {
   '/sim-locations': 'SIM Locations',
   '/sales': 'Sales',
   '/manage-sales': 'Manage Sales',
-  '/port-out': 'Port Out',
   '/dealer-purchases': 'Dealer Purchases',
   '/reminders': 'Work Reminders',
   '/cocp': 'COCP',

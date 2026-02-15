@@ -9,7 +9,7 @@ import { useMemo } from "react";
 
 export function SummaryCards() {
   const { user, role } = useAuth();
-  const { numbers, sales, portOuts, preBookings } = useApp();
+  const { numbers, sales, preBookings } = useApp();
 
   const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
@@ -18,20 +18,11 @@ export function SummaryCards() {
     return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
   }, [sales, role, user?.displayName]);
 
-  const roleFilteredPortOuts = useMemo(() => {
-    if (role === 'admin') {
-      return portOuts;
-    }
-    return portOuts.filter(portOut => portOut.originalNumberData?.assignedTo === user?.displayName);
-  }, [portOuts, role, user?.displayName]);
-
-
   const totalNumbers = numbers.length;
   const rtsNumbers = numbers.filter(n => n.status === 'RTS').length;
   const nonRtsNumbers = totalNumbers - rtsNumbers;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const totalSales = roleFilteredSales.length;
-  const totalPortOuts = roleFilteredPortOuts.length;
   const totalPreBookings = preBookings.length;
 
 
@@ -41,11 +32,10 @@ export function SummaryCards() {
     { title: "Non-RTS Numbers", value: nonRtsNumbers, icon: Clock, color: "text-red-500" },
     { title: "Pre-Bookings", value: totalPreBookings, icon: Bookmark, color: "text-amber-500" },
     { title: "Sales", value: totalSales, icon: DollarSign, color: "text-indigo-500" },
-    { title: "Port Outs", value: totalPortOuts, icon: LogOut, color: "text-purple-500" },
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {summaryData.map(item => (
         <Card key={item.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -6,14 +6,13 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useState, useMemo } from 'react';
 import { Pagination } from '@/components/pagination';
 import { TableSpinner } from '@/components/ui/spinner';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal, ArrowUpDown, Trash, LogOut, Download, Edit, ArrowUp, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Trash, Download, Edit, ArrowUp, ArrowDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { EditSaleStatusModal } from '@/components/edit-sale-status-modal';
 import { SaleRecord } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Timestamp } from 'firebase/firestore';
@@ -30,16 +29,12 @@ type SortableColumn = keyof SaleRecord;
 
 
 export default function SalesPage() {
-  const { sales, loading, cancelSale, markSaleAsPortedOut, addActivity, bulkMarkAsPortedOut } = useApp();
+  const { sales, loading, cancelSale, addActivity } = useApp();
   const { user, role } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [saleToCancel, setSaleToCancel] = useState<SaleRecord | null>(null);
-  const [saleToPortOut, setSaleToPortOut] = useState<SaleRecord | null>(null);
-  const [isBulkPortOutDialogOpen, setIsBulkPortOutDialogOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'saleDate', direction: 'descending'});
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -97,17 +92,8 @@ export default function SalesPage() {
     setCurrentPage(1);
   };
 
-  const handleEditClick = (sale: SaleRecord) => {
-    setSelectedSale(sale);
-    setIsEditModalOpen(true);
-  };
-  
   const handleCancelClick = (sale: SaleRecord) => {
     setSaleToCancel(sale);
-  };
-
-  const handlePortOutClick = (sale: SaleRecord) => {
-    setSaleToPortOut(sale);
   };
   
   const handleConfirmCancel = () => {
@@ -116,13 +102,6 @@ export default function SalesPage() {
       setSaleToCancel(null);
     }
   };
-
-  const handleConfirmPortOut = () => {
-    if (saleToPortOut) {
-      markSaleAsPortedOut(saleToPortOut.id);
-      setSaleToPortOut(null);
-    }
-  }
 
   const handleSelectRow = (id: string) => {
     setSelectedRows(prev => 
@@ -149,9 +128,7 @@ export default function SalesPage() {
       "Sold To": s.soldTo,
       "Sale Price": s.salePrice,
       "Sale Date": format(s.saleDate.toDate(), 'yyyy-MM-dd'),
-      "Payment Status": s.paymentStatus,
       "Upload Status": s.uploadStatus,
-      "Portout Status": s.portOutStatus,
     }));
 
     const csv = Papa.unparse(formattedData);
@@ -188,13 +165,6 @@ export default function SalesPage() {
     });
     setSelectedRows([]);
   }
-
-  const handleConfirmBulkPortOut = () => {
-    const salesToPortOut = sales.filter(s => selectedRows.includes(s.id));
-    bulkMarkAsPortedOut(salesToPortOut);
-    setIsBulkPortOutDialogOpen(false);
-    setSelectedRows([]);
-  };
 
   const selectedSaleRecords = sales.filter(s => selectedRows.includes(s.id));
 
@@ -280,10 +250,6 @@ export default function SalesPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Export ({selectedRows.length})
                     </Button>
-                     <Button variant="outline" onClick={() => setIsBulkPortOutDialogOpen(true)}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Port Out ({selectedRows.length})
-                    </Button>
                 </div>
             )}
           </div>
@@ -305,15 +271,13 @@ export default function SalesPage() {
               <SortableHeader column="soldTo" label="Sold To" />
               <SortableHeader column="salePrice" label="Sale Price" />
               <SortableHeader column="saleDate" label="Sale Date" />
-              <SortableHeader column="paymentStatus" label="Payment Status" />
               <SortableHeader column="uploadStatus" label="Upload Status" />
-              <SortableHeader column="portOutStatus" label="Portout Status" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-                <TableSpinner colSpan={11} />
+                <TableSpinner colSpan={9} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
                 <TableRow key={sale.srNo} data-state={selectedRows.includes(sale.id) && "selected"}>
@@ -330,19 +294,9 @@ export default function SalesPage() {
                     <TableCell>{sale.soldTo}</TableCell>
                     <TableCell>₹{sale.salePrice.toLocaleString()}</TableCell>
                     <TableCell>{format(sale.saleDate.toDate(), 'PPP')}</TableCell>
-                    <TableCell>
-                         <Badge variant={sale.paymentStatus === 'Done' ? 'secondary' : 'outline'}>
-                            {sale.paymentStatus}
-                        </Badge>
-                    </TableCell>
                      <TableCell>
                          <Badge variant={sale.uploadStatus === 'Done' ? 'secondary' : 'outline'}>
                             {sale.uploadStatus}
-                        </Badge>
-                    </TableCell>
-                     <TableCell>
-                         <Badge variant={sale.portOutStatus === 'Done' ? 'secondary' : 'outline'}>
-                            {sale.portOutStatus}
                         </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -354,16 +308,6 @@ export default function SalesPage() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditClick(sale)}>
-                                    Edit Status
-                                </DropdownMenuItem>
-                                {sale.portOutStatus !== 'Done' && (
-                                  <DropdownMenuItem onClick={() => handlePortOutClick(sale)}>
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    Mark as Ported Out
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleCancelClick(sale)}
                                   className="text-destructive focus:text-destructive"
@@ -378,7 +322,7 @@ export default function SalesPage() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                         {searchTerm ? `No sales records found for "${searchTerm}".` : "No sales records found."}
                     </TableCell>
                 </TableRow>
@@ -393,13 +337,6 @@ export default function SalesPage() {
         itemsPerPage={itemsPerPage}
         totalItems={sortedSales.length}
       />
-      {selectedSale && (
-        <EditSaleStatusModal
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
-            sale={selectedSale}
-        />
-      )}
       <AlertDialog open={!!saleToCancel} onOpenChange={() => setSaleToCancel(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -416,40 +353,6 @@ export default function SalesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={!!saleToPortOut} onOpenChange={() => setSaleToPortOut(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mark as Ported Out?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will move the sale of <span className="font-semibold">{saleToPortOut?.mobile}</span> to the Port Out history. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSaleToPortOut(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmPortOut}>
-              Yes, mark as ported out
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={isBulkPortOutDialogOpen} onOpenChange={setIsBulkPortOutDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Bulk Mark as Ported Out</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have selected {selectedRows.length} record(s). This action will move all selected records to the Port Out history. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsBulkPortOutDialogOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmBulkPortOut}>
-              Port Out {selectedRows.length} Record(s)
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
-
-    

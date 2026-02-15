@@ -12,7 +12,7 @@ import { useMemo } from "react";
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
-  const { numbers, reminders, sales, portOuts, preBookings } = useApp();
+  const { numbers, reminders, sales, preBookings } = useApp();
 
   const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
@@ -21,19 +21,10 @@ export default function DashboardPage() {
     return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
   }, [sales, role, user?.displayName]);
 
-  const roleFilteredPortOuts = useMemo(() => {
-    if (role === 'admin') {
-      return portOuts;
-    }
-    return portOuts.filter(portOut => portOut.originalNumberData?.assignedTo === user?.displayName);
-  }, [portOuts, role, user?.displayName]);
-
-
   const rtsCount = numbers.filter(n => n.status === "RTS").length;
   const nonRtsCount = numbers.length - rtsCount;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const salesCount = roleFilteredSales.length;
-  const portOutsCount = roleFilteredPortOuts.length;
   const preBookingsCount = preBookings.length;
 
 
@@ -82,11 +73,6 @@ export default function DashboardPage() {
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-1))]"></span>
                     <span className="font-medium">Sales</span>
                     <span className="ml-auto text-muted-foreground">{salesCount}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-3))]"></span>
-                    <span className="font-medium">Port Outs</span>
-                    <span className="ml-auto text-muted-foreground">{portOutsCount}</span>
                 </div>
                  <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-1))] opacity-50"></span>
