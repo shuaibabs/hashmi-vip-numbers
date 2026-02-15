@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -487,22 +486,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       const existingTaskIds = new Set(reminders.map(r => r.taskId).filter(Boolean));
 
-      // Postpaid Bill Date Reminders
-      const postpaidNumbers = numbers.filter(n => n.numberType === 'Postpaid' && n.billDate && (isToday(n.billDate.toDate()) || isPast(n.billDate.toDate())));
-      for (const num of postpaidNumbers) {
-        const taskId = `postpaid-bill-${num.id}-${num.billDate!.toMillis()}`;
-        if (!existingTaskIds.has(taskId)) {
-          batch.set(doc(remindersCollection), {
-            taskId: taskId,
-            taskName: `Postpaid bill payment due for ${num.mobile}`,
-            assignedTo: adminUsers,
-            dueDate: num.billDate,
-            status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
-          });
-          operationsExist = true;
-        }
-      }
-
       // COCP Safe Custody Date Reminders
       const cocpNumbers = numbers.filter(n => n.numberType === 'COCP' && n.safeCustodyDate && (isToday(n.safeCustodyDate.toDate()) || isPast(n.safeCustodyDate.toDate())));
       for (const num of cocpNumbers) {
@@ -892,15 +875,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         const custodyDate = number.safeCustodyDate.toDate();
         if (isToday(custodyDate) || isPast(custodyDate)) {
           return { canBeDone: false, message: `The Safe Custody Date for ${number.mobile} has not been updated to a future date.` };
-        }
-      }
-    } else if (reminder.taskId.startsWith('postpaid-bill-')) {
-      const numberId = reminder.taskId.split('-')[2];
-      const number = numbers.find(n => n.id === numberId);
-      if (number && number.billDate) {
-        const billDate = number.billDate.toDate();
-        if (isToday(billDate) || isPast(billDate)) {
-          return { canBeDone: false, message: `The Bill Date for ${number.mobile} has not been updated to the next cycle.` };
         }
       }
     } else if (reminder.taskId.startsWith('prebooked-rts-')) {
