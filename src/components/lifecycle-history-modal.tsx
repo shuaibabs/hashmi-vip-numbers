@@ -28,6 +28,7 @@ import {
   History,
   MapPin,
   FileText,
+  UploadCloud,
 } from 'lucide-react';
 import { LifecycleEvent } from '@/lib/data';
 
@@ -42,6 +43,7 @@ const getActionIcon = (action: string) => {
   const lowerAction = action.toLowerCase();
   if (lowerAction.includes('created')) return <FilePlus2 className="h-4 w-4 text-green-500" />;
   if (lowerAction.includes('sold')) return <DollarSign className="h-4 w-4 text-green-500" />;
+  if (lowerAction.includes('upload')) return <UploadCloud className="h-4 w-4 text-sky-500" />;
   if (lowerAction.includes('updated') || lowerAction.includes('changed')) return <FilePen className="h-4 w-4 text-blue-500" />;
   if (lowerAction.includes('deleted') || lowerAction.includes('cancelled')) return <Trash2 className="h-4 w-4 text-red-500" />;
   if (lowerAction.includes('assigned')) return <UserCog className="h-4 w-4 text-purple-500" />;
@@ -66,6 +68,18 @@ export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: Lifecyc
     return [...historyRecord.history].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
     
   }, [globalHistory, mobileNumber, loading]);
+
+  const getCleanedDescription = (event: LifecycleEvent) => {
+    const bulkActionKeywords = [
+        "Assigned Numbers", "Bulk Sold Numbers", "Bulk Updated Upload Status", "Bulk Updated Safe Custody Date",
+        "Bulk Updated Postpaid Details"
+    ];
+    if (bulkActionKeywords.includes(event.action)) {
+        // Return only the core action part, e.g., "Assigned to Employee X"
+        return event.description.split(':')[0];
+    }
+    return event.description;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -109,7 +123,7 @@ export function LifecycleHistoryModal({ isOpen, onClose, mobileNumber }: Lifecyc
                             {event.timestamp ? format(event.timestamp.toDate(), 'PPP p') : 'Syncing...'}
                         </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{event.description}</p>
+                    <p className="text-sm text-muted-foreground">{getCleanedDescription(event)}</p>
                     <p className="text-xs text-muted-foreground mt-1">by <span className="font-medium">{event.performedBy}</span></p>
                   </div>
                 </div>

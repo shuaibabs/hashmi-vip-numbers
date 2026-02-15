@@ -136,7 +136,6 @@ type AppContextType = {
   addNumber: (data: NewNumberData) => void;
   addMultipleNumbers: (data: NewNumberData, validNumbers: string[]) => Promise<void>;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
-  updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; }) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData, showToast?: boolean) => Promise<void>;
   deleteReminder: (id: string) => void;
@@ -751,12 +750,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const numDocRef = doc(db, 'numbers', id);
     const num = numbers.find(n => n.id === id);
     if (!num) return;
+    
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Upload Status Changed', `Upload status changed to ${uploadStatus}.`, performedBy);
 
     const updateData = { uploadStatus };
     
-    updateDoc(numDocRef, updateData).then(() => {
+    updateDoc(numDocRef, {...updateData, history: arrayUnion(historyEvent)}).then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Updated Upload Status',
             description: `Set upload status for ${num.mobile} to ${uploadStatus}`
         });
@@ -776,13 +778,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updateData = { uploadStatus };
     const affectedNumbers = numbers.filter(n => numberIds.includes(n.id)).map(n => n.mobile);
 
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Upload Status Changed', `Upload status changed to ${uploadStatus}.`, performedBy);
+
     numberIds.forEach(id => {
       const docRef = doc(db, 'numbers', id);
-      batch.update(docRef, updateData);
+      batch.update(docRef, {...updateData, history: arrayUnion(historyEvent)});
     });
     batch.commit().then(() => {
         addActivity({
-            employeeName: user.displayName || user.email || 'User',
+            employeeName: performedBy,
             action: 'Bulk Updated Upload Status',
             description: createDetailedDescription(`Updated upload status to ${uploadStatus} for`, affectedNumbers)
         });
@@ -1235,28 +1240,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateDealerPurchase = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; }) => {
-    if (!db || !user) return;
-    const purchase = dealerPurchases.find(p => p.id === id);
-    if (!purchase) return;
-    const docRef = doc(db, 'dealerPurchases', id);
-
-    updateDoc(docRef, statuses).then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Updated Dealer Purchase',
-            description: `Updated status for ${purchase.mobile}.`,
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'update',
-            requestResourceData: statuses,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-  };
-  
   const deleteDealerPurchases = (recordsToDelete: DealerPurchaseRecord[]) => {
     if (!db || !user) return;
 
@@ -2072,7 +2055,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addNumber,
     addMultipleNumbers,
     addDealerPurchase,
-    updateDealerPurchase,
     bulkAddNumbers,
     addReminder,
     deleteReminder,
