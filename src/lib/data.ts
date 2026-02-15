@@ -1,4 +1,3 @@
-
 import { Timestamp } from 'firebase/firestore';
 
 // Base User profile stored in Firestore
@@ -119,4 +118,20 @@ export type PaymentRecord = {
 };
 
 export type NewPaymentData = Omit<PaymentRecord, 'id' | 'srNo' | 'createdBy' | 'paymentDate'> & { paymentDate: Date };
-    
+
+export type GlobalHistoryRecord = {
+  id: string; // A unique ID for the history record itself (e.g., collection-docId)
+  mobile: string;
+  rtsStatus: 'RTS' | 'Non-RTS' | 'N/A';
+  numberType: 'Prepaid' | 'Postpaid' | 'COCP' | 'N/A';
+  currentStage: 'In Inventory' | 'Sold' | 'Pre-Booked' | 'Dealer Purchase';
+  saleInfo?: {
+    soldTo: string;
+    saleDate: Timestamp;
+  };
+  purchaseInfo?: {
+    purchaseFrom: string;
+    purchaseDate: Timestamp | null;
+    purchasePrice: number;
+  };
+};

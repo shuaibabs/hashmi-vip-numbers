@@ -11,12 +11,12 @@ import {
   NewNumberData,
   type DealerPurchaseRecord,
   NewDealerPurchaseData,
-  type PortOutRecord,
   NewReminderData,
   type User,
   PreBookingRecord,
   NewPaymentData,
   PaymentRecord,
+  GlobalHistoryRecord,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast, isValid, parse, subDays } from 'date-fns';
@@ -104,7 +104,6 @@ type AppContextType = {
   loading: boolean;
   numbers: NumberRecord[];
   sales: SaleRecord[];
-  portOuts: PortOutRecord[];
   reminders: Reminder[];
   activities: Activity[];
   users: User[];
@@ -113,6 +112,7 @@ type AppContextType = {
   dealerPurchases: DealerPurchaseRecord[];
   preBookings: PreBookingRecord[];
   payments: PaymentRecord[];
+  globalHistory: GlobalHistoryRecord[];
   seenActivitiesCount: number;
   recentlyAutoRtsIds: string[];
   showReminderPopup: boolean;
@@ -124,9 +124,6 @@ type AppContextType = {
   updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
   bulkUpdateUploadStatus: (numberIds: string[], uploadStatus: 'Pending' | 'Done') => void;
-  updateSaleStatuses: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; }) => void;
-  markSaleAsPortedOut: (saleId: string) => void;
-  bulkMarkAsPortedOut: (sales: SaleRecord[]) => void;
   markReminderDone: (id: string, note?: string) => void;
   addActivity: (activity: Omit<Activity, 'id' | 'srNo' | 'timestamp' | 'createdBy'>, showToast?: boolean) => void;
   assignNumbersToEmployee: (numberIds: string[], employeeName: string, location: { locationType: 'Store' | 'Employee' | 'Dealer'; currentLocation: string; }) => void;
@@ -138,14 +135,11 @@ type AppContextType = {
   addMultipleNumbers: (data: NewNumberData, validNumbers: string[]) => Promise<void>;
   addDealerPurchase: (data: NewDealerPurchaseData) => void;
   updateDealerPurchase: (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; portOutStatus: 'Done' | 'Pending'; }) => void;
-  deletePortOuts: (records: PortOutRecord[]) => void;
   bulkAddNumbers: (records: any[]) => Promise<BulkAddResult>;
   addReminder: (data: NewReminderData, showToast?: boolean) => Promise<void>;
   deleteReminder: (id: string) => void;
   assignRemindersToUsers: (reminderIds: string[], userNames: string[]) => void;
   deleteDealerPurchases: (records: DealerPurchaseRecord[]) => void;
-  updatePortOutStatus: (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => void;
-  bulkUpdatePortOutPaymentStatus: (portOutIds: string[], paymentStatus: 'Pending' | 'Done') => void;
   deleteActivities: (activityIds: string[]) => void;
   updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
   bulkUpdateSafeCustodyDate: (numberIds: string[], newDate: Date) => void;
@@ -172,7 +166,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [numbers, setNumbers] = useState<NumberRecord[]>([]);
   const [sales, setSales] = useState<SaleRecord[]>([]);
-  const [portOuts, setPortOuts] = useState<PortOutRecord[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
@@ -191,7 +184,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [numbersLoading, setNumbersLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(true);
-  const [portOutsLoading, setPortOutsLoading] = useState(true);
   const [remindersLoading, setRemindersLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
@@ -205,7 +197,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (!!user && (
       numbersLoading ||
       salesLoading ||
-      portOutsLoading ||
       remindersLoading ||
       activitiesLoading ||
       dealerPurchasesLoading ||
@@ -308,7 +299,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // If not logged in, reset state and stop loading
       setNumbers([]);
       setSales([]);
-      setPortOuts([]);
       setReminders([]);
       setActivities([]);
       setDealerPurchases([]);
@@ -319,7 +309,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setVendors([]);
       setNumbersLoading(false);
       setSalesLoading(false);
-      setPortOutsLoading(false);
       setRemindersLoading(false);
       setActivitiesLoading(false);
       setDealerPurchasesLoading(false);
@@ -332,7 +321,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Set loading true when user changes
     setNumbersLoading(true);
     setSalesLoading(true);
-    setPortOutsLoading(true);
     setRemindersLoading(true);
     setActivitiesLoading(true);
     setDealerPurchasesLoading(true);
@@ -344,7 +332,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const collectionMappings = [
       { name: 'numbers', setter: setNumbers, loader: setNumbersLoading },
       { name: 'sales', setter: setSales, loader: setSalesLoading },
-      { name: 'portouts', setter: setPortOuts, loader: setPortOutsLoading },
       { name: 'reminders', setter: setReminders, loader: setRemindersLoading },
       { name: 'activities', setter: setActivities, loader: setActivitiesLoading },
       { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
@@ -406,20 +393,88 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setVendors(uniqueVendors.sort());
   }, [sales]);
 
+  const globalHistory = useMemo<GlobalHistoryRecord[]>(() => {
+    if (loading) return [];
+
+    const inventoryHistory: GlobalHistoryRecord[] = numbers.map(num => ({
+      id: `numbers-${num.id}`,
+      mobile: num.mobile,
+      rtsStatus: num.status,
+      numberType: num.numberType,
+      currentStage: 'In Inventory',
+      purchaseInfo: {
+        purchaseFrom: num.purchaseFrom,
+        purchaseDate: num.purchaseDate,
+        purchasePrice: num.purchasePrice,
+      },
+    }));
+
+    const salesHistory: GlobalHistoryRecord[] = sales.map(sale => ({
+      id: `sales-${sale.id}`,
+      mobile: sale.mobile,
+      rtsStatus: sale.originalNumberData?.status || 'N/A',
+      numberType: sale.originalNumberData?.numberType || 'N/A',
+      currentStage: 'Sold',
+      purchaseInfo: sale.originalNumberData ? {
+        purchaseFrom: sale.originalNumberData.purchaseFrom,
+        purchaseDate: sale.originalNumberData.purchaseDate,
+        purchasePrice: sale.originalNumberData.purchasePrice,
+      } : undefined,
+      saleInfo: {
+        soldTo: sale.soldTo,
+        saleDate: sale.saleDate,
+      },
+    }));
+
+    const preBookingHistory: GlobalHistoryRecord[] = preBookings.map(pb => ({
+        id: `prebookings-${pb.id}`,
+        mobile: pb.mobile,
+        rtsStatus: pb.originalNumberData?.status || 'N/A',
+        numberType: pb.originalNumberData?.numberType || 'N/A',
+        currentStage: 'Pre-Booked',
+        purchaseInfo: pb.originalNumberData ? {
+            purchaseFrom: pb.originalNumberData.purchaseFrom,
+            purchaseDate: pb.originalNumberData.purchaseDate,
+            purchasePrice: pb.originalNumberData.purchasePrice,
+        } : undefined,
+    }));
+    
+    const dealerPurchaseHistory: GlobalHistoryRecord[] = dealerPurchases.map(dp => ({
+        id: `dealerPurchases-${dp.id}`,
+        mobile: dp.mobile,
+        rtsStatus: 'N/A',
+        numberType: 'N/A',
+        currentStage: 'Dealer Purchase',
+        purchaseInfo: {
+            purchaseFrom: dp.dealerName,
+            purchaseDate: null, // This info is not available in DealerPurchaseRecord
+            purchasePrice: dp.price,
+        },
+    }));
+
+    return [...inventoryHistory, ...salesHistory, ...preBookingHistory, ...dealerPurchaseHistory];
+  }, [loading, numbers, sales, preBookings, dealerPurchases]);
 
   const isMobileNumberDuplicate = (mobile: string, currentId?: string): boolean => {
     if (!mobile) return false;
-    const allNumbers: { id?: string, mobile: string }[] = [
-      ...numbers,
-      ...sales,
-      ...portOuts,
-      ...dealerPurchases,
-      ...preBookings,
-    ];
+    const allMobiles = new Set([
+      ...numbers.map(n => n.mobile),
+      ...sales.map(s => s.mobile),
+      ...dealerPurchases.map(dp => dp.mobile),
+      ...preBookings.map(pb => pb.mobile),
+    ]);
   
-    return allNumbers.some(item => 
-      item.mobile === mobile && (!currentId || item.id !== currentId)
-    );
+    // For an update operation, we need to check if the new mobile number
+    // exists anywhere *except* for the document being updated.
+    if (currentId) {
+      const currentRecord = numbers.find(n => n.id === currentId);
+      if (currentRecord && currentRecord.mobile !== mobile) {
+        return allMobiles.has(mobile);
+      }
+      return false;
+    }
+  
+    return allMobiles.has(mobile);
   };
 
 
@@ -722,149 +777,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateSaleStatuses = (id: string, statuses: { paymentStatus: 'Done' | 'Pending'; }) => {
-    if (!db || !user) return;
-    const saleToUpdate = sales.find(s => s.id === id);
-    if (!saleToUpdate) return;
-    
-    const saleDocRef = doc(db, 'sales', id);
-    updateDoc(saleDocRef, statuses).then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Updated Sale Status',
-            description: `Updated sale for ${saleToUpdate.mobile}. Payment: ${statuses.paymentStatus}.`,
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: saleDocRef.path,
-            operation: 'update',
-            requestResourceData: statuses,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-  };
-
-  const markSaleAsPortedOut = (saleId: string) => {
-    if (!db || !user) return;
-    const saleToMove = sales.find(s => s.id === saleId);
-    if (!saleToMove) {
-        toast({
-            variant: "destructive",
-            title: "Operation Failed",
-            description: "Could not find the sale record to move.",
-        });
-        return;
-    }
-
-    if (!saleToMove.originalNumberData) {
-         toast({
-            variant: "destructive",
-            title: "Operation Failed",
-            description: "Could not find original number data to archive.",
-        });
-        return;
-    }
-
-    const batch = writeBatch(db);
-    
-    const sanitizedOriginalData = sanitizeObjectForFirestore(saleToMove.originalNumberData);
-
-    const newPortOutData: Omit<PortOutRecord, 'id'> = {
-        srNo: getNextSrNo(portOuts),
-        mobile: saleToMove.mobile,
-        sum: saleToMove.sum,
-        soldTo: saleToMove.soldTo,
-        salePrice: saleToMove.salePrice,
-        paymentStatus: saleToMove.paymentStatus,
-        uploadStatus: saleToMove.uploadStatus,
-        saleDate: saleToMove.saleDate,
-        createdBy: saleToMove.createdBy,
-        originalNumberData: sanitizedOriginalData,
-        portOutDate: Timestamp.now(),
-    };
-
-    batch.set(doc(collection(db, 'portouts')), newPortOutData);
-    batch.delete(doc(db, 'sales', saleId));
-    
-    batch.commit().then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Marked as Ported Out',
-            description: `Number ${saleToMove.mobile} has been ported out and moved to history.`,
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: `portouts and sales/${saleId}`,
-            operation: 'write',
-            requestResourceData: { info: `Batch write for port out of ${saleToMove.mobile}` },
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-};
-
-const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
-    if (!db || !user || salesToMove.length === 0) return;
-
-    const eligibleSales = salesToMove;
-    const skippedCount = salesToMove.length - eligibleSales.length;
-
-    if (eligibleSales.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Eligible Records",
-        description: "No records were selected to port out.",
-      });
-      return;
-    }
-
-    let currentPortOutSrNo = getNextSrNo(portOuts);
-    const batch = writeBatch(db);
-    const affectedNumbers = eligibleSales.map(s => s.mobile);
-
-    eligibleSales.forEach(sale => {
-      const sanitizedOriginalData = sanitizeObjectForFirestore(sale.originalNumberData);
-      const newPortOutData: Omit<PortOutRecord, 'id'> = {
-        srNo: currentPortOutSrNo++,
-        mobile: sale.mobile,
-        sum: sale.sum,
-        soldTo: sale.soldTo,
-        salePrice: sale.salePrice,
-        paymentStatus: sale.paymentStatus,
-        uploadStatus: sale.uploadStatus,
-        saleDate: sale.saleDate,
-        createdBy: sale.createdBy,
-        originalNumberData: sanitizedOriginalData,
-        portOutDate: Timestamp.now(),
-      };
-      batch.set(doc(collection(db, 'portouts')), newPortOutData);
-      batch.delete(doc(db, 'sales', sale.id));
-    });
-
-    batch.commit().then(() => {
-      let toastDescription = `${eligibleSales.length} record(s) marked as ported out.`;
-      
-      addActivity({
-        employeeName: user.displayName || user.email || 'User',
-        action: 'Bulk Port Out',
-        description: createDetailedDescription('Moved to Port Out History:', affectedNumbers)
-      });
-       toast({
-        title: "Bulk Port Out Successful",
-        description: toastDescription,
-      });
-    }).catch(async (serverError) => {
-      const permissionError = new FirestorePermissionError({
-        path: 'sales/portouts',
-        operation: 'write',
-        requestResourceData: { info: `Bulk port out of ${eligibleSales.length} sales.` },
-      });
-      errorEmitter.emit('permission-error', permissionError);
-    });
-  };
-
   const canReminderBeMarkedDone = (reminder: Reminder): { canBeDone: boolean; message: string } => {
     if (!reminder.taskId) {
-      // If it's a manual reminder with no taskId, allow it to be marked done.
       return { canBeDone: true, message: "" };
     }
 
@@ -998,8 +912,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       sum: calculateDigitalRoot(soldNumber.mobile),
       salePrice: details.salePrice,
       soldTo: details.soldTo,
-      paymentStatus: 'Pending',
-      portOutStatus: 'Pending',
       uploadStatus: soldNumber.uploadStatus || 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
@@ -1043,8 +955,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         sum: calculateDigitalRoot(soldNumber.mobile),
         salePrice: details.salePrice,
         soldTo: details.soldTo,
-        paymentStatus: 'Pending',
-        portOutStatus: 'Pending',
         uploadStatus: soldNumber.uploadStatus || 'Pending',
         saleDate: Timestamp.fromDate(details.saleDate),
         createdBy: user.uid,
@@ -1257,8 +1167,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       ...data,
       srNo: getNextSrNo(dealerPurchases),
       sum: calculateDigitalRoot(data.mobile),
-      paymentStatus: 'Pending',
-      portOutStatus: 'Pending',
       createdBy: user.uid,
     };
     const dealerPurchasesCollection = collection(db, 'dealerPurchases');
@@ -1299,74 +1207,12 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         errorEmitter.emit('permission-error', permissionError);
     });
   };
-
-  const deletePortOuts = (recordsToDelete: PortOutRecord[]) => {
-    if (!db || !user) return;
-
-    const pendingPaymentRecords = recordsToDelete.filter(r => r.paymentStatus === 'Pending');
-    if (pendingPaymentRecords.length > 0) {
-        toast({
-            variant: "destructive",
-            title: "Deletion Blocked",
-            description: `Cannot delete ${pendingPaymentRecords.length} record(s) with "Pending" payment status. Please mark payments as "Done" first.`,
-            duration: 5000,
-        });
-        return;
-    }
-    
-    const idsToDelete = recordsToDelete.map(r => r.id);
-    const affectedNumbers = recordsToDelete.map(r => r.mobile);
-
-    const batch = writeBatch(db);
-    idsToDelete.forEach(id => {
-        batch.delete(doc(db, 'portouts', id));
-    });
-
-    batch.commit().then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Deleted Port Out Records',
-            description: createDetailedDescription('Deleted from Port Out history:', affectedNumbers)
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'portouts',
-            operation: 'delete',
-            requestResourceData: {info: `Batch delete ${idsToDelete.length} records`},
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-  }
-
+  
   const deleteDealerPurchases = (recordsToDelete: DealerPurchaseRecord[]) => {
     if (!db || !user) return;
 
-    const recordsThatCanBeDeleted: DealerPurchaseRecord[] = [];
-    const recordsThatCannotBeDeleted: DealerPurchaseRecord[] = [];
-
-    recordsToDelete.forEach(record => {
-      if (record.paymentStatus === 'Done' && record.portOutStatus === 'Done') {
-        recordsThatCanBeDeleted.push(record);
-      } else {
-        recordsThatCannotBeDeleted.push(record);
-      }
-    });
-    
-    if (recordsThatCannotBeDeleted.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Deletion Blocked",
-        description: `${recordsThatCannotBeDeleted.length} record(s) could not be deleted because all statuses are not complete.`,
-        duration: 7000,
-      });
-    }
-
-    if (recordsThatCanBeDeleted.length === 0) {
-      return; // No records to delete
-    }
-
-    const idsToDelete = recordsThatCanBeDeleted.map(r => r.id);
-    const affectedNumbers = recordsThatCanBeDeleted.map(r => r.mobile);
+    const idsToDelete = recordsToDelete.map(r => r.id);
+    const affectedNumbers = recordsToDelete.map(r => r.mobile);
     const batch = writeBatch(db);
     idsToDelete.forEach(id => {
       batch.delete(doc(db, 'dealerPurchases', id));
@@ -1418,58 +1264,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         errorEmitter.emit('permission-error', permissionError);
     });
   }
-  
-  const updatePortOutStatus = (id: string, status: { paymentStatus: 'Done' | 'Pending' }) => {
-    if (!db || !user) return;
-    const portOut = portOuts.find(p => p.id === id);
-    if (!portOut) return;
-    const docRef = doc(db, 'portouts', id);
-
-    updateDoc(docRef, status).then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Updated Port Out Status',
-            description: `Updated payment status for ${portOut.mobile} to ${status.paymentStatus}.`,
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'update',
-            requestResourceData: status,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-  };
-
-  const bulkUpdatePortOutPaymentStatus = (portOutIds: string[], paymentStatus: 'Pending' | 'Done') => {
-    if (!db || !user) return;
-    const batch = writeBatch(db);
-    const updateData = { paymentStatus };
-    const affectedNumbers = portOuts.filter(p => portOutIds.includes(p.id)).map(p => p.mobile);
-
-    portOutIds.forEach(id => {
-      const docRef = doc(db, 'portouts', id);
-      batch.update(docRef, updateData);
-    });
-    batch.commit().then(() => {
-        addActivity({
-            employeeName: user.displayName || user.email || 'User',
-            action: 'Bulk Updated Port Out Payment Status',
-            description: createDetailedDescription(`Updated payment status to ${paymentStatus} for`, affectedNumbers)
-        });
-        toast({
-            title: "Update Successful",
-            description: `Updated payment status for ${portOutIds.length} record(s).`
-        });
-    }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'portouts',
-            operation: 'update',
-            requestResourceData: {info: `Bulk payment status update for ${portOutIds.length} records`},
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-  };
 
   const updateSafeCustodyDate = (numberId: string, newDate: Date) => {
     if (!db || !user) return;
@@ -1708,8 +1502,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
       sum: preBookingToSell.sum,
       salePrice: details.salePrice,
       soldTo: details.soldTo,
-      paymentStatus: 'Pending',
-      portOutStatus: 'Pending',
       uploadStatus: preBookingToSell.uploadStatus || 'Pending',
       saleDate: Timestamp.fromDate(details.saleDate),
       createdBy: user.uid,
@@ -1753,8 +1545,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
         sum: preBookingToSell.sum,
         salePrice: details.salePrice,
         soldTo: details.soldTo,
-        paymentStatus: 'Pending',
-        portOutStatus: 'Pending',
         uploadStatus: preBookingToSell.uploadStatus || 'Pending',
         saleDate: Timestamp.fromDate(details.saleDate),
         createdBy: user.uid,
@@ -2167,7 +1957,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     loading,
     numbers: roleFilteredNumbers,
     sales,
-    portOuts,
     reminders: roleFilteredReminders,
     activities: roleFilteredActivities,
     users,
@@ -2176,6 +1965,7 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     dealerPurchases,
     preBookings: roleFilteredPreBookings,
     payments,
+    globalHistory,
     seenActivitiesCount,
     recentlyAutoRtsIds,
     showReminderPopup,
@@ -2190,9 +1980,6 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     updateNumberStatus,
     updateUploadStatus,
     bulkUpdateUploadStatus,
-    updateSaleStatuses,
-    markSaleAsPortedOut,
-    bulkMarkAsPortedOut,
     markReminderDone,
     addActivity,
     assignNumbersToEmployee,
@@ -2204,14 +1991,11 @@ const bulkMarkAsPortedOut = (salesToMove: SaleRecord[]) => {
     addMultipleNumbers,
     addDealerPurchase,
     updateDealerPurchase,
-    deletePortOuts,
     bulkAddNumbers,
     addReminder,
     deleteReminder,
     assignRemindersToUsers,
     deleteDealerPurchases,
-    updatePortOutStatus,
-    bulkUpdatePortOutPaymentStatus,
     deleteActivities,
     updateSafeCustodyDate,
     bulkUpdateSafeCustodyDate,

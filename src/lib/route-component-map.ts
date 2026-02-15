@@ -14,6 +14,7 @@ import RemindersPage from '@/app/reminders/page';
 import CocpPage from '@/app/cocp/page';
 import ActivitiesPage from '@/app/activities/page';
 import ImportExportPage from '@/app/import-export/page';
+import HistoryPage from '@/app/history/page';
 import NewNumberPage from '@/app/numbers/new/page';
 import NumberDetailsPage from '@/app/numbers/[id]/page';
 import EditNumberPage from '@/app/numbers/[id]/edit/page';
@@ -22,6 +23,7 @@ const staticRouteComponentMap = {
   '/dashboard': DashboardPage,
   '/numbers': AllNumbersPage,
   '/numbers/new': NewNumberPage,
+  '/history': HistoryPage,
   '/postpaid': PostpaidPage,
   '/pre-booking': PreBookingPage,
   '/partners': PartnersPage,
@@ -70,6 +72,7 @@ const routeLabels: { [key: string]: string } = {
   '/dashboard': 'Dashboard',
   '/numbers': 'All Numbers',
   '/numbers/new': 'Add Number',
+  '/history': 'Global History',
   '/postpaid': 'Postpaid Numbers',
   '/pre-booking': 'Pre-Booking',
   '/partners': 'Partners',

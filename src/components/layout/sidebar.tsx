@@ -44,6 +44,7 @@ const navItems: {
 }[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/numbers', label: 'All Numbers', icon: Smartphone, adminOnly: false },
+  { href: '/history', label: 'Global History', icon: History, adminOnly: false },
   { href: '/postpaid', label: 'Postpaid Numbers', icon: Signal, adminOnly: false },
   { href: '/pre-booking', label: 'Pre-Booking', icon: Bookmark, adminOnly: false },
   { href: '/partners', label: 'Partners', icon: Handshake, adminOnly: false },
