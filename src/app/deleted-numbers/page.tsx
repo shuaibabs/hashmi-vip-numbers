@@ -28,7 +28,7 @@ export default function DeletedNumbersPage() {
   const [numberToRestore, setNumberToRestore] = useState<DeletedNumberRecord | null>(null);
 
   const filteredHistory = useMemo(() => {
-    return deletedNumbers.filter(record => 
+    return (deletedNumbers || []).filter(record => 
       record.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [deletedNumbers, searchTerm]);

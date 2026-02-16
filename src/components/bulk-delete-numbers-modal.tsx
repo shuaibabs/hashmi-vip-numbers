@@ -11,6 +11,7 @@ import { CheckCircle, HelpCircle, TriangleAlert, XCircle } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
+import { Label } from './ui/label';
 
 type BulkDeleteModalProps = {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export function BulkDeleteNumbersModal({ isOpen, onClose }: BulkDeleteModalProps
   const [inputText, setInputText] = useState('');
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState('');
 
   const handleReview = () => {
     const inputNumbers = inputText
@@ -56,9 +59,14 @@ export function BulkDeleteNumbersModal({ isOpen, onClose }: BulkDeleteModalProps
 
   const handleDelete = () => {
     if (!reviewResult || reviewResult.found.length === 0) return;
+     if (!reason.trim()) {
+        setReasonError('A reason for deletion is required.');
+        return;
+    }
+    setReasonError('');
     setIsDeleting(true);
     const idsToDelete = reviewResult.found.map(n => n.id);
-    deleteNumbers(idsToDelete);
+    deleteNumbers(idsToDelete, reason);
     setIsDeleting(false);
     handleClose();
   };
@@ -67,6 +75,8 @@ export function BulkDeleteNumbersModal({ isOpen, onClose }: BulkDeleteModalProps
     setInputText('');
     setReviewResult(null);
     setIsDeleting(false);
+    setReason('');
+    setReasonError('');
     onClose();
   }
 
@@ -89,7 +99,7 @@ export function BulkDeleteNumbersModal({ isOpen, onClose }: BulkDeleteModalProps
         <DialogHeader>
           <DialogTitle>Bulk Delete from Master Inventory</DialogTitle>
           <DialogDescription>
-            Paste a list of mobile numbers (separated by commas or newlines) to delete them. This action only affects numbers in the main inventory and cannot be undone.
+            Paste a list of mobile numbers (separated by commas or newlines) to delete them. A reason is required. This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         
@@ -108,13 +118,26 @@ export function BulkDeleteNumbersModal({ isOpen, onClose }: BulkDeleteModalProps
                     <TriangleAlert className="h-4 w-4" />
                     <AlertTitle>Deletion Summary</AlertTitle>
                     <AlertDescription>
-                        Please review the numbers below before confirming deletion. This action is permanent.
+                        Please review the numbers below and provide a reason before confirming deletion. This action is permanent.
                     </AlertDescription>
                 </Alert>
                 <div className="space-y-3">
                     {renderList(reviewResult.found.map(n => n.mobile), "Numbers to be Deleted", "destructive")}
                     {renderList(reviewResult.notFound, "Numbers Not Found in Inventory", "outline")}
                     {renderList(reviewResult.duplicates, "Duplicate Numbers Ignored", "outline")}
+                </div>
+                <div className="space-y-2 mt-4">
+                    <Label htmlFor="delete-reason">Reason for Deletion</Label>
+                    <Textarea 
+                        id="delete-reason" 
+                        placeholder="e.g., Numbers sold to another party, data cleanup, etc."
+                        value={reason}
+                        onChange={(e) => {
+                            setReason(e.target.value);
+                            if (e.target.value.trim()) setReasonError('');
+                        }}
+                    />
+                    {reasonError && <p className="text-sm font-medium text-destructive">{reasonError}</p>}
                 </div>
             </div>
         )}
@@ -143,5 +166,3 @@ export function BulkDeleteNumbersModal({ isOpen, onClose }: BulkDeleteModalProps
     </Dialog>
   );
 }
-
-    
