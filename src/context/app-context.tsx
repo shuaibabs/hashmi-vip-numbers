@@ -1427,7 +1427,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const newDeletedRecord: Omit<DeletedNumberRecord, 'id'> = {
         originalId: id,
-        originalSrNo: srNo,
+        originalSrNo: srNo ?? 0,
         mobile: num.mobile,
         sum: num.sum,
         deletionReason: reason,
