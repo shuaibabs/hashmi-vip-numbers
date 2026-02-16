@@ -2,7 +2,6 @@
 "use client";
 
 import { useApp } from "@/context/app-context";
-import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { StatusChart } from "@/components/dashboard/status-chart";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,18 +27,8 @@ export default function DashboardPage() {
   const salesCount = roleFilteredSales.length;
   const preBookingsCount = preBookings.length;
 
-
-  const title = role === 'admin' ? "Admin Dashboard" : "My Dashboard";
-  const description = role === 'admin' 
-    ? "Overview of the Number Management System."
-    : "Here's a quick overview of your assigned numbers and tasks.";
-
   return (
     <>
-      <PageHeader 
-        title={title}
-        description={description}
-      />
       <div className="space-y-6">
         <SummaryCards />
 
