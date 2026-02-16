@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -18,6 +19,7 @@ import {
   PaymentRecord,
   GlobalHistoryRecord,
   LifecycleEvent,
+  DeletedNumberRecord,
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast, isValid, parse, subDays } from 'date-fns';
@@ -115,6 +117,7 @@ type AppContextType = {
   preBookings: PreBookingRecord[];
   payments: PaymentRecord[];
   globalHistory: GlobalHistoryRecord[];
+  deletedNumbers: DeletedNumberRecord[];
   seenActivitiesCount: number;
   recentlyAutoRtsIds: string[];
   showReminderPopup: boolean;
@@ -144,7 +147,8 @@ type AppContextType = {
   deleteActivities: (activityIds: string[]) => void;
   updateSafeCustodyDate: (numberId: string, newDate: Date) => void;
   bulkUpdateSafeCustodyDate: (numberIds: string[], newDate: Date) => void;
-  deleteNumbers: (numberIds: string[]) => void;
+  deleteNumbers: (numberIds: string[], reason: string) => void;
+  restoreDeletedNumber: (deletedNumberId: string) => void;
   deleteUser: (uid: string) => void;
   updateNumberLocation: (numberIds: string[], location: { locationType: 'Store' | 'Employee' | 'Dealer', currentLocation: string }) => void;
   markAsPreBooked: (numberIds: string[]) => void;
@@ -171,6 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dealerPurchases, setDealerPurchases] = useState<DealerPurchaseRecord[]>([]);
   const [preBookings, setPreBookings] = useState<PreBookingRecord[]>([]);
+  const [deletedNumbers, setDeletedNumbers] = useState<DeletedNumberRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
@@ -189,6 +194,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [dealerPurchasesLoading, setDealerPurchasesLoading] = useState(true);
   const [preBookingsLoading, setPreBookingsLoading] = useState(true);
+  const [deletedNumbersLoading, setDeletedNumbersLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
 
@@ -202,6 +208,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activitiesLoading ||
       dealerPurchasesLoading ||
       preBookingsLoading ||
+      deletedNumbersLoading ||
       usersLoading ||
       paymentsLoading
     ));
@@ -312,6 +319,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActivities([]);
       setDealerPurchases([]);
       setPreBookings([]);
+      setDeletedNumbers([]);
       setUsers([]);
       setPayments([]);
       setEmployees([]);
@@ -322,6 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActivitiesLoading(false);
       setDealerPurchasesLoading(false);
       setPreBookingsLoading(false);
+      setDeletedNumbersLoading(false);
       setUsersLoading(false);
       setPaymentsLoading(false);
       return;
@@ -334,6 +343,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActivitiesLoading(true);
     setDealerPurchasesLoading(true);
     setPreBookingsLoading(true);
+    setDeletedNumbersLoading(true);
     setUsersLoading(true);
     setPaymentsLoading(true);
 
@@ -345,6 +355,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { name: 'activities', setter: setActivities, loader: setActivitiesLoading },
       { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
       { name: 'prebookings', setter: setPreBookings, loader: setPreBookingsLoading },
+      { name: 'deletedNumbers', setter: setDeletedNumbers, loader: setDeletedNumbersLoading },
       { name: 'payments', setter: setPayments, loader: setPaymentsLoading },
       { name: 'users', setter: (data: User[]) => {
           setUsers(data);
@@ -465,8 +476,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
     }));
 
-    return [...inventoryHistory, ...salesHistory, ...preBookingHistory, ...dealerPurchaseHistory];
-  }, [loading, numbers, sales, preBookings, dealerPurchases]);
+    const deletedHistory: GlobalHistoryRecord[] = deletedNumbers.map(dn => ({
+      id: `deleted-${dn.id}`,
+      mobile: dn.mobile,
+      rtsStatus: dn.originalNumberData.status,
+      numberType: dn.originalNumberData.numberType,
+      currentStage: 'Deleted',
+      purchaseInfo: {
+        purchaseFrom: dn.originalNumberData.purchaseFrom,
+        purchaseDate: dn.originalNumberData.purchaseDate,
+        purchasePrice: dn.originalNumberData.purchasePrice,
+      },
+      deletionInfo: {
+        reason: dn.deletionReason,
+        deletedBy: dn.deletedBy,
+        deletedAt: dn.deletedAt,
+      },
+      history: dn.originalNumberData.history,
+    }));
+
+
+    return [...inventoryHistory, ...salesHistory, ...preBookingHistory, ...dealerPurchaseHistory, ...deletedHistory];
+  }, [loading, numbers, sales, preBookings, dealerPurchases, deletedNumbers]);
 
   const isMobileNumberDuplicate = (mobile: string, currentId?: string): boolean => {
     if (!mobile) return false;
@@ -1355,7 +1386,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const deleteNumbers = (numberIds: string[]) => {
+  const deleteNumbers = (numberIds: string[], reason: string) => {
     if (!db || !user || role !== 'admin') {
       toast({
         variant: "destructive",
@@ -1364,28 +1395,99 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
+    
+    if (!reason?.trim()) {
+        toast({
+            variant: "destructive",
+            title: "Reason Required",
+            description: "A reason for deletion is required.",
+        });
+        return;
+    }
 
     const numbersToDelete = numbers.filter(n => numberIds.includes(n.id));
-    const affectedNumbers = numbersToDelete.map(n => n.mobile);
+    if (numbersToDelete.length === 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No matching numbers found to delete.' });
+      return;
+    }
 
+    const affectedNumbers = numbersToDelete.map(n => n.mobile);
     const batch = writeBatch(db);
-    numberIds.forEach(id => {
+    const performedBy = user.displayName || user.email || 'User';
+
+    numbersToDelete.forEach(num => {
+      const { id, srNo, ...originalData } = num;
+      const historyEvent = createLifecycleEvent('Deleted', `Deleted from inventory. Reason: ${reason}`, performedBy);
+      const history = [...(originalData.history || []), historyEvent];
+
+      const newDeletedRecord: Omit<DeletedNumberRecord, 'id'> = {
+        originalId: id,
+        originalSrNo: srNo,
+        mobile: num.mobile,
+        sum: num.sum,
+        deletionReason: reason,
+        deletedBy: performedBy,
+        deletedAt: Timestamp.now(),
+        originalNumberData: sanitizeObjectForFirestore({ ...originalData, history }),
+      };
+
+      batch.set(doc(collection(db, 'deletedNumbers')), newDeletedRecord);
       batch.delete(doc(db, 'numbers', id));
     });
 
     batch.commit().then(() => {
       addActivity({
-        employeeName: user.displayName || user.email || 'User',
+        employeeName: performedBy,
         action: 'Deleted Numbers',
-        description: createDetailedDescription('Permanently deleted from master inventory:', affectedNumbers)
+        description: createDetailedDescription(`Archived from master inventory:`, affectedNumbers)
       });
+      toast({ title: 'Numbers Deleted', description: `${numbersToDelete.length} number(s) moved to Deleted Numbers.` });
     }).catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
-        path: 'numbers',
-        operation: 'delete',
-        requestResourceData: { info: `Batch delete ${numberIds.length} numbers` },
+        path: 'numbers/deletedNumbers',
+        operation: 'write',
+        requestResourceData: { info: `Soft delete of ${numberIds.length} numbers` },
       });
       errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const restoreDeletedNumber = (deletedNumberId: string) => {
+    if (!db || !user || role !== 'admin') {
+        toast({ variant: 'destructive', title: 'Permission Denied', description: 'You cannot restore numbers.' });
+        return;
+    }
+    const recordToRestore = deletedNumbers.find(dn => dn.id === deletedNumberId);
+    if (!recordToRestore) {
+        toast({ variant: 'destructive', title: 'Not Found', description: 'Could not find the deleted record to restore.' });
+        return;
+    }
+    
+    const performedBy = user.displayName || user.email || 'User';
+    const historyEvent = createLifecycleEvent('Restored', `Number restored to inventory.`, performedBy);
+    
+    const restoredData = sanitizeObjectForFirestore({
+        ...recordToRestore.originalNumberData,
+        history: [...(recordToRestore.originalNumberData.history || []), historyEvent],
+    });
+
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'numbers', recordToRestore.originalId), restoredData);
+    batch.delete(doc(db, 'deletedNumbers', deletedNumberId));
+
+    batch.commit().then(() => {
+        addActivity({
+            employeeName: performedBy,
+            action: 'Restored Number',
+            description: `Restored number ${recordToRestore.mobile} to the master inventory.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'numbers/deletedNumbers',
+            operation: 'write',
+            requestResourceData: { info: `Restore number ${recordToRestore.mobile}` },
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
   };
   
@@ -2031,6 +2133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     preBookings: roleFilteredPreBookings,
     payments,
     globalHistory,
+    deletedNumbers,
     seenActivitiesCount,
     recentlyAutoRtsIds,
     showReminderPopup,
@@ -2064,6 +2167,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateSafeCustodyDate,
     bulkUpdateSafeCustodyDate,
     deleteNumbers,
+    restoreDeletedNumber,
     deleteUser,
     updateNumberLocation,
     markAsPreBooked,

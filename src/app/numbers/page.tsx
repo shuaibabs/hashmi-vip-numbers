@@ -34,6 +34,8 @@ import { BulkDeleteNumbersModal } from '@/components/bulk-delete-numbers-modal';
 import { cn } from '@/lib/utils';
 import { AdvancedSearch, type AdvancedSearchState } from '@/components/advanced-search';
 import { BulkUploadStatusChangeModal } from '@/components/bulk-upload-status-change-modal';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 type SortableColumn = keyof NumberRecord | 'id' | 'twoDigitSum';
 
@@ -76,6 +78,12 @@ export default function AllNumbersPage() {
   const [sortConfig, setSortConfig] = useState<{ key: SortableColumn; direction: 'ascending' | 'descending' } | null>({ key: 'srNo', direction: 'ascending'});
   const [isPreBookConfirmationOpen, setIsPreBookConfirmationOpen] = useState(false);
   const [advancedSearch, setAdvancedSearch] = useState<AdvancedSearchState>(initialAdvancedSearchState);
+  
+  const [rowsToDelete, setRowsToDelete] = useState<string[]>([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteReasonError, setDeleteReasonError] = useState('');
+
 
   const calculateSimpleSum = (mobile: string): number => {
     return mobile
@@ -285,10 +293,28 @@ export default function AllNumbersPage() {
     setIsLocationModalOpen(false);
     setSelectedRows([]);
   }
-  
-  const handleDeleteSelected = () => {
-    deleteNumbers(selectedRows);
-    setSelectedRows([]);
+
+  const openDeleteModal = (numberIds: string[]) => {
+    if (numberIds.length === 0) return;
+    setRowsToDelete(numberIds);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setRowsToDelete([]);
+    setDeleteReason('');
+    setDeleteReasonError('');
+  }
+
+  const handleConfirmDelete = () => {
+    if (!deleteReason.trim()) {
+        setDeleteReasonError('A reason for deletion is required.');
+        return;
+    }
+    deleteNumbers(rowsToDelete, deleteReason);
+    setSelectedRows(prev => prev.filter(id => !rowsToDelete.includes(id)));
+    closeDeleteModal();
   };
 
   const selectedNumberRecords = numbers.filter(n => selectedRows.includes(n.id));
@@ -480,28 +506,10 @@ export default function AllNumbersPage() {
         {selectedRows.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
               {role === 'admin' && (
-                  <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                      <Button variant="destructive">
-                          <Trash className="mr-2 h-4 w-4" />
-                          Delete ({selectedRows.length})
-                      </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                      <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete {selectedRows.length} number record(s).
-                          </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDeleteSelected}>
-                          Yes, delete
-                          </AlertDialogAction>
-                      </AlertDialogFooter>
-                      </AlertDialogContent>
-                  </AlertDialog>
+                <Button variant="destructive" onClick={() => openDeleteModal(selectedRows)}>
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete ({selectedRows.length})
+                </Button>
               )}
               {role === 'admin' && (
                   <Button onClick={handleOpenAssignModal}>
@@ -628,6 +636,11 @@ export default function AllNumbersPage() {
                             <DollarSign className="mr-2 h-4 w-4" />
                             Mark as Sold
                             </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); openDeleteModal([num.id]); }}>
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete Number
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                         </DropdownMenu>
                     )}
@@ -707,6 +720,36 @@ export default function AllNumbersPage() {
             selectedNumbers={selectedNumberRecords}
         />
       )}
+       <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action will move {rowsToDelete.length} number record(s) to the Deleted Numbers archive. Please provide a reason.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label htmlFor="delete-reason" className={deleteReasonError ? 'text-destructive': ''}>Reason for Deletion (Required)</Label>
+                    <Textarea 
+                        id="delete-reason"
+                        value={deleteReason}
+                        onChange={(e) => {
+                            setDeleteReason(e.target.value);
+                            if (e.target.value.trim()) setDeleteReasonError('');
+                        }}
+                        placeholder="e.g. Data cleanup, numbers sold outside system."
+                        className={deleteReasonError ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    />
+                    {deleteReasonError && <p className="text-sm font-medium text-destructive">{deleteReasonError}</p>}
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={closeDeleteModal}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmDelete} disabled={!deleteReason.trim()}>
+                        Yes, delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       <AlertDialog open={isPreBookConfirmationOpen} onOpenChange={setIsPreBookConfirmationOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
