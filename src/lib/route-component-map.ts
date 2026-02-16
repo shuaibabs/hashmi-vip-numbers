@@ -18,6 +18,7 @@ import HistoryPage from '@/app/history/page';
 import NewNumberPage from '@/app/numbers/new/page';
 import NumberDetailsPage from '@/app/numbers/[id]/page';
 import EditNumberPage from '@/app/numbers/[id]/edit/page';
+import DeletedNumbersPage from '@/app/deleted-numbers/page';
 
 const staticRouteComponentMap = {
   '/dashboard': DashboardPage,
@@ -37,6 +38,7 @@ const staticRouteComponentMap = {
   '/cocp': CocpPage,
   '/activities': ActivitiesPage,
   '/import-export': ImportExportPage,
+  '/deleted-numbers': DeletedNumbersPage,
 };
 
 const dynamicRoutePatterns: { pattern: RegExp, component: React.ComponentType, getLabel: (pathname: string) => string }[] = [
@@ -86,6 +88,7 @@ const routeLabels: { [key: string]: string } = {
   '/cocp': 'COCP',
   '/activities': 'Activities',
   '/import-export': 'Import / Export',
+  '/deleted-numbers': 'Deleted Numbers',
 };
 
 export function getLabelForRoute(href: string): string {

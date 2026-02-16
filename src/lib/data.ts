@@ -69,6 +69,18 @@ export type SaleRecord = {
   originalNumberData: Omit<NumberRecord, 'id'>;
 };
 
+export type DeletedNumberRecord = {
+    id: string; // Firestore document ID in the deletedNumbers collection
+    originalId: string; // ID from the 'numbers' collection
+    originalSrNo: number;
+    mobile: string;
+    sum: number;
+    deletionReason: string;
+    deletedBy: string; // Name of user
+    deletedAt: Timestamp;
+    originalNumberData: Omit<NumberRecord, 'id'>;
+};
+
 export type PreBookingRecord = {
   id: string; // Firestore document ID
   srNo: number;
@@ -135,7 +147,7 @@ export type GlobalHistoryRecord = {
   mobile: string;
   rtsStatus: 'RTS' | 'Non-RTS' | 'N/A';
   numberType: 'Prepaid' | 'Postpaid' | 'COCP' | 'N/A';
-  currentStage: 'In Inventory' | 'Sold' | 'Pre-Booked' | 'Dealer Purchase';
+  currentStage: 'In Inventory' | 'Sold' | 'Pre-Booked' | 'Dealer Purchase' | 'Deleted';
   saleInfo?: {
     soldTo: string;
     saleDate: Timestamp;
@@ -145,6 +157,11 @@ export type GlobalHistoryRecord = {
     purchaseFrom: string;
     purchaseDate: Timestamp | null;
     purchasePrice: number;
+  };
+  deletionInfo?: {
+    reason: string;
+    deletedBy: string;
+    deletedAt: Timestamp;
   };
   history?: LifecycleEvent[];
 };

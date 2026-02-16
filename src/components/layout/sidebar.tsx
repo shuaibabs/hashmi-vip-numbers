@@ -29,6 +29,7 @@ import {
   Database,
   Handshake,
   Bookmark,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
@@ -56,6 +57,7 @@ const navItems: {
   { href: '/dealer-purchases', label: 'Dealer Purchases', icon: ShoppingCart, adminOnly: false },
   { href: '/reminders', label: 'Work Reminders', icon: ClipboardList, adminOnly: false },
   { href: '/cocp', label: 'COCP', icon: RadioTower, adminOnly: false },
+  { href: '/deleted-numbers', label: 'Deleted Numbers', icon: Trash2, adminOnly: true },
   { href: '/activities', label: 'Activities', icon: History, adminOnly: false },
   { href: '/import-export', label: 'Import / Export', icon: FileOutput, adminOnly: false },
 ];
