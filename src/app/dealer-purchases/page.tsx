@@ -290,7 +290,7 @@ export default function DealerPurchasesPage() {
                 <TableSpinner colSpan={6} />
             ) : paginatedPurchases.length > 0 ? (
                 paginatedPurchases.map((purchase) => (
-                <TableRow key={purchase.srNo} data-state={selectedRows.includes(purchase.id) && "selected"}>
+                <TableRow key={purchase.id} data-state={selectedRows.includes(purchase.id) && "selected"}>
                     <TableCell>
                        {role === 'admin' && (
                         <Checkbox

@@ -280,7 +280,7 @@ export default function SalesPage() {
                 <TableSpinner colSpan={9} />
             ) : paginatedSales.length > 0 ? (
                 paginatedSales.map((sale) => (
-                <TableRow key={sale.srNo} data-state={selectedRows.includes(sale.id) && "selected"}>
+                <TableRow key={sale.id} data-state={selectedRows.includes(sale.id) && "selected"}>
                     <TableCell>
                         <Checkbox
                             checked={selectedRows.includes(sale.id)}

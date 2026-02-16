@@ -309,7 +309,7 @@ export default function CocpPage() {
 
                     return (
                         <TableRow 
-                            key={num.srNo} 
+                            key={num.id} 
                             data-state={selectedRows.includes(num.id) && "selected"}
                             className={cn(hasSafeCustodyDateArrived && "bg-red-200 dark:bg-red-800/30 hover:bg-red-200/80 dark:hover:bg-red-800/40 data-[state=selected]:bg-red-300 dark:data-[state=selected]:bg-red-800/50")}
                         >

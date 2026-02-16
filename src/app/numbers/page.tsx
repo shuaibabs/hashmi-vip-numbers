@@ -570,7 +570,7 @@ export default function AllNumbersPage() {
               ) : paginatedNumbers.length > 0 ? (
                   paginatedNumbers.map((num) => (
                     <TableRow 
-                        key={num.srNo}
+                        key={num.id}
                         data-state={selectedRows.includes(num.id) && "selected"}
                         className={cn(
                             "cursor-pointer",

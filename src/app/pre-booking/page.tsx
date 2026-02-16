@@ -217,7 +217,7 @@ export default function PreBookingPage() {
                     const isRts = pb.originalNumberData?.status === 'RTS';
                     return (
                         <TableRow 
-                            key={pb.srNo} 
+                            key={pb.id} 
                             data-state={selectedRows.includes(pb.id) && "selected"}
                             className={cn(isRts && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50")}
                         >

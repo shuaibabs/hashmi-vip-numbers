@@ -282,7 +282,7 @@ export default function PostpaidPage() {
             ) : paginatedNumbers.length > 0 ? (
                 paginatedNumbers.map((num) => (
                         <TableRow 
-                            key={num.srNo} 
+                            key={num.id} 
                             data-state={selectedRows.includes(num.id) && "selected"}
                         >
                         <TableCell>
@@ -356,4 +356,3 @@ export default function PostpaidPage() {
     </>
   );
 }
-
