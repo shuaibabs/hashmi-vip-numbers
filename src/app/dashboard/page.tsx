@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useAuth } from "@/context/auth-context";
 import { LatestActivities } from "@/components/dashboard/latest-activities";
 import { useMemo } from "react";
+import { GlobalHistory } from "@/components/dashboard/global-history";
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
@@ -41,6 +42,9 @@ export default function DashboardPage() {
       />
       <div className="space-y-6">
         <SummaryCards />
+
+        <GlobalHistory />
+        
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-7">
           <Card className="lg:col-span-4">
             <CardHeader>
