@@ -366,13 +366,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ];
 
     collectionMappings.forEach(({ name, setter, loader }) => {
-      const q = query(collection(db, name));
+      const collectionRef = collection(db, name);
+      const q = query(collectionRef);
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const data = mapSnapshotToData(querySnapshot);
         setter(data as any); // Cast as any because setters have different types
         loader(false);
       }, (error) => {
-        console.error(`Error fetching ${name}:`, error);
+        const permissionError = new FirestorePermissionError({
+            path: collectionRef.path,
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         loader(false);
       });
       subscriptions.push(unsubscribe);
@@ -1471,8 +1476,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         history: [...(recordToRestore.originalNumberData.history || []), historyEvent],
     });
 
+    const restoredNumber: Omit<NumberRecord, 'id'> = {
+      ...(restoredData as Omit<NumberRecord, 'id'>),
+    };
+
     const batch = writeBatch(db);
-    batch.set(doc(db, 'numbers', recordToRestore.originalId), restoredData);
+    batch.set(doc(db, 'numbers', recordToRestore.originalId), restoredNumber);
     batch.delete(doc(db, 'deletedNumbers', deletedNumberId));
 
     batch.commit().then(() => {
