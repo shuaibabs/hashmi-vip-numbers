@@ -22,6 +22,7 @@ import { SaleDetailsModal } from '@/components/sale-details-modal';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
+import { ReceivePaymentModal } from '@/components/receive-payment-modal';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000, 5000];
@@ -36,6 +37,7 @@ export default function ManageSalesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const roleFilteredSales = useMemo(() => {
     if (role === 'admin') {
@@ -65,6 +67,16 @@ export default function ManageSalesPage() {
     }, { totalPurchaseAmount: 0, totalSaleAmount: 0 });
   }, [filteredSales]);
   
+  const { totalPaid, amountRemaining } = useMemo(() => {
+    const relevantPayments = soldToFilter === 'all'
+      ? payments
+      : payments.filter(p => p.vendorName === soldToFilter);
+
+    const paid = relevantPayments.reduce((sum, p) => sum + p.amount, 0);
+    
+    return { totalPaid: paid, amountRemaining: totalSaleAmount - paid };
+  }, [payments, soldToFilter, totalSaleAmount]);
+
   const totalProfitLoss = totalSaleAmount - totalPurchaseAmount;
   
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
@@ -187,6 +199,10 @@ export default function ManageSalesPage() {
         description="Review, filter, and export sales records with calculated totals."
       >
         <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => setIsPaymentModalOpen(true)} disabled={loading || soldToFilter === 'all'} variant="outline">
+                <DollarSign className="mr-2 h-4 w-4" />
+                Receive Payment
+            </Button>
             <Button onClick={exportToCsv} disabled={loading} variant="outline">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -194,7 +210,7 @@ export default function ManageSalesPage() {
         </div>
       </PageHeader>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 mb-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
@@ -221,6 +237,31 @@ export default function ManageSalesPage() {
                     <div className={cn("text-2xl font-bold", totalProfitLoss >= 0 ? "text-green-600" : "text-red-600")}>
                         ₹{totalProfitLoss.toLocaleString()}
                     </div>
+                     <p className="text-xs text-muted-foreground">&nbsp;</p>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">₹{totalPaid.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">
+                        {soldToFilter === 'all' ? 'from all vendors' : `for ${soldToFilter}`}
+                    </p>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Amount Remaining</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className={cn("text-2xl font-bold", amountRemaining > 0 ? "text-red-600" : "text-green-600")}>
+                        ₹{amountRemaining.toLocaleString()}
+                    </div>
+                     <p className="text-xs text-muted-foreground">
+                        {soldToFilter === 'all' ? 'from all vendors' : `for ${soldToFilter}`}
+                    </p>
                 </CardContent>
             </Card>
         </div>
@@ -310,6 +351,11 @@ export default function ManageSalesPage() {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         sale={selectedSale}
+      />
+      <ReceivePaymentModal 
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        vendorName={soldToFilter}
       />
     </>
   );
