@@ -27,7 +27,7 @@ export default function HistoryPage() {
 
   const filteredHistory = useMemo(() => {
     return globalHistory.filter(record => 
-      record.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+      record.mobile && record.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [globalHistory, searchTerm]);
 
