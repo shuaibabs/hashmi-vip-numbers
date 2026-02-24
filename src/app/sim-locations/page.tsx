@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -39,8 +40,8 @@ export default function SimLocationsPage() {
   }, [numbers, role, user?.displayName]);
 
   const currentLocationOptions = useMemo(() => {
-    const allLocations = roleFilteredNumbers.map(n => n.currentLocation);
-    return ['all', ...Array.from(new Set(allLocations))];
+    const allLocations = roleFilteredNumbers.map(n => n.currentLocation).filter(Boolean);
+    return [...new Set(['all', ...allLocations])];
   }, [roleFilteredNumbers]);
 
   const filteredNumbers = useMemo(() => {
