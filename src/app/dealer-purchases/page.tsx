@@ -38,7 +38,7 @@ export default function DealerPurchasesPage() {
 
   const sortedPurchases = useMemo(() => {
     let sortableItems = [...dealerPurchases].filter(purchase => 
-        purchase.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+        purchase.mobile && purchase.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {

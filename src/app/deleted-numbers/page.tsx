@@ -29,7 +29,7 @@ export default function DeletedNumbersPage() {
 
   const filteredHistory = useMemo(() => {
     return (deletedNumbers || []).filter(record => 
-      record.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+      record.mobile && record.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [deletedNumbers, searchTerm]);
 

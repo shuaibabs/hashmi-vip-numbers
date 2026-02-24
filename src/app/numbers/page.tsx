@@ -99,7 +99,7 @@ export default function AllNumbersPage() {
         (typeFilter === 'all' || num.numberType === typeFilter)
       )
       .filter(num => 
-        num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+        num.mobile && num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
     // Advanced search filtering

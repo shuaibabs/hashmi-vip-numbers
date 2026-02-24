@@ -48,7 +48,7 @@ export default function SimLocationsPage() {
     return roleFilteredNumbers
       .filter(num => locationTypeFilter === 'all' || num.locationType === locationTypeFilter)
       .filter(num => currentLocationFilter === 'all' || num.currentLocation === currentLocationFilter)
-      .filter(num => num.mobile.toLowerCase().includes(searchTerm.toLowerCase()));
+      .filter(num => num.mobile && num.mobile.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [roleFilteredNumbers, locationTypeFilter, currentLocationFilter, searchTerm]);
 
   const totalPages = Math.ceil(filteredNumbers.length / itemsPerPage);

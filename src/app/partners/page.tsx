@@ -91,7 +91,7 @@ export default function PartnersPage() {
 
   const sortedNumbers = useMemo(() => {
     let sortableItems = [...combinedPartnershipNumbers].filter(num => 
-        num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+        num.mobile && num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {

@@ -51,7 +51,7 @@ export default function PortOutPage() {
 
   const sortedPortOuts = useMemo(() => {
     let sortableItems = [...roleFilteredPortOuts].filter(portOut => 
-        portOut.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+        portOut.mobile && portOut.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
@@ -323,7 +323,7 @@ export default function PortOutPage() {
                 <TableSpinner colSpan={11} />
             ) : paginatedPortOuts.length > 0 ? (
                 paginatedPortOuts.map((record) => (
-                <TableRow key={record.srNo} data-state={selectedRows.includes(record.id) && "selected"}>
+                <TableRow key={record.id} data-state={selectedRows.includes(record.id) && "selected"}>
                     <TableCell>
                       {role === 'admin' && (
                         <Checkbox

@@ -53,7 +53,7 @@ export default function CocpPage() {
 
   const sortedNumbers = useMemo(() => {
     let sortableItems = [...cocpNumbers].filter(num => 
-        num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+        num.mobile && num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Primary sort: bring records with arrived safe custody date to the top

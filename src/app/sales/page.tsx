@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useApp } from '@/context/app-context';
@@ -48,7 +47,7 @@ export default function SalesPage() {
 
   const sortedSales = useMemo(() => {
     let sortableItems = [...roleFilteredSales].filter(sale => 
-        sale.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+        sale.mobile && sale.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {

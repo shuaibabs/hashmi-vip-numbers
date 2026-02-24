@@ -51,7 +51,7 @@ export default function PostpaidPage() {
 
   const sortedNumbers = useMemo(() => {
     let sortableItems = [...postpaidNumbers].filter(num => 
-        num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
+        num.mobile && num.mobile.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (sortConfig !== null) {

@@ -50,7 +50,7 @@ export default function PreBookingPage() {
 
   const sortedAndFilteredPreBookings = useMemo(() => {
     let filtered = roleFilteredPreBookings.filter(pb => 
-      (pb.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
+      (pb.mobile && pb.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     
     // Sort by RTS status first, then by pre-booking date
