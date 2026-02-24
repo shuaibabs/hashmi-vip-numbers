@@ -55,7 +55,7 @@ export default function ManageSalesPage() {
   const filteredSales = useMemo(() => {
     return roleFilteredSales.filter(sale => 
       (soldToFilter === 'all' || sale.soldTo === soldToFilter) &&
-      (sale.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
+      (sale.mobile && sale.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [roleFilteredSales, soldToFilter, searchTerm]);
 
