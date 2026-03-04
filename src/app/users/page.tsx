@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigation } from '@/context/navigation-context';
 import type { User } from '@/lib/data';
 import { usePathname } from 'next/navigation';
@@ -71,37 +71,16 @@ export default function ManageUsersPage() {
                 <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className='capitalize'>{user.role}</Badge>
             </CardContent>
             <CardFooter>
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                         <Button
-                            variant="destructive"
-                            size="sm"
-                            className="w-full"
-                            disabled={user.uid === currentUser?.uid}
-                            onClick={() => setUserToDelete(user)}
-                        >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete User
-                        </Button>
-                    </AlertDialogTrigger>
-                     {userToDelete?.uid === user.uid && (
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the user account for <span className='font-semibold'>{userToDelete.displayName}</span> and remove all associated data.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleConfirmDelete}>
-                                    Yes, delete user
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    )}
-                </AlertDialog>
-
+                 <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    disabled={user.uid === currentUser?.uid}
+                    onClick={() => setUserToDelete(user)}
+                >
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete User
+                </Button>
             </CardFooter>
           </Card>
         ))}
@@ -113,7 +92,7 @@ export default function ManageUsersPage() {
           </CardContent>
         </Card>
        )}
-        <AlertDialog open={!!userToDelete}>
+        <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -122,7 +101,7 @@ export default function ManageUsersPage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleConfirmDelete}>
                         Yes, delete user
                     </AlertDialogAction>
