@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, ArrowLeft, UserPlus } from 'lucide-react';
+import { AlertCircle, ArrowLeft, UserPlus, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { PageHeader } from '@/components/page-header';
@@ -28,6 +28,7 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(['admin', 'employee']),
+  telegramUsername: z.string().optional(),
 });
 
 // A temporary, secondary Firebase App to create users without logging the admin out.
@@ -58,6 +59,7 @@ export default function SignupPage() {
       email: '',
       password: '',
       role: 'employee',
+      telegramUsername: '',
     },
   });
 
@@ -105,6 +107,7 @@ export default function SignupPage() {
             email: values.email,
             displayName: values.displayName,
             role: values.role,
+            telegramUsername: values.telegramUsername || null,
         });
 
       toast({
@@ -209,6 +212,22 @@ export default function SignupPage() {
                                     </Select>
                                     <FormMessage />
                                 </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="telegramUsername"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Telegram Username (Optional)</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Send className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="@username" {...field} className="pl-9" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
                             )}
                         />
                     </div>

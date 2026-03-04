@@ -8,6 +8,7 @@ export type User = {
   displayName: string;
   role: 'admin' | 'employee';
   id: string; // Firestore document ID is the same as uid
+  telegramUsername?: string;
 };
 
 // New type for individual history events on a number

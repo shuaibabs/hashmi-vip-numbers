@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { useAuth } from '@/context/auth-context';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, ArrowLeft, Trash, User as UserIcon } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Trash, User as UserIcon, Send } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -64,7 +64,15 @@ export default function ManageUsersPage() {
                 </Avatar>
                 <div className='flex-1'>
                     <CardTitle className="text-lg">{user.displayName}</CardTitle>
-                    <CardDescription>{user.email}</CardDescription>
+                    <CardDescription>
+                      {user.email}
+                      {user.telegramUsername && (
+                          <div className="flex items-center gap-1.5 pt-1 text-muted-foreground">
+                              <Send className="h-3.5 w-3.5" />
+                              <span className="text-xs">{user.telegramUsername}</span>
+                          </div>
+                      )}
+                    </CardDescription>
                 </div>
             </CardHeader>
             <CardContent>
