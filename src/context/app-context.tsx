@@ -414,7 +414,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         "numberatm",
         "numbersolution"
     ];
-    const allSalesVendors = sales.map(s => s.soldTo);
+    const allSalesVendors = sales.map(s => s.soldTo).filter(Boolean);
     const uniqueVendors = [...new Set([...defaultVendors, ...allSalesVendors])];
     setVendors(uniqueVendors.sort());
   }, [sales]);
@@ -1456,13 +1456,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const performedBy = user.displayName || user.email || 'User';
 
     numbersToDelete.forEach(num => {
-      const { id, srNo, ...originalData } = num;
+      const { id, ...originalData } = num;
       const historyEvent = createLifecycleEvent('Deleted', `Deleted from inventory. Reason: ${reason}`, performedBy);
       const history = [...(originalData.history || []), historyEvent];
 
       const newDeletedRecord: Omit<DeletedNumberRecord, 'id'> = {
         originalId: id,
-        originalSrNo: srNo ?? 0,
+        originalSrNo: num.srNo ?? 0,
         mobile: num.mobile,
         sum: num.sum,
         deletionReason: reason,
@@ -1536,6 +1536,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const deleteUser = (uid: string) => {
+    if (!uid) {
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: "Cannot delete user: invalid user ID provided.",
+        });
+        return;
+    }
     if (!db || !user || role !== 'admin') {
       toast({
         variant: "destructive",

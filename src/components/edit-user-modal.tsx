@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect } from 'react';
@@ -83,7 +84,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
                   <FormControl>
                     <div className="relative">
                         <Send className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="@username" {...field} />
+                        <Input placeholder="@username" {...field} className="pl-9" />
                     </div>
                   </FormControl>
                   <FormMessage />
