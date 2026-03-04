@@ -57,7 +57,7 @@ export default function ManageUsersPage() {
       />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {allUsers.map((user) => (
-          <Card key={user.uid}>
+          <Card key={user.id}>
             <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar>
                     <AvatarFallback>{user.displayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
