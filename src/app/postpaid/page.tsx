@@ -128,7 +128,7 @@ export default function PostpaidPage() {
         "Mobile": n.mobile,
         "Sum": n.sum,
         "Status": n.status,
-        "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : 'N/A',
+        "RTP Date": n.rtpDate ? format(n.rtpDate.toDate(), 'yyyy-MM-dd') : 'N/A',
         "Bill Date": n.billDate ? format(n.billDate.toDate(), 'yyyy-MM-dd') : 'N/A',
         "PD Bill": n.pdBill
     }));
@@ -270,7 +270,7 @@ export default function PostpaidPage() {
               <SortableHeader column="mobile" label="Number" />
               <SortableHeader column="sum" label="Sum" />
               <SortableHeader column="status" label="Status" />
-              <SortableHeader column="rtsDate" label="RTS Date" />
+              <SortableHeader column="rtpDate" label="RTP Date" />
               <SortableHeader column="billDate" label="Bill Date" />
               <SortableHeader column="pdBill" label="PD Bill" />
               <TableHead className="text-right">Actions</TableHead>
@@ -296,9 +296,9 @@ export default function PostpaidPage() {
                             <TableCell className="font-medium">{highlightMatch(num.mobile, searchTerm)}</TableCell>
                             <TableCell>{num.sum}</TableCell>
                             <TableCell>
-                            <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
+                            <Badge variant={num.status === 'RTP' ? 'default' : 'destructive'} className={num.status === 'RTP' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
                             </TableCell>
-                            <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                            <TableCell>{num.rtpDate ? format(num.rtpDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                             <TableCell>{num.billDate ? format(num.billDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                             <TableCell>
                                 <Badge variant={num.pdBill === 'Yes' ? 'secondary' : 'outline'}>{num.pdBill}</Badge>

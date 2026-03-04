@@ -21,8 +21,8 @@ export default function DashboardPage() {
     return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
   }, [sales, role, user?.displayName]);
 
-  const rtsCount = numbers.filter(n => n.status === "RTS").length;
-  const nonRtsCount = numbers.length - rtsCount;
+  const rtpCount = numbers.filter(n => n.status === "RTP").length;
+  const nonRtpCount = numbers.length - rtpCount;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const salesCount = roleFilteredSales.length;
   const preBookingsCount = preBookings.length;
@@ -49,13 +49,13 @@ export default function DashboardPage() {
                <div className="flex flex-col gap-4 text-sm">
                 <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-2))]"></span>
-                    <span className="font-medium">RTS</span>
-                    <span className="ml-auto text-muted-foreground">{rtsCount}</span>
+                    <span className="font-medium">RTP</span>
+                    <span className="ml-auto text-muted-foreground">{rtpCount}</span>
                 </div>
                  <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-5))]"></span>
-                    <span className="font-medium">Non-RTS</span>
-                    <span className="ml-auto text-muted-foreground">{nonRtsCount}</span>
+                    <span className="font-medium">Non-RTP</span>
+                    <span className="ml-auto text-muted-foreground">{nonRtpCount}</span>
                 </div>
                  <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-4))]"></span>

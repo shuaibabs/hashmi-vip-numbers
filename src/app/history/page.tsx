@@ -110,7 +110,7 @@ export default function HistoryPage() {
                 <TableHead>Phone Number</TableHead>
                 <TableHead>Current Stage</TableHead>
                 <TableHead>Number Type</TableHead>
-                <TableHead>RTS Status</TableHead>
+                <TableHead>RTP Status</TableHead>
                 <TableHead>Purchase From</TableHead>
                 <TableHead>Purchase Price</TableHead>
                 <TableHead>Purchase Date</TableHead>
@@ -129,8 +129,8 @@ export default function HistoryPage() {
                     <TableCell><Badge variant="secondary">{record.currentStage}</Badge></TableCell>
                     <TableCell>{record.numberType}</TableCell>
                     <TableCell>
-                        {record.rtsStatus !== 'N/A' ? (
-                             <Badge variant={record.rtsStatus === 'RTS' ? 'default' : 'destructive'} className={record.rtsStatus === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{record.rtsStatus}</Badge>
+                        {record.rtpStatus !== 'N/A' ? (
+                             <Badge variant={record.rtpStatus === 'RTP' ? 'default' : 'destructive'} className={record.rtpStatus === 'RTP' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{record.rtpStatus}</Badge>
                         ) : 'N/A'}
                     </TableCell>
                     <TableCell>{record.purchaseInfo?.purchaseFrom || 'N/A'}</TableCell>

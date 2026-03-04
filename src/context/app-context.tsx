@@ -119,14 +119,14 @@ type AppContextType = {
   globalHistory: GlobalHistoryRecord[];
   deletedNumbers: DeletedNumberRecord[];
   seenActivitiesCount: number;
-  recentlyAutoRtsIds: string[];
+  recentlyAutoRtpIds: string[];
   showReminderPopup: boolean;
   pendingRemindersForPopup: Reminder[];
   closeReminderPopup: () => void;
   markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
   updateNumber: (id: string, data: NewNumberData) => void;
-  updateNumberStatus: (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => void;
+  updateNumberStatus: (id: string, status: 'RTP' | 'Non-RTP', rtpDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
   bulkUpdateUploadStatus: (numberIds: string[], uploadStatus: 'Pending' | 'Done') => void;
   markReminderDone: (id: string, note?: string) => void;
@@ -183,7 +183,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const [roleFilteredActivities, setRoleFilteredActivities] = useState<Activity[]>([]);
   const [seenActivitiesCount, setSeenActivitiesCount] = useState(0);
-  const [recentlyAutoRtsIds, setRecentlyAutoRtsIds] = useState<string[]>([]);
+  const [recentlyAutoRtpIds, setRecentlyAutoRtpIds] = useState<string[]>([]);
   const [showReminderPopup, setShowReminderPopup] = useState(false);
   const [pendingRemindersForPopup, setPendingRemindersForPopup] = useState<Reminder[]>([]);
   const [remindersShownInPopup, setRemindersShownInPopup] = useState<Set<string>>(new Set());
@@ -424,7 +424,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const inventoryHistory: GlobalHistoryRecord[] = numbers.map(num => ({
       id: `numbers-${num.id}`,
       mobile: num.mobile,
-      rtsStatus: num.status,
+      rtpStatus: num.status,
       numberType: num.numberType,
       currentStage: 'In Inventory',
       purchaseInfo: {
@@ -438,7 +438,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const salesHistory: GlobalHistoryRecord[] = sales.map(sale => ({
       id: `sales-${sale.id}`,
       mobile: sale.mobile,
-      rtsStatus: sale.originalNumberData?.status || 'N/A',
+      rtpStatus: sale.originalNumberData?.status || 'N/A',
       numberType: sale.originalNumberData?.numberType || 'N/A',
       currentStage: 'Sold',
       purchaseInfo: sale.originalNumberData ? {
@@ -457,7 +457,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const preBookingHistory: GlobalHistoryRecord[] = preBookings.map(pb => ({
         id: `prebookings-${pb.id}`,
         mobile: pb.mobile,
-        rtsStatus: pb.originalNumberData?.status || 'N/A',
+        rtpStatus: pb.originalNumberData?.status || 'N/A',
         numberType: pb.originalNumberData?.numberType || 'N/A',
         currentStage: 'Pre-Booked',
         purchaseInfo: pb.originalNumberData ? {
@@ -471,7 +471,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const dealerPurchaseHistory: GlobalHistoryRecord[] = dealerPurchases.map(dp => ({
         id: `dealerPurchases-${dp.id}`,
         mobile: dp.mobile,
-        rtsStatus: 'N/A',
+        rtpStatus: 'N/A',
         numberType: 'N/A',
         currentStage: 'Dealer Purchase',
         purchaseInfo: {
@@ -484,7 +484,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const deletedHistory: GlobalHistoryRecord[] = deletedNumbers.map(dn => ({
       id: `deleted-${dn.id}`,
       mobile: dn.mobile,
-      rtsStatus: dn.originalNumberData.status,
+      rtpStatus: dn.originalNumberData.status,
       numberType: dn.originalNumberData.numberType,
       currentStage: 'Deleted',
       purchaseInfo: {
@@ -532,23 +532,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const checkRtsDates = async () => {
+    const checkRtpDates = async () => {
         if (!db) return;
 
         const batch = writeBatch(db);
         const updatedIds: string[] = [];
         
         numbers.forEach(num => {
-            if (num.status === 'Non-RTS' && num.rtsDate) {
-                const rtsDateObj = num.rtsDate.toDate();
-                if (isValid(rtsDateObj) && (isToday(rtsDateObj) || isPast(rtsDateObj))) {
+            if (num.status === 'Non-RTP' && num.rtpDate) {
+                const rtpDateObj = num.rtpDate.toDate();
+                if (isValid(rtpDateObj) && (isToday(rtpDateObj) || isPast(rtpDateObj))) {
                     const docRef = doc(db, 'numbers', num.id);
-                    const historyEvent = createLifecycleEvent('RTS Status Changed', 'Number automatically became RTS as per schedule.', 'System');
-                    batch.update(docRef, { status: 'RTS', rtsDate: null, history: arrayUnion(historyEvent) });
+                    const historyEvent = createLifecycleEvent('RTP Status Changed', 'Number automatically became RTP as per schedule.', 'System');
+                    batch.update(docRef, { status: 'RTP', rtpDate: null, history: arrayUnion(historyEvent) });
                     addActivity({
                         employeeName: 'System',
-                        action: 'Auto-updated to RTS',
-                        description: `Number ${num.mobile} automatically became RTS.`
+                        action: 'Auto-updated to RTP',
+                        description: `Number ${num.mobile} automatically became RTP.`
                     }, false);
                     updatedIds.push(num.id);
                 }
@@ -556,22 +556,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
 
         if (updatedIds.length > 0) {
-            setRecentlyAutoRtsIds(updatedIds);
-            setTimeout(() => setRecentlyAutoRtsIds([]), 5 * 60 * 1000); // Clear after 5 minutes
+            setRecentlyAutoRtpIds(updatedIds);
+            setTimeout(() => setRecentlyAutoRtpIds([]), 5 * 60 * 1000); // Clear after 5 minutes
             
             await batch.commit().catch(async (serverError) => {
                 const permissionError = new FirestorePermissionError({
                     path: 'numbers',
                     operation: 'update',
-                    requestResourceData: {info: 'Batch update for RTS status'},
+                    requestResourceData: {info: 'Batch update for RTP status'},
                 });
                 errorEmitter.emit('permission-error', permissionError);
             });
         }
     };
 
-    checkRtsDates();
-    const interval = setInterval(checkRtsDates, 60000);
+    checkRtpDates();
+    const interval = setInterval(checkRtpDates, 60000);
     return () => clearInterval(interval);
   }, [db, numbers, numbersLoading, authLoading, user, addActivity, createLifecycleEvent]);
   
@@ -610,14 +610,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
          }
       }
       
-      // Pre-Booked RTS Reminders
-      const rtsPreBookings = preBookings.filter(pb => pb.originalNumberData?.status === 'RTS');
-      for (const pb of rtsPreBookings) {
-          const taskId = `prebooked-rts-${pb.id}`;
+      // Pre-Booked RTP Reminders
+      const rtpPreBookings = preBookings.filter(pb => pb.originalNumberData?.status === 'RTP');
+      for (const pb of rtpPreBookings) {
+          const taskId = `prebooked-rtp-${pb.id}`;
           if (!existingTaskIds.has(taskId)) {
              batch.set(doc(remindersCollection), {
                 taskId: taskId,
-                taskName: `Pre-Booked Number is now RTS: ${pb.mobile}`,
+                taskName: `Pre-Booked Number is now RTP: ${pb.mobile}`,
                 assignedTo: adminUsers,
                 dueDate: Timestamp.now(),
                 status: 'Pending', createdBy: 'system', srNo: currentReminderSrNo++,
@@ -721,7 +721,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...data,
       sum: calculateDigitalRoot(data.mobile),
       purchaseDate: Timestamp.fromDate(data.purchaseDate),
-      rtsDate: data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+      rtpDate: data.rtpDate ? Timestamp.fromDate(data.rtpDate) : null,
       safeCustodyDate: data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
       billDate: data.billDate ? Timestamp.fromDate(data.billDate) : null,
       salePrice: data.salePrice || 0,
@@ -745,7 +745,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
   };
 
-  const updateNumberStatus = (id: string, status: 'RTS' | 'Non-RTS', rtsDate: Date | null, note?: string) => {
+  const updateNumberStatus = (id: string, status: 'RTP' | 'Non-RTP', rtpDate: Date | null, note?: string) => {
     if (!db || !user) return;
     const numDocRef = doc(db, 'numbers', id);
     const num = numbers.find(n => n.id === id);
@@ -753,14 +753,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const performedBy = user.displayName || user.email || 'User';
     const historyEvent = createLifecycleEvent(
-      'RTS Status Changed',
-      `Status changed to ${status}${rtsDate ? ` with RTS date ${rtsDate.toLocaleDateString()}` : ''}. ${note || ''}`.trim(),
+      'RTP Status Changed',
+      `Status changed to ${status}${rtpDate ? ` with RTP date ${rtpDate.toLocaleDateString()}` : ''}. ${note || ''}`.trim(),
       performedBy
     );
 
     const updateData: any = {
         status: status,
-        rtsDate: status === 'RTS' ? null : (rtsDate ? Timestamp.fromDate(rtsDate) : null)
+        rtpDate: status === 'RTP' ? null : (rtpDate ? Timestamp.fromDate(rtpDate) : null)
     };
     if (note) {
         updateData.notes = `${num.notes || ''}\n${note}`.trim();
@@ -768,7 +768,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateDoc(numDocRef, {...updateData, history: arrayUnion(historyEvent)}).then(() => {
         addActivity({
             employeeName: performedBy,
-            action: 'Updated RTS Status',
+            action: 'Updated RTP Status',
             description: `Marked ${num.mobile} as ${status}`
         });
     }).catch(async (serverError) => {
@@ -855,8 +855,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return { canBeDone: false, message: `The Safe Custody Date for ${number.mobile} has not been updated to a future date.` };
         }
       }
-    } else if (reminder.taskId.startsWith('prebooked-rts-')) {
-      const preBookingId = reminder.taskId.replace('prebooked-rts-', '');
+    } else if (reminder.taskId.startsWith('prebooked-rtp-')) {
+      const preBookingId = reminder.taskId.replace('prebooked-rtp-', '');
       const preBooking = preBookings.find(pb => pb.id === preBookingId);
       if (preBooking) {
         return { canBeDone: false, message: `The Pre-Booked number ${preBooking.mobile} has not been marked as sold yet.` };
@@ -1135,7 +1135,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...data,
         srNo: getNextSrNo(numbers),
         sum: calculateDigitalRoot(data.mobile),
-        rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+        rtpDate: data.status === 'Non-RTP' && data.rtpDate ? Timestamp.fromDate(data.rtpDate) : null,
         safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
         billDate: data.numberType === 'Postpaid' && data.billDate ? Timestamp.fromDate(data.billDate) : null,
         assignedTo: data.assignedTo || 'Unassigned',
@@ -1197,7 +1197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           mobile,
           srNo: currentSrNo++,
           sum: calculateDigitalRoot(mobile),
-          rtsDate: data.status === 'Non-RTS' && data.rtsDate ? Timestamp.fromDate(data.rtsDate) : null,
+          rtpDate: data.status === 'Non-RTP' && data.rtpDate ? Timestamp.fromDate(data.rtpDate) : null,
           safeCustodyDate: data.numberType === 'COCP' && data.safeCustodyDate ? Timestamp.fromDate(data.safeCustodyDate) : null,
           billDate: data.numberType === 'Postpaid' && data.billDate ? Timestamp.fromDate(data.billDate) : null,
           assignedTo: data.assignedTo || 'Unassigned',
@@ -1801,8 +1801,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         
         const status = record.Status;
-        if (!status || !['RTS', 'Non-RTS'].includes(status)) {
-            failedRecords.push({ record, reason: 'Status is a required field. Must be "RTS" or "Non-RTS".' });
+        if (!status || !['RTP', 'Non-RTP'].includes(status)) {
+            failedRecords.push({ record, reason: 'Status is a required field. Must be "RTP" or "Non-RTP".' });
             continue;
         }
         
@@ -1834,11 +1834,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
             continue;
         }
 
-        let rtsDate: Date | null = null;
-        if (status === 'Non-RTS') {
-            rtsDate = parseDate(record.RTSDate);
-             if (!rtsDate) {
-                failedRecords.push({ record, reason: 'Invalid or missing RTSDate (required for Non-RTS status).' });
+        let rtpDate: Date | null = null;
+        if (status === 'Non-RTP') {
+            rtpDate = parseDate(record.RTPDate);
+             if (!rtpDate) {
+                failedRecords.push({ record, reason: 'Invalid or missing RTPDate (required for Non-RTP status).' });
                 continue;
             }
         }
@@ -1866,7 +1866,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             numberType: numberType,
             status: status,
             uploadStatus: uploadStatus,
-            rtsDate: rtsDate ? Timestamp.fromDate(rtsDate) : null,
+            rtpDate: rtpDate ? Timestamp.fromDate(rtpDate) : null,
             purchaseFrom: record.PurchaseFrom || 'N/A',
             purchasePrice: purchasePrice,
             salePrice: isNaN(salePrice) ? 0 : salePrice,
@@ -2144,7 +2144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     globalHistory,
     deletedNumbers,
     seenActivitiesCount,
-    recentlyAutoRtsIds,
+    recentlyAutoRtpIds,
     showReminderPopup,
     pendingRemindersForPopup,
     closeReminderPopup: () => {

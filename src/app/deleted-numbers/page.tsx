@@ -171,7 +171,6 @@ export default function DeletedNumbersPage() {
             isOpen={isHistoryModalOpen}
             onClose={() => setIsHistoryModalOpen(false)}
             mobileNumber={selectedMobile}
-            source="deleted"
         />
       )}
        <AlertDialog open={!!numberToRestore} onOpenChange={() => setNumberToRestore(null)}>

@@ -53,13 +53,13 @@ export default function PreBookingPage() {
       (pb.mobile && pb.mobile.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     
-    // Sort by RTS status first, then by pre-booking date
+    // Sort by RTP status first, then by pre-booking date
     filtered.sort((a, b) => {
-        const aIsRts = a.originalNumberData?.status === 'RTS';
-        const bIsRts = b.originalNumberData?.status === 'RTS';
+        const aIsRtp = a.originalNumberData?.status === 'RTP';
+        const bIsRtp = b.originalNumberData?.status === 'RTP';
         
-        if (aIsRts && !bIsRts) return -1;
-        if (!aIsRts && bIsRts) return 1;
+        if (aIsRtp && !bIsRtp) return -1;
+        if (!aIsRtp && bIsRtp) return 1;
 
         return b.preBookingDate.toDate().getTime() - a.preBookingDate.toDate().getTime();
     });
@@ -214,12 +214,12 @@ export default function PreBookingPage() {
                 <TableSpinner colSpan={9} />
             ) : paginatedPreBookings.length > 0 ? (
                 paginatedPreBookings.map((pb) => {
-                    const isRts = pb.originalNumberData?.status === 'RTS';
+                    const isRtp = pb.originalNumberData?.status === 'RTP';
                     return (
                         <TableRow 
                             key={pb.id} 
                             data-state={selectedRows.includes(pb.id) && "selected"}
-                            className={cn(isRts && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50")}
+                            className={cn(isRtp && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50")}
                         >
                             <TableCell>
                                 <Checkbox
@@ -233,7 +233,7 @@ export default function PreBookingPage() {
                             <TableCell>{pb.sum}</TableCell>
                             <TableCell>₹{pb.originalNumberData?.purchasePrice.toLocaleString() || 'N/A'}</TableCell>
                             <TableCell>
-                              <Badge variant={pb.originalNumberData?.status === 'RTS' ? 'default' : 'destructive'} className={pb.originalNumberData?.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{pb.originalNumberData?.status}</Badge>
+                              <Badge variant={pb.originalNumberData?.status === 'RTP' ? 'default' : 'destructive'} className={pb.originalNumberData?.status === 'RTP' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{pb.originalNumberData?.status}</Badge>
                             </TableCell>
                             <TableCell>{format(pb.preBookingDate.toDate(), 'PPP')}</TableCell>
                             <TableCell>{pb.originalNumberData?.assignedTo || 'N/A'}</TableCell>

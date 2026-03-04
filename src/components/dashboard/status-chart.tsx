@@ -21,27 +21,27 @@ export function StatusChart() {
     return sales.filter(sale => sale.originalNumberData?.assignedTo === user?.displayName);
   }, [sales, role, user?.displayName]);
 
-  const rtsCount = numbers.filter(n => n.status === "RTS").length;
-  const nonRtsCount = numbers.length - rtsCount;
+  const rtpCount = numbers.filter(n => n.status === "RTP").length;
+  const nonRtpCount = numbers.length - rtpCount;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const salesCount = roleFilteredSales.length;
   const preBookingsCount = preBookings.length;
 
   const chartData = [
-    { name: "RTS", value: rtsCount, fill: "hsl(var(--chart-2))" },
-    { name: "Non-RTS", value: nonRtsCount, fill: "hsl(var(--chart-5))" },
+    { name: "RTP", value: rtpCount, fill: "hsl(var(--chart-2))" },
+    { name: "Non-RTP", value: nonRtpCount, fill: "hsl(var(--chart-5))" },
     { name: "Pending Uploads", value: pendingUploads, fill: "hsl(var(--chart-4))" },
     { name: "Sales", value: salesCount, fill: "hsl(var(--chart-1))" },
     { name: "Pre-Bookings", value: preBookingsCount, fill: "hsla(var(--chart-1), 0.5)" },
   ].filter(item => item.value > 0);
 
    const chartConfig = {
-    rts: {
-      label: "RTS",
+    rtp: {
+      label: "RTP",
       color: "hsl(var(--chart-2))",
     },
-    "non-rts": {
-      label: "Non-RTS",
+    "non-rtp": {
+      label: "Non-RTP",
       color: "hsl(var(--chart-5))",
     },
     "pending-uploads": {

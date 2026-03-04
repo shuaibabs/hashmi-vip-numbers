@@ -7,7 +7,7 @@ Hashmi VIP Numbers is a comprehensive Number Management System designed to strea
 Key features include:
 - **Master Inventory Management**: A detailed database of all numbers, with robust searching, sorting, and filtering capabilities.
 - **Role-Based Access Control**: Separate views and permissions for administrators and employees to ensure data security and operational efficiency.
-- **Lifecycle Tracking**: Full visibility into the status of each number, including sales, port-outs, RTS (Ready to Sell) status, and location tracking.
+- **Lifecycle Tracking**: Full visibility into the status of each number, including sales, port-outs, RTP (Ready to Port) status, and location tracking.
 - **User and Activity Management**: Tools for creating and managing user accounts, along with a detailed activity log for a complete audit trail of all actions performed in the system.
 - **Bulk Data Operations**: Efficiently manage large datasets through CSV import and export functionality.
 
@@ -17,7 +17,7 @@ Key features include:
 
 Managing a vast inventory of VIP mobile numbers presents several significant challenges that this system is designed to solve:
 
-1.  **Managing a Large, Complex Inventory**: Manually tracking thousands of numbers with diverse attributes—such as status (RTS/Non-RTS), type (Prepaid/Postpaid/COCP), ownership (Individual/Partnership), and physical location—is incredibly difficult and inefficient using spreadsheets or disparate systems.
+1.  **Managing a Large, Complex Inventory**: Manually tracking thousands of numbers with diverse attributes—such as status (RTP/Non-RTP), type (Prepaid/Postpaid/COCP), ownership (Individual/Partnership), and physical location—is incredibly difficult and inefficient using spreadsheets or disparate systems.
 
 2.  **Prone to Human Error**: Manual data entry and updates are susceptible to mistakes, leading to inaccurate inventory records, incorrect pricing, and lost sales opportunities.
 
@@ -42,6 +42,6 @@ This application addresses these challenges with a suite of integrated features 
 4.  **Streamlined and Automated Workflows**:
     - **Bulk Operations**: The CSV import/export feature drastically reduces manual entry, and a robust validation system provides detailed error reports for failed imports.
     - **Bulk Editing**: The ability to select multiple records to perform bulk actions—such as assigning numbers, marking them as sold, or changing their location—saves significant time.
-    - **Automated Status Updates**: The system automatically updates numbers to "RTS" status when their scheduled date arrives, reducing manual oversight.
+    - **Automated Status Updates**: The system automatically updates numbers to "RTP" status when their scheduled date arrives, reducing manual oversight.
 
 5.  **Complete Audit Trail**: A comprehensive activity logging system automatically records every significant action performed by users, from creating a new number to canceling a sale. This provides full transparency and accountability across the organization.

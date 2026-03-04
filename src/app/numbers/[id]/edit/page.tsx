@@ -35,9 +35,9 @@ const formSchema = z.object({
   currentLocation: z.string().min(1, 'Current location is required.'),
   locationType: z.enum(['Store', 'Employee', 'Dealer']),
   notes: z.string().optional(),
-  status: z.enum(['RTS', 'Non-RTS']),
+  status: z.enum(['RTP', 'Non-RTP']),
   uploadStatus: z.enum(['Pending', 'Done']),
-  rtsDate: z.date().optional(),
+  rtpDate: z.date().optional(),
   safeCustodyDate: z.date().optional(),
   accountName: z.string().optional(),
   ownershipType: z.enum(['Individual', 'Partnership']),
@@ -45,9 +45,9 @@ const formSchema = z.object({
   billDate: z.date().optional(),
   pdBill: z.enum(['Yes', 'No']).default('No'),
 }).refine(data => {
-  if (data.status === 'Non-RTS') return !!data.rtsDate;
+  if (data.status === 'Non-RTP') return !!data.rtpDate;
   return true;
-}, { message: 'RTS Date is required for Non-RTS status.', path: ['rtsDate'] })
+}, { message: 'RTP Date is required for Non-RTP status.', path: ['rtpDate'] })
 .refine(data => {
   if (data.numberType === 'COCP') return !!data.safeCustodyDate;
   return true;
@@ -73,7 +73,7 @@ export default function EditNumberPage() {
   const numberId = Array.isArray(id) ? id[0] : id;
 
   const [isPurchaseDatePickerOpen, setIsPurchaseDatePickerOpen] = useState(false);
-  const [isRtsDatePickerOpen, setIsRtsDatePickerOpen] = useState(false);
+  const [isRtpDatePickerOpen, setIsRtpDatePickerOpen] = useState(false);
   const [isSafeCustodyDatePickerOpen, setIsSafeCustodyDatePickerOpen] = useState(false);
   const [isBillDatePickerOpen, setIsBillDatePickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,7 +90,7 @@ export default function EditNumberPage() {
       form.reset({
         ...foundNumber,
         purchaseDate: foundNumber.purchaseDate?.toDate(),
-        rtsDate: foundNumber.rtsDate?.toDate(),
+        rtpDate: foundNumber.rtpDate?.toDate(),
         safeCustodyDate: foundNumber.safeCustodyDate?.toDate(),
         billDate: foundNumber.billDate?.toDate(),
         salePrice: foundNumber.salePrice ? Number(foundNumber.salePrice) : undefined,
@@ -255,22 +255,22 @@ export default function EditNumberPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>RTS Status</FormLabel>
-                      <Select onValueChange={(value) => { field.onChange(value); if (value === 'RTS') { form.setValue('rtsDate', undefined); form.clearErrors('rtsDate'); } }} defaultValue={field.value}>
+                      <FormLabel>RTP Status</FormLabel>
+                      <Select onValueChange={(value) => { field.onChange(value); if (value === 'RTP') { form.setValue('rtpDate', undefined); form.clearErrors('rtpDate'); } }} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="RTS">RTS</SelectItem>
-                          <SelectItem value="Non-RTS">Non-RTS</SelectItem>
+                          <SelectItem value="RTP">RTP</SelectItem>
+                          <SelectItem value="Non-RTP">Non-RTP</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}/>
-                {form.watch('status') === 'Non-RTS' && (
-                  <FormField control={form.control} name="rtsDate" render={({ field }) => (
+                {form.watch('status') === 'Non-RTP' && (
+                  <FormField control={form.control} name="rtpDate" render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Schedule RTS Date</FormLabel>
-                        <Popover open={isRtsDatePickerOpen} onOpenChange={setIsRtsDatePickerOpen}>
+                        <FormLabel>Schedule RTP Date</FormLabel>
+                        <Popover open={isRtpDatePickerOpen} onOpenChange={setIsRtpDatePickerOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -280,7 +280,7 @@ export default function EditNumberPage() {
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={(date) => { if(date) field.onChange(date); setIsRtsDatePickerOpen(false); }} disabled={(date) => date < new Date() || date < new Date("1900-01-01")} initialFocus/>
+                            <Calendar mode="single" selected={field.value} onSelect={(date) => { if(date) field.onChange(date); setIsRtpDatePickerOpen(false); }} disabled={(date) => date < new Date() || date < new Date("1900-01-01")} initialFocus/>
                           </PopoverContent>
                         </Popover>
                         <FormMessage />

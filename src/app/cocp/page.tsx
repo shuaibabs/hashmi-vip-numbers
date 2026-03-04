@@ -148,7 +148,7 @@ export default function CocpPage() {
         "Sum": n.sum,
         "Status": n.status,
         "Account Name": n.accountName,
-        "RTS Date": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : 'N/A',
+        "RTP Date": n.rtpDate ? format(n.rtpDate.toDate(), 'yyyy-MM-dd') : 'N/A',
         "Safe Custody Date": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : 'N/A',
     }));
 
@@ -295,7 +295,7 @@ export default function CocpPage() {
               <SortableHeader column="accountName" label="Account Name" />
               <SortableHeader column="sum" label="Sum" />
               <SortableHeader column="status" label="Status" />
-              <SortableHeader column="rtsDate" label="RTS Date" />
+              <SortableHeader column="rtpDate" label="RTP Date" />
               <SortableHeader column="safeCustodyDate" label="Safe Custody Date" />
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -325,9 +325,9 @@ export default function CocpPage() {
                             <TableCell>{num.accountName}</TableCell>
                             <TableCell>{num.sum}</TableCell>
                             <TableCell>
-                            <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
+                            <Badge variant={num.status === 'RTP' ? 'default' : 'destructive'} className={num.status === 'RTP' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
                             </TableCell>
-                            <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                            <TableCell>{num.rtpDate ? format(num.rtpDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                             <TableCell>{num.safeCustodyDate ? format(num.safeCustodyDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                 <DropdownMenu>

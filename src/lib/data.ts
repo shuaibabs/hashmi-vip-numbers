@@ -25,13 +25,13 @@ export type NumberRecord = {
   srNo: number;
   mobile: string;
   sum: number;
-  status: 'RTS' | 'Non-RTS';
+  status: 'RTP' | 'Non-RTP';
   uploadStatus: 'Pending' | 'Done';
   numberType: 'Prepaid' | 'Postpaid' | 'COCP';
   purchaseFrom: string;
   purchasePrice: number;
   salePrice: number | string;
-  rtsDate: Timestamp | null;
+  rtpDate: Timestamp | null;
   name: string;
   currentLocation: string;
   locationType: 'Store' | 'Employee' | 'Dealer';
@@ -53,7 +53,7 @@ export type NumberRecord = {
 export type NewNumberData = Omit<
   NumberRecord,
   'id' | 'srNo' | 'createdBy' | 'checkInDate' | 'purchaseDate' | 'sum' | 'safeCustodyDate' | 'billDate' | 'history'
-> & { purchaseDate: Date; rtsDate?: Date, safeCustodyDate?: Date, billDate?: Date };
+> & { purchaseDate: Date; rtpDate?: Date, safeCustodyDate?: Date, billDate?: Date };
 
 
 export type SaleRecord = {
@@ -145,7 +145,7 @@ export type NewPaymentData = Omit<PaymentRecord, 'id' | 'srNo' | 'createdBy' | '
 export type GlobalHistoryRecord = {
   id: string; // A unique ID for the history record itself (e.g., collection-docId)
   mobile: string;
-  rtsStatus: 'RTS' | 'Non-RTS' | 'N/A';
+  rtpStatus: 'RTP' | 'Non-RTP' | 'N/A';
   numberType: 'Prepaid' | 'Postpaid' | 'COCP' | 'N/A';
   currentStage: 'In Inventory' | 'Sold' | 'Pre-Booked' | 'Dealer Purchase' | 'Deleted';
   saleInfo?: {

@@ -19,26 +19,26 @@ import type { NumberRecord } from '@/lib/data';
 import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
-  status: z.enum(['RTS', 'Non-RTS']),
-  rtsDate: z.date().optional(),
+  status: z.enum(['RTP', 'Non-RTP']),
+  rtpDate: z.date().optional(),
   note: z.string().optional(),
 }).refine(data => {
-  if (data.status === 'Non-RTS') {
-    return !!data.rtsDate;
+  if (data.status === 'Non-RTP') {
+    return !!data.rtpDate;
   }
   return true;
 }, {
-  message: 'RTS Date is required for Non-RTS status.',
-  path: ['rtsDate'],
+  message: 'RTP Date is required for Non-RTP status.',
+  path: ['rtpDate'],
 });
 
-type RtsStatusModalProps = {
+type RtpStatusModalProps = {
   isOpen: boolean;
   onClose: () => void;
   number: NumberRecord;
 };
 
-export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps) {
+export function RtpStatusModal({ isOpen, onClose, number }: RtpStatusModalProps) {
   const { updateNumberStatus } = useApp();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
@@ -46,7 +46,7 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
     resolver: zodResolver(formSchema),
     defaultValues: {
       status: number.status,
-      rtsDate: number.rtsDate ? number.rtsDate.toDate() : undefined,
+      rtpDate: number.rtpDate ? number.rtpDate.toDate() : undefined,
       note: '',
     },
   });
@@ -55,14 +55,14 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
     if (number) {
         form.reset({
             status: number.status,
-            rtsDate: number.rtsDate ? number.rtsDate.toDate() : undefined,
+            rtpDate: number.rtpDate ? number.rtpDate.toDate() : undefined,
             note: '',
         })
     }
   }, [number, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    updateNumberStatus(number.id, values.status, values.rtsDate || null, values.note);
+    updateNumberStatus(number.id, values.status, values.rtpDate || null, values.note);
     onClose();
     form.reset();
   }
@@ -71,7 +71,7 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Update RTS Status</DialogTitle>
+          <DialogTitle>Update RTP Status</DialogTitle>
           <DialogDescription>
             Update the status for mobile number <span className="font-semibold">{number.mobile}</span>.
           </DialogDescription>
@@ -86,9 +86,9 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
                   <FormLabel>Status</FormLabel>
                   <Select onValueChange={(value) => {
                       field.onChange(value);
-                      if (value === 'RTS') {
-                          form.setValue('rtsDate', undefined);
-                          form.clearErrors('rtsDate');
+                      if (value === 'RTP') {
+                          form.setValue('rtpDate', undefined);
+                          form.clearErrors('rtpDate');
                       }
                   }} defaultValue={field.value}>
                     <FormControl>
@@ -97,21 +97,21 @@ export function RtsStatusModal({ isOpen, onClose, number }: RtsStatusModalProps)
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="RTS">RTS</SelectItem>
-                      <SelectItem value="Non-RTS">Non-RTS</SelectItem>
+                      <SelectItem value="RTP">RTP</SelectItem>
+                      <SelectItem value="Non-RTP">Non-RTP</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {form.watch('status') === 'Non-RTS' && (
+            {form.watch('status') === 'Non-RTP' && (
               <FormField
                 control={form.control}
-                name="rtsDate"
+                name="rtpDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Schedule RTS Date</FormLabel>
+                    <FormLabel>Schedule RTP Date</FormLabel>
                     <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>

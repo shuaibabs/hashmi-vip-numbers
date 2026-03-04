@@ -82,7 +82,7 @@ export default function NumberDetailsPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline">{number.numberType}</Badge>
-                <Badge variant={number.status === 'RTS' ? 'default' : 'destructive'} className={number.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>
+                <Badge variant={number.status === 'RTP' ? 'default' : 'destructive'} className={number.status === 'RTP' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>
                 {number.status}
                 </Badge>
             </div>
@@ -117,7 +117,7 @@ export default function NumberDetailsPage() {
 
           <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
             <h4 className="text-lg font-semibold col-span-full">Status & Location</h4>
-             <DetailItem label="Scheduled RTS Date" value={number.rtsDate ? format(number.rtsDate.toDate(), 'PPP') : 'N/A'} />
+             <DetailItem label="Scheduled RTP Date" value={number.rtpDate ? format(number.rtpDate.toDate(), 'PPP') : 'N/A'} />
              {number.numberType === 'COCP' && <DetailItem label="Safe Custody Date" value={number.safeCustodyDate ? format(number.safeCustodyDate.toDate(), 'PPP') : 'N/A'} />}
              {number.numberType === 'Postpaid' && <DetailItem label="Bill Date" value={number.billDate ? format(number.billDate.toDate(), 'PPP') : 'N/A'} />}
              {number.numberType === 'Postpaid' && <DetailItem label="PD Bill" value={number.pdBill} />}

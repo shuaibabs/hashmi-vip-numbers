@@ -49,7 +49,7 @@ const getActionIcon = (action: string) => {
   if (lowerAction.includes('assigned')) return <UserCog className="h-4 w-4 text-purple-500" />;
   if (lowerAction.includes('pre-booked')) return <Bookmark className="h-4 w-4 text-amber-500" />;
   if (lowerAction.includes('checked in')) return <LogIn className="h-4 w-4 text-cyan-500" />;
-  if (lowerAction.includes('rts')) return <FileClock className="h-4 w-4 text-orange-500" />;
+  if (lowerAction.includes('rtp')) return <FileClock className="h-4 w-4 text-orange-500" />;
   if (lowerAction.includes('location')) return <MapPin className="h-4 w-4 text-teal-500" />;
   if (lowerAction.includes('postpaid')) return <FileText className="h-4 w-4 text-indigo-500" />;
   return <History className="h-4 w-4" />;

@@ -19,8 +19,8 @@ export function SummaryCards() {
   }, [sales, role, user?.displayName]);
 
   const totalNumbers = numbers.length;
-  const rtsNumbers = numbers.filter(n => n.status === 'RTS').length;
-  const nonRtsNumbers = totalNumbers - rtsNumbers;
+  const rtpNumbers = numbers.filter(n => n.status === 'RTP').length;
+  const nonRtpNumbers = totalNumbers - rtpNumbers;
   const pendingUploads = numbers.filter(n => n.uploadStatus === 'Pending').length;
   const totalSales = roleFilteredSales.length;
   const totalPreBookings = preBookings.length;
@@ -28,8 +28,8 @@ export function SummaryCards() {
 
   const summaryData = [
     { title: "Total Numbers", value: totalNumbers, icon: Smartphone, color: "text-blue-500" },
-    { title: "RTS Numbers", value: rtsNumbers, icon: CheckCircle, color: "text-green-500" },
-    { title: "Non-RTS Numbers", value: nonRtsNumbers, icon: Clock, color: "text-red-500" },
+    { title: "RTP Numbers", value: rtpNumbers, icon: CheckCircle, color: "text-green-500" },
+    { title: "Non-RTP Numbers", value: nonRtpNumbers, icon: Clock, color: "text-red-500" },
     { title: "Pre-Bookings", value: totalPreBookings, icon: Bookmark, color: "text-amber-500" },
     { title: "Sales", value: totalSales, icon: DollarSign, color: "text-indigo-500" },
   ];

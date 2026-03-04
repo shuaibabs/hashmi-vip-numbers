@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -116,7 +117,7 @@ export function GlobalHistory() {
                     <TableRow>
                         <TableHead>Phone Number</TableHead>
                         <TableHead>Current Stage</TableHead>
-                        <TableHead>RTS Status</TableHead>
+                        <TableHead>RTP Status</TableHead>
                         <TableHead>Purchase From</TableHead>
                         <TableHead>Sale Date</TableHead>
                     </TableRow>
@@ -130,8 +131,8 @@ export function GlobalHistory() {
                             <TableCell className="font-medium">{highlightMatch(record.mobile, searchTerm)}</TableCell>
                             <TableCell><Badge variant="secondary">{record.currentStage}</Badge></TableCell>
                             <TableCell>
-                                {record.rtsStatus !== 'N/A' ? (
-                                    <Badge variant={record.rtsStatus === 'RTS' ? 'default' : 'destructive'} className={record.rtsStatus === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{record.rtsStatus}</Badge>
+                                {record.rtpStatus !== 'N/A' ? (
+                                    <Badge variant={record.rtpStatus === 'RTP' ? 'default' : 'destructive'} className={record.rtpStatus === 'RTP' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{record.rtpStatus}</Badge>
                                 ) : 'N/A'}
                             </TableCell>
                             <TableCell>{record.purchaseInfo?.purchaseFrom || 'N/A'}</TableCell>

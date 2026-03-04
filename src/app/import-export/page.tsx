@@ -63,7 +63,7 @@ export default function ImportExportPage() {
         "Notes": n.notes || '',
         "UploadStatus": n.uploadStatus,
         "PartnerName": n.partnerName || '',
-        "RTSDate": n.rtsDate ? format(n.rtsDate.toDate(), 'yyyy-MM-dd') : '',
+        "RTPDate": n.rtpDate ? format(n.rtpDate.toDate(), 'yyyy-MM-dd') : '',
         "SafeCustodyDate": n.safeCustodyDate ? format(n.safeCustodyDate.toDate(), 'yyyy-MM-dd') : '',
         "AccountName": n.accountName || '',
         "BillDate": n.billDate ? format(n.billDate.toDate(), 'yyyy-MM-dd') : '',
@@ -266,7 +266,7 @@ export default function ImportExportPage() {
                   {isImporting ? 'Importing...' : 'Import from CSV'}
                 </Button>
                 <input type="file" id="import-file-input" className="hidden" accept=".csv" onChange={handleFileImport} />
-                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, OwnershipType. Optional: AssignedTo, SalePrice, Notes, UploadStatus, PartnerName (required if OwnershipType is Partnership). Conditional: RTSDate (required if Status is 'Non-RTS'), SafeCustodyDate and AccountName (required if NumberType is 'COCP'), BillDate and PDBill (required for Postpaid).</p>
+                 <p className="text-xs text-muted-foreground mt-2">Required headers: Mobile, NumberType, PurchaseFrom, PurchasePrice, PurchaseDate, CurrentLocation, LocationType, Status, OwnershipType. Optional: AssignedTo, SalePrice, Notes, UploadStatus, PartnerName (required if OwnershipType is Partnership). Conditional: RTPDate (required if Status is 'Non-RTP'), SafeCustodyDate and AccountName (required if NumberType is 'COCP'), BillDate and PDBill (required for Postpaid).</p>
              </CardContent>
            </Card>
            <Card>
@@ -340,7 +340,7 @@ export default function ImportExportPage() {
                 <TableHead>Purchase From</TableHead>
                 <TableHead>Purchase Price</TableHead>
                 <TableHead>Sale Price</TableHead>
-                <TableHead>RTS Date</TableHead>
+                <TableHead>RTP Date</TableHead>
                 <TableHead>Location Type</TableHead>
                 <TableHead>Current Location</TableHead>
                 <TableHead>Assigned To</TableHead>
@@ -366,7 +366,7 @@ export default function ImportExportPage() {
                     <TableCell className="font-medium">{num.mobile}</TableCell>
                     <TableCell>{num.sum}</TableCell>
                     <TableCell>
-                      <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
+                      <Badge variant={num.status === 'RTP' ? 'default' : 'destructive'} className={num.status === 'RTP' ? `bg-green-500/20 text-green-700` : `bg-red-500/20 text-red-700`}>{num.status}</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={num.uploadStatus === 'Done' ? 'secondary' : 'outline'}>{num.uploadStatus}</Badge>
@@ -375,7 +375,7 @@ export default function ImportExportPage() {
                     <TableCell>{num.purchaseFrom}</TableCell>
                     <TableCell>₹{num.purchasePrice?.toLocaleString()}</TableCell>
                     <TableCell>₹{Number(num.salePrice)?.toLocaleString()}</TableCell>
-                    <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.rtpDate ? format(num.rtpDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{num.locationType}</TableCell>
                     <TableCell>{num.currentLocation}</TableCell>
                     <TableCell>{num.assignedTo}</TableCell>

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, UserPlus, ArrowUpDown, DollarSign, PlusCircle, FileInput, Trash, MapPin, Edit, UploadCloud, ArrowUp, ArrowDown, Bookmark, Copy } from 'lucide-react';
 import { format } from 'date-fns';
-import { RtsStatusModal } from '@/components/rts-status-modal';
+import { RtpStatusModal } from '@/components/rts-status-modal';
 import { Pagination } from '@/components/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AssignNumbersModal } from '@/components/assign-numbers-modal';
@@ -54,7 +54,7 @@ const initialAdvancedSearchState: AdvancedSearchState = {
 
 
 export default function AllNumbersPage() {
-  const { numbers, loading, isMobileNumberDuplicate, deleteNumbers, markAsPreBooked, recentlyAutoRtsIds } = useApp();
+  const { numbers, loading, isMobileNumberDuplicate, deleteNumbers, markAsPreBooked, recentlyAutoRtpIds } = useApp();
   const { role } = useAuth();
   const { navigate } = useNavigation();
   const pathname = usePathname();
@@ -63,7 +63,7 @@ export default function AllNumbersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedNumber, setSelectedNumber] = useState<NumberRecord | null>(null);
-  const [isRtsModalOpen, setIsRtsModalOpen] = useState(false);
+  const [isRtpModalOpen, setIsRtpModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isBulkSellModalOpen, setIsBulkSellModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -147,10 +147,10 @@ export default function AllNumbersPage() {
         });
     }
 
-    // Prioritize recently auto-RTS'd numbers
+    // Prioritize recently auto-RTP'd numbers
     sortableItems.sort((a, b) => {
-        const aIsRecent = recentlyAutoRtsIds.includes(a.id);
-        const bIsRecent = recentlyAutoRtsIds.includes(b.id);
+        const aIsRecent = recentlyAutoRtpIds.includes(a.id);
+        const bIsRecent = recentlyAutoRtpIds.includes(b.id);
         if (aIsRecent && !bIsRecent) return -1;
         if (!aIsRecent && bIsRecent) return 1;
         return 0;
@@ -158,9 +158,9 @@ export default function AllNumbersPage() {
 
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        // Keep recent RTS at top regardless of other sorting
-        const aIsRecent = recentlyAutoRtsIds.includes(a.id);
-        const bIsRecent = recentlyAutoRtsIds.includes(b.id);
+        // Keep recent RTP at top regardless of other sorting
+        const aIsRecent = recentlyAutoRtpIds.includes(a.id);
+        const bIsRecent = recentlyAutoRtpIds.includes(b.id);
         if (aIsRecent && !bIsRecent) return -1;
         if (!aIsRecent && bIsRecent) return 1;
         
@@ -192,7 +192,7 @@ export default function AllNumbersPage() {
     }
 
     return sortableItems;
-  }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig, recentlyAutoRtsIds, advancedSearch]);
+  }, [numbers, searchTerm, statusFilter, typeFilter, sortConfig, recentlyAutoRtpIds, advancedSearch]);
 
   const totalPages = Math.ceil(sortedAndFilteredNumbers.length / itemsPerPage);
   const paginatedNumbers = sortedAndFilteredNumbers.slice(
@@ -220,9 +220,9 @@ export default function AllNumbersPage() {
   };
 
 
-  const handleMarkRTS = (number: NumberRecord) => {
+  const handleMarkRTP = (number: NumberRecord) => {
     setSelectedNumber(number);
-    setIsRtsModalOpen(true);
+    setIsRtpModalOpen(true);
   };
   
   const handleEditUpload = (number: NumberRecord) => {
@@ -331,8 +331,8 @@ export default function AllNumbersPage() {
 
     const textToCopy = selectedNumberRecords.map(num => {
         const twoDigitSum = calculateSimpleSum(num.mobile);
-        const rtsDate = num.rtsDate ? format(num.rtsDate.toDate(), 'yyyy-MM-dd') : 'N/A';
-        return [num.mobile, num.sum, twoDigitSum, num.status, rtsDate].join(',\t');
+        const rtpDate = num.rtpDate ? format(num.rtpDate.toDate(), 'yyyy-MM-dd') : 'N/A';
+        return [num.mobile, num.sum, twoDigitSum, num.status, rtpDate].join(',\t');
     }).join('\n');
 
     navigator.clipboard.writeText(textToCopy).then(() => {
@@ -473,8 +473,8 @@ export default function AllNumbersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="RTS">RTS</SelectItem>
-                <SelectItem value="Non-RTS">Non-RTS</SelectItem>
+                <SelectItem value="RTP">RTP</SelectItem>
+                <SelectItem value="Non-RTP">Non-RTP</SelectItem>
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={(value) => {
@@ -560,7 +560,7 @@ export default function AllNumbersPage() {
                 <SortableHeader column="currentLocation" label="Current Location" />
                 <SortableHeader column="status" label="Status" />
                 <SortableHeader column="purchaseFrom" label="Purchase From" />
-                <SortableHeader column="rtsDate" label="RTS Date" />
+                <SortableHeader column="rtpDate" label="RTP Date" />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -574,7 +574,7 @@ export default function AllNumbersPage() {
                         data-state={selectedRows.includes(num.id) && "selected"}
                         className={cn(
                             "cursor-pointer",
-                            recentlyAutoRtsIds.includes(num.id) && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50"
+                            recentlyAutoRtpIds.includes(num.id) && "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 data-[state=selected]:bg-amber-200 dark:data-[state=selected]:bg-amber-900/50"
                         )}
                         onClick={(e) => handleRowClick(e, num.id)}
                     >
@@ -606,10 +606,10 @@ export default function AllNumbersPage() {
                     <TableCell>{num.locationType}</TableCell>
                     <TableCell>{num.currentLocation}</TableCell>
                     <TableCell>
-                        <Badge variant={num.status === 'RTS' ? 'default' : 'destructive'} className={num.status === 'RTS' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
+                        <Badge variant={num.status === 'RTP' ? 'default' : 'destructive'} className={num.status === 'RTP' ? `bg-green-500/20 text-green-700 hover:bg-green-500/30` : `bg-red-500/20 text-red-700 hover:bg-red-500/30`}>{num.status}</Badge>
                     </TableCell>
                     <TableCell>{num.purchaseFrom}</TableCell>
-                    <TableCell>{num.rtsDate ? format(num.rtsDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{num.rtpDate ? format(num.rtpDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                     {(role === 'admin' || role === 'employee') && (
                         <DropdownMenu>
@@ -621,7 +621,7 @@ export default function AllNumbersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => navigate(`/numbers/${num.id}`, pathname)}>View Details</DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTS(num); }}>Update RTS Status</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkRTP(num); }}>Update RTP Status</DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditUpload(num); }}>Edit Upload Status</DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditLocation(num); }}>
                               <Edit className="mr-2 h-4 w-4" />
@@ -670,9 +670,9 @@ export default function AllNumbersPage() {
 
       </div>
       {selectedNumber && (
-        <RtsStatusModal
-          isOpen={isRtsModalOpen}
-          onClose={() => setIsRtsModalOpen(false)}
+        <RtpStatusModal
+          isOpen={isRtpModalOpen}
+          onClose={() => setIsRtpModalOpen(false)}
           number={selectedNumber}
         />
       )}
