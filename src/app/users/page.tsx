@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { PageHeader } from '@/components/page-header';
 import { useAuth } from '@/context/auth-context';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, ArrowLeft, Trash, User as UserIcon, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Trash, User as UserIcon, Send, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useNavigation } from '@/context/navigation-context';
 import type { User } from '@/lib/data';
 import { usePathname } from 'next/navigation';
+import { EditUserModal } from '@/components/edit-user-modal';
 
 export default function ManageUsersPage() {
   const { users: allUsers, deleteUser, loading } = useApp();
@@ -23,6 +24,13 @@ export default function ManageUsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { navigate } = useNavigation();
   const pathname = usePathname();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+
+  const handleEditClick = (user: User) => {
+    setUserToEdit(user);
+    setIsEditModalOpen(true);
+  };
 
   if (adminRole !== 'admin') {
     return (
@@ -53,7 +61,7 @@ export default function ManageUsersPage() {
     <>
       <PageHeader
         title="Manage Users"
-        description="View and remove user accounts from the system."
+        description="View, edit, and remove user accounts from the system."
       />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {allUsers.map((user) => (
@@ -78,7 +86,11 @@ export default function ManageUsersPage() {
             <CardContent>
                 <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className='capitalize'>{user.role}</Badge>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex gap-2">
+                 <Button variant="outline" size="sm" className="w-full" onClick={() => handleEditClick(user)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                </Button>
                  <Button
                     variant="destructive"
                     size="sm"
@@ -87,7 +99,7 @@ export default function ManageUsersPage() {
                     onClick={() => setUserToDelete(user)}
                 >
                     <Trash className="mr-2 h-4 w-4" />
-                    Delete User
+                    Delete
                 </Button>
             </CardFooter>
           </Card>
@@ -105,7 +117,7 @@ export default function ManageUsersPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the user account for <span className='font-semibold'>{userToDelete?.displayName}</span> and remove all associated data from the database. The user will no longer be able to log in.
+                        This action cannot be undone. This will permanently delete the user account for <span className='font-semibold'>{userToDelete?.displayName}</span> and remove all associated data.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -116,6 +128,13 @@ export default function ManageUsersPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        {userToEdit && (
+            <EditUserModal 
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                user={userToEdit}
+            />
+        )}
     </>
   );
 }

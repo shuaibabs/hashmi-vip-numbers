@@ -125,6 +125,7 @@ type AppContextType = {
   closeReminderPopup: () => void;
   markActivitiesAsSeen: () => void;
   isMobileNumberDuplicate: (mobile: string, currentId?: string) => boolean;
+  updateUser: (uid: string, data: { displayName: string, telegramUsername?: string }) => void;
   updateNumber: (id: string, data: NewNumberData) => void;
   updateNumberStatus: (id: string, status: 'RTP' | 'Non-RTP', rtpDate: Date | null, note?: string) => void;
   updateUploadStatus: (id: string, uploadStatus: 'Pending' | 'Done') => void;
@@ -707,6 +708,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(intervalId);
 
   }, [db, reminders, remindersLoading, role, addActivity]);
+
+  const updateUser = (uid: string, data: { displayName: string, telegramUsername?: string }) => {
+    if (!db || !user || role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You do not have permission to update users.",
+      });
+      return;
+    }
+    const docRef = doc(db, 'users', uid);
+    const updateData = {
+        displayName: data.displayName,
+        telegramUsername: data.telegramUsername || null,
+    };
+    updateDoc(docRef, updateData).then(() => {
+        addActivity({
+            employeeName: user.displayName || user.email || 'User',
+            action: 'Updated User',
+            description: `Updated details for user ${data.displayName}.`
+        });
+        toast({
+            title: "User Updated",
+            description: `Details for ${data.displayName} have been saved.`
+        });
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
 
   const updateNumber = async (id: string, data: NewNumberData) => {
     if (!db || !user) return;
@@ -2153,6 +2188,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     markActivitiesAsSeen,
     isMobileNumberDuplicate,
+    updateUser,
     updateNumber,
     updateNumberStatus,
     updateUploadStatus,
