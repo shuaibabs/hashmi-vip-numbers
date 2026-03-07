@@ -349,14 +349,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPaymentsLoading(true);
 
     const subscriptions: Unsubscribe[] = [];
-    const collectionMappings = [
+    const collectionMappings: { name: string; setter: (data: any) => void; loader: (loading: boolean) => void }[] = [
       { name: 'numbers', setter: setNumbers, loader: setNumbersLoading },
       { name: 'sales', setter: setSales, loader: setSalesLoading },
       { name: 'reminders', setter: setReminders, loader: setRemindersLoading },
       { name: 'activities', setter: setActivities, loader: setActivitiesLoading },
       { name: 'dealerPurchases', setter: setDealerPurchases, loader: setDealerPurchasesLoading },
       { name: 'prebookings', setter: setPreBookings, loader: setPreBookingsLoading },
-      { name: 'deletedNumbers', setter: setDeletedNumbers, loader: setDeletedNumbersLoading },
       { name: 'payments', setter: setPayments, loader: setPaymentsLoading },
       { name: 'users', setter: (data: User[]) => {
           setUsers(data);
@@ -366,12 +365,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
     ];
 
+    if (role === 'admin') {
+      collectionMappings.push({ name: 'deletedNumbers', setter: setDeletedNumbers, loader: setDeletedNumbersLoading });
+    } else {
+      // For non-admins, clear deletedNumbers and set loading to false
+      setDeletedNumbers([]);
+      setDeletedNumbersLoading(false);
+    }
+
     collectionMappings.forEach(({ name, setter, loader }) => {
       const collectionRef = collection(db, name);
       const q = query(collectionRef);
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const data = mapSnapshotToData(querySnapshot);
-        setter(data as any); // Cast as any because setters have different types
+        setter(data as any);
         loader(false);
       }, (error) => {
         const permissionError = new FirestorePermissionError({
@@ -387,7 +394,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       subscriptions.forEach(sub => sub());
     };
-  }, [db, user]);
+  }, [db, user, role]);
 
   useEffect(() => {
     if (loading || !user) return;
