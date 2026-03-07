@@ -1,3 +1,4 @@
+
 /**
  * Import function triggers from their respective submodules:
  *
@@ -8,25 +9,28 @@
  */
 
 import {setGlobalOptions} from "firebase-functions";
-// import {onRequest} from "firebase-functions/https";
-// import * as logger from "firebase-functions/logger";
+import {onDocumentDeleted} from "firebase-functions/v2/firestore";
+import * as admin from "firebase-admin";
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+// Initialize admin SDK if not already initialized
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
 
 // For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
+// running at the same time.
 setGlobalOptions({ maxInstances: 10 });
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+/**
+ * Deletes a user from Firebase Authentication when their corresponding document
+ * is deleted from the 'users' collection in Firestore.
+ */
+export const onUserDeleted = onDocumentDeleted("users/{userId}", async (event) => {
+  const userId = event.params.userId;
+  try {
+    await admin.auth().deleteUser(userId);
+    console.log(`Successfully deleted user with ID: ${userId} from Firebase Auth.`);
+  } catch (error) {
+    console.error(`Error deleting user with ID: ${userId} from Firebase Auth:`, error);
+  }
+});

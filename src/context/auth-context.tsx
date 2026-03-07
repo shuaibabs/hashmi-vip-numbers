@@ -2,8 +2,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, setDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import type { User } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -32,65 +32,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
-      try {
-        const isLoggingIn = !user && firebaseUser; // Transition from null to a user
+    let userDocUnsubscribe: (() => void) | undefined;
+
+    const authStateUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (userDocUnsubscribe) {
+        userDocUnsubscribe(); // Clean up previous listener
+      }
+
+      if (firebaseUser) {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
         
-        if (firebaseUser) {
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (userDoc.exists()) {
-            setRole(userDoc.data().role);
+        userDocUnsubscribe = onSnapshot(userDocRef, async (docSnap) => {
+          const isLoggingIn = !user && firebaseUser;
+
+          if (docSnap.exists()) {
+            setUser(firebaseUser);
+            setRole(docSnap.data().role);
+            if (isLoggingIn) {
+               toast({
+                title: "Logged In Successfully",
+                description: `Welcome back, ${firebaseUser.displayName || firebaseUser.email}!`,
+              });
+            }
+            setLoading(false);
           } else {
-            // This logic runs if it's a user's first-ever sign-in to this app.
+            // Doc doesn't exist. Check if it's the VERY first user to bootstrap admin.
             const usersCollection = collection(db, "users");
             const usersSnap = await getDocs(usersCollection);
-            const isFirstUser = usersSnap.empty;
-            
-            const newRole = isFirstUser ? 'admin' : 'employee';
-            const newUser: User = {
-              uid: firebaseUser.uid,
-              id: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'New User',
-              role: newRole,
-            };
-            await setDoc(userDocRef, newUser);
-            setRole(newRole);
+            if (usersSnap.empty) {
+                // First user ever. Create admin doc.
+                 const newRole = 'admin';
+                 const newUser: User = {
+                     uid: firebaseUser.uid,
+                     id: firebaseUser.uid,
+                     email: firebaseUser.email || '',
+                     displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'New User',
+                     role: newRole,
+                 };
+                 try {
+                     await setDoc(userDocRef, newUser);
+                     // The onSnapshot will fire again with the new doc, setting the user and role.
+                 } catch (e) {
+                      console.error("Failed to create first admin user doc:", e);
+                      signOut(auth);
+                 }
+            } else {
+                // Not the first user, and their doc is missing. Sign them out.
+                signOut(auth);
+            }
           }
-          setUser(firebaseUser);
+        }, (error) => {
+          console.error("Error listening to user document:", error);
+          signOut(auth);
+          setLoading(false);
+        });
 
-          if (isLoggingIn) {
-             toast({
-              title: "Logged In Successfully",
-              description: `Welcome back, ${firebaseUser.displayName || firebaseUser.email}!`,
-            });
-          }
-        } else {
-          setUser(null);
-          setRole(null);
-        }
-      } catch (error: any) {
-        console.error("Error during authentication state change:", error);
-        
-        if (error.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
-                path: `users/${firebaseUser?.uid || 'unknown'}`,
-                operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        }
-
+      } else {
+        // User is logged out.
         setUser(null);
         setRole(null);
-      } finally {
         setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      authStateUnsubscribe();
+      if (userDocUnsubscribe) {
+        userDocUnsubscribe();
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, db]);
 
